@@ -154,7 +154,7 @@ class Lead extends Model
         }
 
         // Presentation attended / has presentation (+20)
-        if ($this->presentations()->exists() || $this->stage === LeadStage::PRESENTATION) {
+        if (($this->exists && $this->presentations()->exists()) || $this->stage === LeadStage::PRESENTATION) {
             $score += 20;
         }
 
