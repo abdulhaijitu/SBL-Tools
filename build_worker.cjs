@@ -118,6 +118,8 @@ const parts = [
   '      html = PAGES.users;',
   '    } else if (path === "/roles" || path.startsWith("/roles/")) {',
   '      html = PAGES.roles;',
+  '    } else if (path === "/ecosystem") {',
+  '      html = PAGES.ecosystem;',
   '    } else {',
   '      // Fallback: Dashboard',
   '      html = PAGES.dashboard;',

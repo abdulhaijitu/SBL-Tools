@@ -51,6 +51,12 @@ Route::middleware(['auth'])->group(function () {
     // SBL Plans & Toolkit (From PDF)
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
 
+    // SBL Ecosystem Directory & Links CRUD
+    Route::get('/ecosystem', [\App\Http\Controllers\EcosystemController::class, 'index'])->name('ecosystem.index');
+    Route::post('/ecosystem', [\App\Http\Controllers\EcosystemController::class, 'store'])->name('ecosystem.store');
+    Route::put('/ecosystem/{ecosystemLink}', [\App\Http\Controllers\EcosystemController::class, 'update'])->name('ecosystem.update');
+    Route::delete('/ecosystem/{ecosystemLink}', [\App\Http\Controllers\EcosystemController::class, 'destroy'])->name('ecosystem.destroy');
+
     // Team & User Management CRUD
     Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
     Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');

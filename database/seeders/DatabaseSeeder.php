@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
     {
         // 0. Seed Roles, Permissions, and Team Structure
         $this->call(RoleAndPermissionSeeder::class);
+        $this->call(EcosystemLinkSeeder::class);
 
         // 1. Create Admin User
         $admin = User::firstOrCreate(

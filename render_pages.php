@@ -42,6 +42,9 @@ $pages = [
     'roles' => function() {
         return app(App\Http\Controllers\RoleController::class)->index()->render();
     },
+    'ecosystem' => function() {
+        return app(App\Http\Controllers\EcosystemController::class)->index(request())->render();
+    },
 ];
 
 $rendered = [];
