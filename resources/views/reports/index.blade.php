@@ -29,19 +29,19 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Leads</span>
-            <span class="text-3xl font-bold text-slate-900 mt-1 block">{{ $totalLeads }}</span>
+            <span data-report-metric="total-leads" class="text-3xl font-bold text-slate-900 mt-1 block">{{ $totalLeads }}</span>
             <span class="text-xs text-slate-400">Total pipeline acquisition</span>
         </div>
 
         <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
             <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wider block">Converted Leads</span>
-            <span class="text-3xl font-bold text-emerald-700 mt-1 block">{{ $convertedLeads }}</span>
+            <span data-report-metric="converted-leads" class="text-3xl font-bold text-emerald-700 mt-1 block">{{ $convertedLeads }}</span>
             <span class="text-xs text-slate-400">Customers & Members</span>
         </div>
 
         <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
             <span class="text-xs font-semibold text-orange-600 uppercase tracking-wider block">Overall Conversion Rate</span>
-            <span class="text-3xl font-bold text-orange-600 mt-1 block">{{ $conversionRate }}%</span>
+            <span data-report-metric="conversion-rate" class="text-3xl font-bold text-orange-600 mt-1 block">{{ $conversionRate }}%</span>
             <span class="text-xs text-slate-400">Leads into converted deals</span>
         </div>
     </div>
@@ -51,13 +51,13 @@
         <h3 class="text-base font-bold text-slate-900 mb-4">Lead Funnel Distribution</h3>
         <div class="space-y-3">
             @foreach ($funnelData as $stageKey => $data)
-                <div>
+                <div data-report-stage="{{ $stageKey }}">
                     <div class="flex items-center justify-between text-xs mb-1">
                         <span class="font-bold text-slate-800">{{ $data['label'] }}</span>
-                        <span class="font-semibold text-slate-600">{{ $data['count'] }} leads ({{ $data['percentage'] }}%)</span>
+                        <span data-report-stage-text="{{ $stageKey }}" class="font-semibold text-slate-600">{{ $data['count'] }} leads ({{ $data['percentage'] }}%)</span>
                     </div>
                     <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-orange-500 rounded-full transition-all duration-500" style="width: {{ $data['percentage'] }}%"></div>
+                        <div data-report-stage-bar="{{ $stageKey }}" class="h-full bg-orange-500 rounded-full transition-all duration-500" style="width: {{ $data['percentage'] }}%"></div>
                     </div>
                 </div>
             @endforeach

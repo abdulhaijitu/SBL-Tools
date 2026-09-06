@@ -12,7 +12,7 @@
         <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Follow-ups Today</span>
-                <span class="text-2xl font-bold text-slate-900 mt-1 block">{{ $followupsDueToday->count() }}</span>
+                <span data-metric="followups-today" class="text-2xl font-bold text-slate-900 mt-1 block">{{ $followupsDueToday->count() }}</span>
                 <span class="text-[11px] text-slate-400">Scheduled for today</span>
             </div>
             <div class="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
@@ -24,7 +24,7 @@
         <div class="bg-white rounded-2xl p-4 border {{ $overdueFollowups->count() > 0 ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200/80' }} shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-xs font-semibold {{ $overdueFollowups->count() > 0 ? 'text-rose-600' : 'text-slate-500' }} uppercase tracking-wider block">Overdue Follow-ups</span>
-                <span class="text-2xl font-bold {{ $overdueFollowups->count() > 0 ? 'text-rose-700' : 'text-slate-900' }} mt-1 block">{{ $overdueFollowups->count() }}</span>
+                <span data-metric="overdue-followups" class="text-2xl font-bold {{ $overdueFollowups->count() > 0 ? 'text-rose-700' : 'text-slate-900' }} mt-1 block">{{ $overdueFollowups->count() }}</span>
                 <span class="text-[11px] text-slate-400">Requires urgent touch</span>
             </div>
             <div class="w-11 h-11 rounded-xl {{ $overdueFollowups->count() > 0 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500' }} flex items-center justify-center font-bold">
@@ -36,7 +36,7 @@
         <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Presentations Today</span>
-                <span class="text-2xl font-bold text-slate-900 mt-1 block">{{ $presentationsToday->count() }}</span>
+                <span data-metric="presentations-today" class="text-2xl font-bold text-slate-900 mt-1 block">{{ $presentationsToday->count() }}</span>
                 <span class="text-[11px] text-slate-400">1-on-1 & Group sessions</span>
             </div>
             <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
@@ -48,8 +48,8 @@
         <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Active Leads</span>
-                <span class="text-2xl font-bold text-slate-900 mt-1 block">{{ $totalLeads }}</span>
-                <span class="text-[11px] text-slate-400">{{ $newLeadsTodayCount }} added today</span>
+                <span data-metric="total-leads" class="text-2xl font-bold text-slate-900 mt-1 block">{{ $totalLeads }}</span>
+                <span class="text-[11px] text-slate-400"><span data-metric="new-leads-today">{{ $newLeadsTodayCount }}</span> added today</span>
             </div>
             <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -73,12 +73,13 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             @foreach ($funnelStages as $stageKey => $count)
                 <a href="{{ route('leads.index', ['stage' => $stageKey]) }}" 
+                   data-funnel-stage="{{ $stageKey }}"
                    class="bg-slate-50 hover:bg-orange-50/50 hover:border-orange-200 border border-slate-100 rounded-xl p-3 text-center transition-all group active:scale-95 flex flex-col justify-between">
                     <div>
                         <span class="text-[11px] font-semibold text-slate-500 group-hover:text-orange-700 uppercase tracking-tight block truncate">
                             {{ ucfirst(str_replace('_', ' ', $stageKey)) }}
                         </span>
-                        <span class="text-xl font-bold text-slate-900 group-hover:text-orange-600 mt-1 block">
+                        <span data-funnel-count="{{ $stageKey }}" class="text-xl font-bold text-slate-900 group-hover:text-orange-600 mt-1 block">
                             {{ $count }}
                         </span>
                     </div>

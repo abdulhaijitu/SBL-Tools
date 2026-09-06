@@ -219,7 +219,7 @@ export default {
       }
 
       // 4b. Binary Tree Handlers
-      if (path === "/binary" && effectiveMethod === "POST" && formData) {
+      if ((path === "/binary" || path === "/binary/place") && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
             const memberName = formData.get("member_name") || "New Member";
@@ -230,11 +230,14 @@ export default {
             const parentId = Number(formData.get("parent_id")) || 1;
             const position = formData.get("position") || "left";
             const pointValue = Number(formData.get("point_value")) || 100;
+            const sponsorId = formData.get("sponsor_id") ? Number(formData.get("sponsor_id")) : null;
+            const userId = formData.get("user_id") ? Number(formData.get("user_id")) : null;
+            const memberCode = formData.get("member_code") || ("SBL-" + (Math.floor(1000 + Math.random() * 9000)));
 
             await db.prepare(
-              "INSERT INTO binary_nodes (member_name, phone, email, package_name, rank_name, parent_id, position, point_value, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(memberName, phone, email, packageName, rankName, parentId, position, pointValue).run();
+              "INSERT INTO binary_nodes (member_name, member_code, phone, email, package_name, rank_name, parent_id, sponsor_id, user_id, position, point_value, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ).bind(memberName, memberCode, phone, email, packageName, rankName, parentId, sponsorId, userId, position, pointValue).run();
 
             if (position === "left") {
               await db.prepare("UPDATE binary_nodes SET left_count = left_count + 1, left_bv = left_bv + ?, carry_left = carry_left + ? WHERE id = ?").bind(pointValue, pointValue, parentId).run();
@@ -658,6 +661,67 @@ export default {
         }
       }
 
+            // 4i. Roles & Permissions Handlers
+      if (path === "/roles" && effectiveMethod === "POST" && formData) {
+        if (db) {
+          try {
+            const name = formData.get("name") || "New Role";
+            const slug = (formData.get("slug") || name.toLowerCase().replace(/[^a-z0-9]+/g, "-")).replace(/^-|-$/g, "");
+            const description = formData.get("description") || null;
+            const permissions = formData.getAll("permissions[]") || [];
+            const insRes = await db.prepare(
+              "INSERT INTO roles (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ).bind(name, slug, description).run();
+
+            const roleId = insRes?.meta?.last_row_id;
+            if (roleId && permissions.length > 0) {
+              for (const pId of permissions) {
+                await db.prepare("INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)").bind(roleId, Number(pId)).run();
+              }
+            }
+          } catch (e) {
+            console.error("D1 Role create error:", e);
+          }
+        }
+        return Response.redirect(new URL("/roles", request.url), 302);
+      }
+
+      if (path.startsWith("/roles/")) {
+        const parts = path.split("/");
+        const roleId = parseInt(parts[2], 10);
+        if (effectiveMethod === "DELETE" && roleId) {
+          if (db) {
+            try {
+              if (roleId > 4) { // Keep core roles intact
+                await db.prepare("DELETE FROM permission_role WHERE role_id = ?").bind(roleId).run();
+                await db.prepare("DELETE FROM role_user WHERE role_id = ?").bind(roleId).run();
+                await db.prepare("DELETE FROM roles WHERE id = ?").bind(roleId).run();
+              }
+            } catch (e) {
+              console.error("D1 Role delete error:", e);
+            }
+          }
+          return Response.redirect(new URL("/roles", request.url), 302);
+        }
+        if (effectiveMethod === "PUT" && roleId && formData) {
+          if (db) {
+            try {
+              const name = formData.get("name") || "Role";
+              const description = formData.get("description") || null;
+              const permissions = formData.getAll("permissions[]") || [];
+              await db.prepare("UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(name, description, roleId).run();
+              await db.prepare("DELETE FROM permission_role WHERE role_id = ?").bind(roleId).run();
+              for (const pId of permissions) {
+                await db.prepare("INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)").bind(roleId, Number(pId)).run();
+              }
+            } catch (e) {
+              console.error("D1 Role update error:", e);
+            }
+          }
+          return Response.redirect(new URL("/roles", request.url), 302);
+        }
+      }
+
       // Smart Redirect based on Path
       if (path.startsWith("/users")) {
         return Response.redirect(new URL("/users", request.url), 302);
@@ -695,11 +759,14 @@ export default {
     let deletedUserIds = [];
     let livePresentations = [];
     let deletedPresIds = [];
+    let liveContentItems = [];
+    let liveActivities = [];
+    let liveRoles = [];
     let sourcesMap = { 1: "Direct Inbound", 2: "Facebook Page", 3: "LinkedIn Outreach", 4: "Referral / Team", 5: "Website / Landing Page", 6: "Seminar / Workshop", 7: "Investor Network", 8: "Cold Calling" };
 
     if (db) {
       try {
-        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes, presRes] = await Promise.all([
+        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes, presRes, contentRes, actRes, rolesRes] = await Promise.all([
           db.prepare("SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY id DESC").all(),
           db.prepare("SELECT id FROM leads WHERE deleted_at IS NOT NULL").all(),
           db.prepare("SELECT * FROM binary_nodes ORDER BY id ASC").all(),
@@ -708,7 +775,10 @@ export default {
           db.prepare("SELECT * FROM ecosystem_links ORDER BY sort_order ASC, id DESC").all(),
           db.prepare("SELECT id, name FROM lead_sources").all(),
           db.prepare("SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC").all(),
-          db.prepare("SELECT p.*, l.name as lead_name, l.mobile as lead_mobile, l.stage as lead_stage, u.name as user_name FROM presentations p LEFT JOIN leads l ON p.lead_id = l.id LEFT JOIN users u ON p.user_id = u.id ORDER BY p.date_time DESC").all()
+          db.prepare("SELECT p.*, l.name as lead_name, l.mobile as lead_mobile, l.stage as lead_stage, u.name as user_name FROM presentations p LEFT JOIN leads l ON p.lead_id = l.id LEFT JOIN users u ON p.user_id = u.id ORDER BY p.date_time DESC").all(),
+          db.prepare("SELECT * FROM content_items ORDER BY scheduled_at DESC, id DESC").all(),
+          db.prepare("SELECT a.*, u.name as user_name FROM activities a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.performed_at DESC, a.id DESC").all(),
+          db.prepare("SELECT r.*, count(ru.user_id) as users_count FROM roles r LEFT JOIN role_user ru ON r.id = ru.role_id GROUP BY r.id ORDER BY r.id ASC").all()
         ]);
 
         if (leadsRes?.results) liveLeads = leadsRes.results;
@@ -719,6 +789,9 @@ export default {
         if (ecoRes?.results) liveEcosystem = ecoRes.results;
         if (usersRes?.results) liveUsers = usersRes.results;
         if (presRes?.results) livePresentations = presRes.results;
+        if (contentRes?.results) liveContentItems = contentRes.results;
+        if (actRes?.results) liveActivities = actRes.results;
+        if (rolesRes?.results) liveRoles = rolesRes.results;
 
         if (sourcesRes?.results) {
           for (const s of sourcesRes.results) {
@@ -750,9 +823,13 @@ export default {
       const leadId = parseInt(parts[2], 10);
       let pageHtml = PAGES.leads_edit || PAGES.leads;
 
-      // Dynamically populate lead data into edit template
       const currentLead = liveLeads.find(l => Number(l.id) === leadId);
       if (currentLead && pageHtml) {
+        let interests = [];
+        try {
+          interests = typeof currentLead.interest_types === "string" ? JSON.parse(currentLead.interest_types) : (currentLead.interest_types || []);
+        } catch(e) {}
+
         pageHtml = pageHtml
           .replace(/action="[^"]*\/leads\/\d+"/g, `action="/leads/${currentLead.id}"`)
           .replace(/id="delete-lead-form-\d+"/g, `id="delete-lead-form-${currentLead.id}"`)
@@ -761,7 +838,10 @@ export default {
           .replace(/value="rafiq@example.com"/g, `value="${escapeHtml(currentLead.email || '')}"`)
           .replace(/value="Dhaka, Mirpur"/g, `value="${escapeHtml(currentLead.location || '')}"`)
           .replace(/value="Retail Shop Owner"/g, `value="${escapeHtml(currentLead.profession_or_business || '')}"`)
-          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || ''));
+          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || ''))
+          .replace(/<option value="(\w+)"([^>]*)selected/g, '<option value="$1"$2')
+          .replace(new RegExp(`<option value="${currentLead.stage || 'new'}"`), `<option value="${currentLead.stage || 'new'}" selected`)
+          .replace(new RegExp(`<option value="${currentLead.lead_source_id || 1}"`), `<option value="${currentLead.lead_source_id || 1}" selected`);
       }
       html = pageHtml;
     } else if (path.match(/^\/leads\/\d+$/)) {
@@ -769,21 +849,41 @@ export default {
       const leadId = parseInt(parts[2], 10);
       let pageHtml = PAGES.leads_show || PAGES.leads;
 
-      // Dynamically populate lead data into show template
       const currentLead = liveLeads.find(l => Number(l.id) === leadId);
       if (currentLead && pageHtml) {
+        const stageLabel = (currentLead.stage || 'new').replace('_', ' ').toUpperCase();
+        const initialLetter = (currentLead.name || 'L').charAt(0).toUpperCase();
+        const sourceName = sourcesMap[currentLead.lead_source_id] || 'Direct';
+        const score = currentLead.score || 25;
+        const temp = (currentLead.temperature || 'warm').toUpperCase();
+
+        let interests = [];
+        try {
+          interests = typeof currentLead.interest_types === "string" ? JSON.parse(currentLead.interest_types) : (currentLead.interest_types || []);
+        } catch(e) {}
+
+        const cleanWhatsapp = (currentLead.whatsapp || currentLead.mobile || '').replace(/[^0-9]/g, '');
+
         pageHtml = pageHtml
           .replace(/action="[^"]*\/leads\/\d+\/stage"/g, `action="/leads/${currentLead.id}/stage"`)
           .replace(/action="[^"]*\/leads\/\d+\/convert"/g, `action="/leads/${currentLead.id}/convert"`)
+          .replace(/action="[^"]*\/leads\/\d+\/activities"/g, `action="/leads/${currentLead.id}/activities"`)
           .replace(/action="[^"]*\/leads\/\d+"/g, `action="/leads/${currentLead.id}"`)
           .replace(/href="[^"]*\/leads\/\d+\/edit"/g, `href="/leads/${currentLead.id}/edit"`)
           .replace(/id="delete-lead-form-\d+"/g, `id="delete-lead-form-${currentLead.id}"`)
+          .replace(/value="1" name="lead_id"/g, `value="${currentLead.id}" name="lead_id"`)
+          .replace(/value="1" name="related_lead_id"/g, `value="${currentLead.id}" name="related_lead_id"`)
+          .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(currentLead.name)} - SBL Growth Manager</title>`)
+          .replace(/<h2 class="text-xl font-bold text-slate-900">.*?<\/h2>/, `<h2 class="text-xl font-bold text-slate-900">${escapeHtml(currentLead.name)}</h2>`)
           .replace(/Rafiqul Islam/g, escapeHtml(currentLead.name))
           .replace(/01711001122/g, escapeHtml(currentLead.mobile))
           .replace(/rafiq@example\.com/g, escapeHtml(currentLead.email || 'N/A'))
           .replace(/Dhaka, Mirpur/g, escapeHtml(currentLead.location || 'N/A'))
           .replace(/Retail Shop Owner/g, escapeHtml(currentLead.profession_or_business || 'N/A'))
-          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || 'No initial notes.'));
+          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || 'No initial notes.'))
+          .replace(/Facebook Page<\/span>/g, `${escapeHtml(sourceName)}</span>`)
+          .replace(/<span>65 \/ 100<\/span>/g, `<span>${score} / 100</span>`)
+          .replace(/style="width: 65%"/g, `style="width: ${score}%"`);
       }
       html = pageHtml;
     } else if (path === "/leads") {
@@ -848,7 +948,10 @@ export default {
         deletedUsers: deletedUserIds,
         sources: sourcesMap,
         presentations: livePresentations,
-        deletedPresentations: deletedPresIds
+        deletedPresentations: deletedPresIds,
+        contentItems: liveContentItems,
+        activities: liveActivities,
+        roles: liveRoles
       };
 
       const syncScript = `
@@ -960,10 +1063,99 @@ export default {
   function runSync() {
     const curPath = window.location.pathname;
 
-    // Run Universal Dropdowns Sync
+    // Run Universal Dropdowns Sync across all pages
     syncEntityDropdowns();
 
-    // 1. LEADS SYNC - ONLY on /leads!
+    // 1. DASHBOARD SYNC - ONLY on / or /dashboard!
+    if (curPath === '/' || curPath === '/dashboard') {
+      if (DATA.leads) {
+        const totalLeads = DATA.leads.length;
+        const totalEl = document.querySelector('[data-metric="total-leads"]');
+        if (totalEl) totalEl.textContent = totalLeads;
+
+        // Stage Funnel Counters
+        const stages = ['new', 'contacted', 'qualified', 'presentation', 'interested', 'negotiation', 'converted', 'lost'];
+        stages.forEach(function(s) {
+          const count = DATA.leads.filter(function(l) { return (l.stage || 'new') === s; }).length;
+          const el = document.querySelector('[data-funnel-count="' + s + '"]');
+          if (el) el.textContent = count;
+        });
+
+        // Follow-ups & Overdue Calculations
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+
+        let overdueCount = 0;
+        let followupsToday = 0;
+
+        DATA.leads.forEach(function(lead) {
+          if (lead.next_action_at) {
+            const actDate = lead.next_action_at.slice(0, 10);
+            if (actDate === todayStr) followupsToday++;
+            if (new Date(lead.next_action_at) < now && (lead.stage !== 'converted' && lead.stage !== 'lost')) {
+              overdueCount++;
+            }
+          }
+        });
+
+        if (DATA.tasks) {
+          DATA.tasks.forEach(function(task) {
+            if (task.status !== 'Completed' && task.due_at) {
+              const dStr = task.due_at.slice(0, 10);
+              if (dStr === todayStr) followupsToday++;
+              if (new Date(task.due_at) < now) overdueCount++;
+            }
+          });
+        }
+
+        const dueEl = document.querySelector('[data-metric="followups-today"]');
+        if (dueEl) dueEl.textContent = followupsToday;
+
+        const overEl = document.querySelector('[data-metric="overdue-followups"]');
+        if (overEl) overEl.textContent = overdueCount;
+
+        // Presentations Today
+        let presTodayCount = 0;
+        if (DATA.presentations) {
+          DATA.presentations.forEach(function(p) {
+            if (p.date_time && p.date_time.slice(0, 10) === todayStr) presTodayCount++;
+          });
+        }
+        const presEl = document.querySelector('[data-metric="presentations-today"]');
+        if (presEl) presEl.textContent = presTodayCount;
+      }
+    }
+
+    // 2. REPORTS SYNC - ONLY on /reports!
+    if (curPath === '/reports' || curPath.startsWith('/reports?')) {
+      if (DATA.leads && DATA.leads.length > 0) {
+        const total = DATA.leads.length;
+        const converted = DATA.leads.filter(function(l) { return l.stage === 'converted'; }).length;
+        const rate = total > 0 ? Math.round((converted / total) * 100) : 0;
+
+        const totEl = document.querySelector('[data-report-metric="total-leads"]');
+        if (totEl) totEl.textContent = total;
+
+        const convEl = document.querySelector('[data-report-metric="converted-leads"]');
+        if (convEl) convEl.textContent = converted;
+
+        const rateEl = document.querySelector('[data-report-metric="conversion-rate"]');
+        if (rateEl) rateEl.textContent = rate + '%';
+
+        // Update Funnel Breakdown
+        const stages = ['new', 'contacted', 'qualified', 'presentation', 'interested', 'negotiation', 'converted', 'lost'];
+        stages.forEach(function(s) {
+          const count = DATA.leads.filter(function(l) { return (l.stage || 'new') === s; }).length;
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          const txt = document.querySelector('[data-report-stage-text="' + s + '"]');
+          if (txt) txt.textContent = count + ' leads (' + pct + '%)';
+          const bar = document.querySelector('[data-report-stage-bar="' + s + '"]');
+          if (bar) bar.style.width = pct + '%';
+        });
+      }
+    }
+
+    // 3. LEADS SYNC - ONLY on /leads!
     if (curPath === '/leads' || curPath.startsWith('/leads?')) {
       if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
         DATA.deletedLeads.forEach(function(id) {
@@ -1017,7 +1209,7 @@ export default {
       }
     }
 
-    // 2. TEAM & USERS SYNC - ONLY on /users!
+    // 4. TEAM & USERS SYNC - ONLY on /users!
     if (curPath === '/users' || curPath.startsWith('/users?')) {
       if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
         DATA.deletedUsers.forEach(function(id) {
@@ -1039,7 +1231,7 @@ export default {
             const tr = document.createElement('tr');
             tr.setAttribute('data-user-id', user.id);
             tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
-            tr.innerHTML = '<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">' + initialLetter + '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' + user.name + '</span></div><div class="text-xs text-slate-400">' + user.email + '</div></div></div></td><td class="py-3 px-4"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-200">' + roleLabel + '</span></td><td class="py-3 px-4"><span class="text-slate-700 font-medium">' + (user.designation || 'Staff Member') + '</span></td><td class="py-3 px-4 text-xs">' + (user.phone ? ('<span>📞 ' + user.phone + '</span>') : '<span class="text-slate-400 italic">No phone set</span>') + '</td><td class="py-3 px-4 text-center"><div class="inline-flex items-center gap-2 text-xs"><span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span></div></td><td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span></td><td class="py-3 px-4 text-right space-x-2"><form action="/users/' + user.id + '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure you want to delete member?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
+            tr.innerHTML = '<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">' + initialLetter + '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' + user.name + '</span></div><div class="text-xs text-slate-400">' + user.email + '</div></div></div></td><td class="py-3 px-4"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-200">' + roleLabel + '</span></td><td class="py-3 px-4"><span class="text-slate-700 font-medium">' + (user.designation || 'Staff Member') + '</span></td><td class="py-3 px-4 text-xs">' + (user.phone ? ('<span>📞 ' + user.phone + '</span>') : '<span class="text-slate-400 italic">No phone set</span>') + '</td><td class="py-3 px-4 text-center"><div class="inline-flex items-center gap-2 text-xs"><span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span></div></td><td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span></td><td class="py-3 px-4 text-right space-x-2"><button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].editingUser = { id: ' + user.id + ', name: \'' + user.name.replace(/'/g, "\\\'") + '\', email: \'' + user.email + '\', phone: \'' + (user.phone || '') + '\', designation: \'' + (user.designation || '') + '\', role_id: \'' + (user.role_id || '') + '\', status: \'active\' }; c._x_dataStack[0].editModalOpen = true; } })() : null" class="text-orange-600 hover:text-orange-800 font-semibold text-xs px-2 py-1 rounded hover:bg-orange-50 transition-colors">Edit</button><form action="/users/' + user.id + '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure you want to delete member?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
             userTableBody.appendChild(tr);
           }
 
@@ -1054,16 +1246,30 @@ export default {
       }
     }
 
-    // 3. BINARY TREE SYNC - ONLY on /binary!
+    // 5. BINARY TREE & DIRECTORY SYNC - ONLY on /binary!
     if (curPath === '/binary' || curPath.startsWith('/binary?')) {
       if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
         DATA.deletedNodes.forEach(function(id) {
           document.querySelectorAll('[data-node-id="' + id + '"]').forEach(function(el) { el.remove(); });
         });
       }
+
+      // Sync Member Directory Table
+      const binaryTableBody = document.querySelector('tbody[data-binary-table-body]');
+      if (binaryTableBody && DATA.nodes && DATA.nodes.length > 0) {
+        DATA.nodes.forEach(function(node) {
+          if (binaryTableBody.querySelector('tr[data-node-id="' + node.id + '"]')) return;
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-node-id', node.id);
+          tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
+          const initLetter = (node.member_name || 'M').charAt(0).toUpperCase();
+          tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">' + initLetter + '</div><div><div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">' + node.member_name + '</div><div class="text-[11px] text-slate-400 font-mono">' + (node.member_code || ('SBL-' + node.id)) + '</div></div></div></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800">' + (node.parent_id ? 'Node #' + node.parent_id : 'Top Root') + '</span><span class="block text-[10px] text-slate-400 uppercase">' + (node.position || 'Root') + '</span></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800 block">' + (node.package_name || 'National 120k') + '</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700">' + (node.rank_name || 'Member') + '</span></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-emerald-700">' + (node.left_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.left_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-blue-700">' + (node.right_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.right_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center font-bold text-orange-600">' + (node.matched_pairs || 0) + '</td><td class="py-3.5 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td><td class="py-3.5 px-4 text-right"><form action="/binary/' + node.id + '" method="POST" onsubmit="return confirm(&quot;Delete member?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></td>';
+          binaryTableBody.prepend(tr);
+        });
+      }
     }
 
-    // 4. CONTACTS SYNC - ONLY on /contacts!
+    // 6. CONTACTS SYNC - ONLY on /contacts!
     if (curPath === '/contacts' || curPath.startsWith('/contacts?')) {
       if (DATA.contacts && DATA.contacts.length > 0) {
         const contactsGrid = document.querySelector('div[class*="grid-cols-1"][class*="lg:grid-cols-3"]');
@@ -1080,7 +1286,7 @@ export default {
       }
     }
 
-    // 5. PRESENTATIONS SYNC - ONLY on /presentations!
+    // 7. PRESENTATIONS SYNC - ONLY on /presentations!
     if (curPath === '/presentations' || curPath.startsWith('/presentations?')) {
       if (DATA.deletedPresentations && DATA.deletedPresentations.length > 0) {
         DATA.deletedPresentations.forEach(function(id) {
@@ -1124,7 +1330,7 @@ export default {
       }
     }
 
-    // 6. TASKS SYNC - ONLY on /tasks!
+    // 8. TASKS SYNC - ONLY on /tasks!
     if (curPath === '/tasks' || curPath.startsWith('/tasks?')) {
       if (DATA.tasks && DATA.tasks.length > 0) {
         const tasksContainer = document.querySelector('div.divide-y[class*="rounded-2xl"]');
@@ -1145,8 +1351,25 @@ export default {
         }
       }
     }
-  }
 
+    // 9. MARKETING CONTENT CALENDAR SYNC - ONLY on /marketing/content-calendar!
+    if (curPath === '/marketing/content-calendar' || curPath.startsWith('/marketing/content-calendar?')) {
+      if (DATA.contentItems && DATA.contentItems.length > 0) {
+        const calContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-3, div[class*="grid-cols-1"][class*="lg:grid-cols-3"]');
+        if (calContainer) {
+          DATA.contentItems.forEach(function(item) {
+            if (document.querySelector('[data-content-id="' + item.id + '"]')) return;
+            const cCard = document.createElement('div');
+            cCard.setAttribute('data-content-id', item.id);
+            cCard.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-300 transition-all flex flex-col justify-between';
+            const dtStr = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
+            cCard.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">' + (item.platform || 'General') + '</span><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">' + (item.status || 'Draft') + '</span></div><h4 class="font-bold text-slate-900 text-sm mb-1">' + item.title + '</h4>' + (item.copy_text ? ('<p class="text-xs text-slate-600 line-clamp-3 mb-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">' + item.copy_text + '</p>') : '') + '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400"><span>' + dtStr + '</span><form action="/marketing/content-calendar/' + item.id + '" method="POST" onsubmit="return confirm(&quot;Delete post?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-rose-600 text-xs font-semibold">Delete</button></form></div>';
+            calContainer.prepend(cCard);
+          });
+        }
+      }
+    }
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', runSync);
   } else {

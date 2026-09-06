@@ -167,7 +167,7 @@
                         <th class="py-3 px-4 text-right">অ্যাকশন</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                <tbody data-binary-table-body class="divide-y divide-slate-100 text-xs text-slate-700">
                     @forelse($members as $member)
                     <tr data-node-id="{{ $member->id }}" class="hover:bg-slate-50/60 transition-colors">
                         <!-- Member Profile -->
