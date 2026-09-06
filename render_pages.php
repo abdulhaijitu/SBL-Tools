@@ -36,6 +36,12 @@ $pages = [
     'calendar' => function() {
         return app(App\Http\Controllers\ContentCalendarController::class)->index(request())->render();
     },
+    'users' => function() {
+        return app(App\Http\Controllers\UserController::class)->index(request())->render();
+    },
+    'roles' => function() {
+        return app(App\Http\Controllers\RoleController::class)->index()->render();
+    },
 ];
 
 $rendered = [];

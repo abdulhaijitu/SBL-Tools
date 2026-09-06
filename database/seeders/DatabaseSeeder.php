@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 0. Seed Roles, Permissions, and Team Structure
+        $this->call(RoleAndPermissionSeeder::class);
+
         // 1. Create Admin User
         $admin = User::firstOrCreate(
             ['email' => 'admin@sbl.test'],
