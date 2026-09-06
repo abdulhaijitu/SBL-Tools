@@ -7,7 +7,7 @@
 <div class="space-y-6" x-data="{ actionModal: false, modalType: 'note', modalTitle: 'Add Note' }">
 
     <!-- Lead Profile Header Card (Section 6) -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 md:p-6" data-lead-id="{{ $lead->id }}">
+    <div id="lead-show-profile-card" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 md:p-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <!-- Left: Avatar & Primary Info -->
             <div class="flex items-start gap-4">

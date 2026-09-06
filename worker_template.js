@@ -1686,6 +1686,14 @@ export default {
                         `<title>${escapedName} - SBL Growth Manager</title>`,
                     )
                     .replace(
+                        /<h1 id="app-page-title"[^>]*>[\s\S]*?<\/h1>/,
+                        `<h1 id="app-page-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">${escapedName}</h1>`,
+                    )
+                    .replace(
+                        /<h1 class="text-base sm:text-lg font-bold[^"]*"[^>]*>[\s\S]*?<\/h1>/,
+                        `<h1 id="app-page-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">${escapedName}</h1>`,
+                    )
+                    .replace(
                         /<h2 id="lead-show-name"[^>]*>.*?<\/h2>/,
                         `<h2 id="lead-show-name" class="text-xl font-bold text-slate-900">${escapedName}</h2>`,
                     )
@@ -1766,19 +1774,19 @@ export default {
             if (deletedLeadIds.length > 0) {
                 syncStyles +=
                     deletedLeadIds
-                        .map((id) => '[data-lead-id="' + id + '"]')
+                        .map((id) => 'tr[data-lead-id="' + id + '"], .kanban-card[data-lead-id="' + id + '"], .divide-y > div[data-lead-id="' + id + '"]')
                         .join(", ") + " { display: none !important; }\n";
             }
             if (deletedNodeIds.length > 0) {
                 syncStyles +=
                     deletedNodeIds
-                        .map((id) => '[data-node-id="' + id + '"]')
+                        .map((id) => 'tr[data-node-id="' + id + '"], [data-node-id="' + id + '"]')
                         .join(", ") + " { display: none !important; }\n";
             }
             if (deletedUserIds.length > 0) {
                 syncStyles +=
                     deletedUserIds
-                        .map((id) => '[data-user-id="' + id + '"]')
+                        .map((id) => 'tr[data-user-id="' + id + '"], [data-user-id="' + id + '"]')
                         .join(", ") + " { display: none !important; }\n";
             }
 
@@ -2092,6 +2100,9 @@ export default {
 
         document.title = lead.name + ' - SBL Growth Manager';
 
+        const pageTitleEl = document.getElementById('app-page-title');
+        if (pageTitleEl) pageTitleEl.textContent = lead.name;
+
         const nameEl = document.getElementById('lead-show-name');
         if (nameEl) nameEl.textContent = lead.name;
 
@@ -2242,6 +2253,9 @@ export default {
       const lead = DATA.leads ? DATA.leads.find(function(l) { return Number(l.id) === editLeadId; }) : null;
       if (lead) {
         document.title = 'Edit Lead: ' + lead.name + ' - SBL Growth Manager';
+
+        const pageTitleEl = document.getElementById('app-page-title');
+        if (pageTitleEl) pageTitleEl.textContent = 'Edit Lead: ' + lead.name;
 
         const titleEl = document.getElementById('lead-edit-title') || document.querySelector('h2.text-base.font-bold');
         if (titleEl) titleEl.textContent = 'Edit Lead: ' + lead.name;

@@ -196,7 +196,7 @@
                         <img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" class="h-8 w-auto object-contain bg-slate-950 p-1 rounded-lg border border-slate-800">
                     </a>
                     <div>
-                        <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">
+                        <h1 id="app-page-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">
                             @yield('page-title', 'Dashboard')
                         </h1>
                         <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">
