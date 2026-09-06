@@ -105,7 +105,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse($users as $user)
-                <tr class="hover:bg-slate-50/60 transition-colors">
+                <tr data-user-id="{{ $user->id }}" class="hover:bg-slate-50/60 transition-colors">
                     
                     <!-- Member Info -->
                     <td class="py-3 px-4">
@@ -227,7 +227,7 @@
     <!-- Mobile Responsive Cards (md:hidden) -->
     <div class="md:hidden space-y-3">
         @forelse($users as $user)
-        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+        <div data-user-id="{{ $user->id }}" class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700">

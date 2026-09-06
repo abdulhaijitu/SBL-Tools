@@ -263,7 +263,77 @@ export default {
         }
       }
 
-      // 4c. Contacts Handlers
+      // 4c. Team & Users Handlers (POST, PUT, DELETE)
+      if (path === "/users" && effectiveMethod === "POST" && formData) {
+        if (db) {
+          try {
+            const name = formData.get("name") || "New Team Member";
+            const email = formData.get("email") || "";
+            const phone = formData.get("phone") || null;
+            const designation = formData.get("designation") || null;
+            const roleId = Number(formData.get("role_id")) || 3;
+            const status = formData.get("status") || "active";
+            const passwordHash = "$2y$12$e/e8u9R52f4q4z1V0h.qgeNq4mGkLpY4o5wOQvS5c9zQvT/zKk2yC";
+
+            const insRes = await db.prepare(
+              "INSERT INTO users (name, email, password, phone, designation, status, created_at, updated_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ).bind(name, email, passwordHash, phone, designation, status).run();
+
+            const newUserId = insRes?.meta?.last_row_id;
+            if (newUserId) {
+              await db.prepare("INSERT INTO role_user (user_id, role_id) VALUES (?, ?)").bind(newUserId, roleId).run();
+            }
+          } catch (e) {
+            console.error("D1 User create error:", e);
+          }
+        }
+        return Response.redirect(new URL("/users", request.url), 302);
+      }
+
+      if (path.startsWith("/users/")) {
+        const parts = path.split("/");
+        const userId = parseInt(parts[2], 10);
+
+        if (effectiveMethod === "DELETE" && userId) {
+          if (db) {
+            try {
+              if (userId !== 1) { // Never delete super admin
+                await db.prepare("DELETE FROM role_user WHERE user_id = ?").bind(userId).run();
+                await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+              }
+            } catch (e) {
+              console.error("D1 User delete error:", e);
+            }
+          }
+          return Response.redirect(new URL("/users?deleted_user=" + userId, request.url), 302);
+        }
+
+        if (effectiveMethod === "PUT" && userId && formData) {
+          if (db) {
+            try {
+              const name = formData.get("name");
+              const email = formData.get("email");
+              const phone = formData.get("phone") || null;
+              const designation = formData.get("designation") || null;
+              const roleId = Number(formData.get("role_id")) || 3;
+              const status = formData.get("status") || "active";
+
+              await db.prepare(
+                "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+              ).bind(name, email, phone, designation, status, userId).run();
+
+              await db.prepare("DELETE FROM role_user WHERE user_id = ?").bind(userId).run();
+              await db.prepare("INSERT INTO role_user (user_id, role_id) VALUES (?, ?)").bind(userId, roleId).run();
+            } catch (e) {
+              console.error("D1 User update error:", e);
+            }
+          }
+          return Response.redirect(new URL("/users", request.url), 302);
+        }
+      }
+
+      // 4d. Contacts Handlers
       if (path === "/contacts" && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
@@ -328,7 +398,7 @@ export default {
         }
       }
 
-      // 4d. Tasks Handlers
+      // 4e. Tasks Handlers
       if (path === "/tasks" && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
@@ -375,7 +445,7 @@ export default {
         }
       }
 
-      // 4e. Ecosystem Handlers
+      // 4f. Ecosystem Handlers
       if (path === "/ecosystem" && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
@@ -433,7 +503,7 @@ export default {
         }
       }
 
-      // 4f. Presentations Handlers
+      // 4g. Presentations Handlers
       if (path === "/presentations" && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
@@ -458,7 +528,7 @@ export default {
         return Response.redirect(new URL("/presentations", request.url), 302);
       }
 
-      // 4g. Content Calendar Handlers
+      // 4h. Content Calendar Handlers
       if (path === "/marketing/content-calendar" && effectiveMethod === "POST" && formData) {
         if (db) {
           try {
@@ -495,7 +565,28 @@ export default {
         }
       }
 
-      // Default redirect
+      // Smart Redirect based on Path
+      if (path.startsWith("/users")) {
+        return Response.redirect(new URL("/users", request.url), 302);
+      }
+      if (path.startsWith("/leads")) {
+        return Response.redirect(new URL("/leads", request.url), 302);
+      }
+      if (path.startsWith("/binary")) {
+        return Response.redirect(new URL("/binary", request.url), 302);
+      }
+      if (path.startsWith("/contacts")) {
+        return Response.redirect(new URL("/contacts", request.url), 302);
+      }
+      if (path.startsWith("/tasks")) {
+        return Response.redirect(new URL("/tasks", request.url), 302);
+      }
+      if (path.startsWith("/ecosystem")) {
+        return Response.redirect(new URL("/ecosystem", request.url), 302);
+      }
+      if (path.startsWith("/roles")) {
+        return Response.redirect(new URL("/roles", request.url), 302);
+      }
       return Response.redirect(new URL(path, request.url), 302);
     }
 
@@ -507,18 +598,21 @@ export default {
     let liveContacts = [];
     let liveTasks = [];
     let liveEcosystem = [];
+    let liveUsers = [];
+    let deletedUserIds = [];
     let sourcesMap = { 1: "Direct Inbound", 2: "Facebook Page", 3: "LinkedIn Outreach", 4: "Referral / Team", 5: "Website / Landing Page", 6: "Seminar / Workshop", 7: "Investor Network", 8: "Cold Calling" };
 
     if (db) {
       try {
-        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes] = await Promise.all([
+        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes] = await Promise.all([
           db.prepare("SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY id DESC").all(),
           db.prepare("SELECT id FROM leads WHERE deleted_at IS NOT NULL").all(),
           db.prepare("SELECT * FROM binary_nodes ORDER BY id ASC").all(),
           db.prepare("SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id DESC").all(),
           db.prepare("SELECT * FROM tasks ORDER BY id DESC").all(),
           db.prepare("SELECT * FROM ecosystem_links ORDER BY sort_order ASC, id DESC").all(),
-          db.prepare("SELECT id, name FROM lead_sources").all()
+          db.prepare("SELECT id, name FROM lead_sources").all(),
+          db.prepare("SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC").all()
         ]);
 
         if (leadsRes?.results) liveLeads = leadsRes.results;
@@ -527,6 +621,7 @@ export default {
         if (contactsRes?.results) liveContacts = contactsRes.results;
         if (tasksRes?.results) liveTasks = tasksRes.results;
         if (ecoRes?.results) liveEcosystem = ecoRes.results;
+        if (usersRes?.results) liveUsers = usersRes.results;
 
         if (sourcesRes?.results) {
           for (const s of sourcesRes.results) {
@@ -537,6 +632,10 @@ export default {
         const existingNodeIds = new Set(liveNodes.map(r => Number(r.id)));
         const allKnownNodeIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         deletedNodeIds = allKnownNodeIds.filter(id => !existingNodeIds.has(id));
+
+        const existingUserIds = new Set(liveUsers.map(r => Number(r.id)));
+        const allKnownUserIds = [1, 2, 3, 4];
+        deletedUserIds = allKnownUserIds.filter(id => !existingUserIds.has(id));
       } catch (e) {
         console.error("D1 Query error:", e);
       }
@@ -603,7 +702,7 @@ export default {
       html = PAGES.reports;
     } else if (path === "/marketing/content-calendar") {
       html = PAGES.calendar;
-    } else if (path === "/users") {
+    } else if (path === "/users" || path.startsWith("/users/")) {
       html = PAGES.users;
     } else if (path === "/roles" || path.startsWith("/roles/")) {
       html = PAGES.roles;
@@ -629,13 +728,16 @@ export default {
       if (deletedNodeIds.length > 0) {
         syncStyles += deletedNodeIds.map(id => '[data-node-id="' + id + '"]').join(', ') + ' { display: none !important; }\n';
       }
+      if (deletedUserIds.length > 0) {
+        syncStyles += deletedUserIds.map(id => '[data-user-id="' + id + '"]').join(', ') + ' { display: none !important; }\n';
+      }
 
       responseHtml = responseHtml.replace("</head>", () => 
         "<style id=\"sbl-edge-styles\">\n" + CSS_CONTENT + "\n" + syncStyles + "</style>\n</head>"
       );
     }
 
-    // 8. Inject Live Dynamic Edge Synchronization Script
+    // 8. Inject Live Dynamic Edge Synchronization Script (STRICT PATH ISOLATION)
     if (responseHtml && responseHtml.includes("</body>")) {
       const syncDataPayload = {
         leads: liveLeads,
@@ -645,6 +747,8 @@ export default {
         contacts: liveContacts,
         tasks: liveTasks,
         ecosystem: liveEcosystem,
+        users: liveUsers,
+        deletedUsers: deletedUserIds,
         sources: sourcesMap
       };
 
@@ -654,220 +758,341 @@ export default {
   const DATA = ${JSON.stringify(syncDataPayload)};
   
   function runSync() {
-    // 1. Leads DOM Sync
-    if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
-      DATA.deletedLeads.forEach(function(id) {
-        document.querySelectorAll('[data-lead-id="' + id + '"]').forEach(function(el) { el.remove(); });
-      });
-    }
+    const curPath = window.location.pathname;
 
-    if (DATA.leads && DATA.leads.length > 0) {
-      const tableBody = document.querySelector('tbody.divide-y');
-      const mobileStack = document.querySelector('.block.md\\\\:hidden.divide-y, div.divide-y.block.md\\\\:hidden');
+    // ==========================================
+    // 1. LEADS SYNC - ONLY on /leads!
+    // ==========================================
+    if (curPath === '/leads' || curPath.startsWith('/leads?')) {
+      if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
+        DATA.deletedLeads.forEach(function(id) {
+          document.querySelectorAll('[data-lead-id="' + id + '"]').forEach(function(el) { el.remove(); });
+        });
+      }
 
-      // Sort newest first
-      DATA.leads.slice().reverse().forEach(function(lead) {
-        // If already rendered in DOM, update stage/status if needed
-        const existingRow = document.querySelector('tr[data-lead-id="' + lead.id + '"]');
-        if (existingRow) return;
+      if (DATA.leads && DATA.leads.length > 0) {
+        const tableBody = document.querySelector('tbody.divide-y');
+        const mobileStack = document.querySelector('.block.md\\\\:hidden.divide-y, div.divide-y.block.md\\\\:hidden');
 
-        // Otherwise, this is a newly created lead in D1 - inject it!
-        let interests = [];
-        try {
-          interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
-        } catch(e) {}
+        DATA.leads.slice().reverse().forEach(function(lead) {
+          const existingRow = document.querySelector('tr[data-lead-id="' + lead.id + '"]');
+          if (existingRow) return;
 
-        const sourceName = DATA.sources[lead.lead_source_id] || 'Direct';
-        const initialLetter = (lead.name || 'L').charAt(0).toUpperCase();
-        const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
-        const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
+          let interests = [];
+          try {
+            interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
+          } catch(e) {}
 
-        // Desktop Table Row
-        if (tableBody) {
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-lead-id', lead.id);
-          tr.className = 'hover:bg-slate-50/70 transition-colors bg-orange-50/20';
-          tr.innerHTML = \`
-            <td class="py-3.5 px-4">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                  \${initialLetter}
-                </div>
-                <div>
-                  <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                    \${lead.name}
-                  </a>
-                  <div class="text-[11px] text-slate-400">
-                    \${lead.location || 'No location'} \${lead.profession_or_business ? '• ' + lead.profession_or_business : ''}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td class="py-3.5 px-4">
-              <div class="font-medium text-slate-800">\${lead.mobile}</div>
-              <div class="flex items-center gap-2 mt-1">
-                <a href="tel:\${lead.mobile}" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a>
-                <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a>
-              </div>
-            </td>
-            <td class="py-3.5 px-4">
-              <span class="font-medium text-slate-800 block">\${sourceName}</span>
-              <div class="flex flex-wrap gap-1 mt-1">
-                \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
-              </div>
-            </td>
-            <td class="py-3.5 px-4">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                \${stageLabel}
-              </span>
-            </td>
-            <td class="py-3.5 px-4">
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-xs text-orange-600">\${lead.score || 25}</span>
-                <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">\${lead.temperature || 'warm'}</span>
-              </div>
-            </td>
-            <td class="py-3.5 px-4">
-              \${lead.next_action_at ? '<div class="text-xs font-medium text-slate-700">' + (lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + lead.next_action_at + '</span></div>' : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>'}
-            </td>
-            <td class="py-3.5 px-4 text-right">
-              <div class="flex items-center justify-end gap-1.5">
-                <a href="/leads/\${lead.id}" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a>
-                <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a>
-                <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
-                  <input type="hidden" name="_method" value="DELETE">
-                  <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button>
-                </form>
-              </div>
-            </td>
-          \`;
-          tableBody.prepend(tr);
-        }
+          const sourceName = DATA.sources[lead.lead_source_id] || 'Direct';
+          const initialLetter = (lead.name || 'L').charAt(0).toUpperCase();
+          const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
+          const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
 
-        // Mobile Card Stack
-        if (mobileStack) {
-          const card = document.createElement('div');
-          card.setAttribute('data-lead-id', lead.id);
-          card.className = 'p-4 space-y-3 hover:bg-slate-50/50 transition-colors bg-orange-50/20';
-          card.innerHTML = \`
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
-                  \${initialLetter}
-                </div>
-                <div>
-                  <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                    \${lead.name}
-                  </a>
-                  <div class="text-xs text-slate-500">\${lead.mobile}</div>
-                </div>
-              </div>
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                \${stageLabel}
-              </span>
-            </div>
-            <div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1">
-              <span>\${sourceName}</span>
-              \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
-            </div>
-            <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-              <div class="flex items-center gap-2">
-                <a href="tel:\${lead.mobile}" class="text-emerald-600 font-semibold">📞 Call</a>
-                <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <a href="/leads/\${lead.id}" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a>
-                <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a>
-                <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
-                  <input type="hidden" name="_method" value="DELETE">
-                  <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button>
-                </form>
-              </div>
-            </div>
-          \`;
-          mobileStack.prepend(card);
-        }
-
-        // Kanban Board Card
-        const kanbanCol = document.querySelector('.kanban-cards-container[data-stage="' + (lead.stage || 'new') + '"]');
-        if (kanbanCol && !document.querySelector('.kanban-card[data-lead-id="' + lead.id + '"]')) {
-          const kCard = document.createElement('div');
-          kCard.setAttribute('data-lead-id', lead.id);
-          kCard.className = 'bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing kanban-card bg-orange-50/20';
-          kCard.innerHTML = \`
-            <div class="flex items-start justify-between gap-2">
-              <a href="/leads/\${lead.id}" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">
-                \${lead.name}
-              </a>
-              <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">
-                \${lead.temperature || 'warm'}
-              </span>
-            </div>
-            <div class="text-xs text-slate-600 mt-1 flex items-center justify-between">
-              <span>\${lead.mobile}</span>
-              <span class="text-[11px] text-slate-400">\${sourceName}</span>
-            </div>
-            <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-              <span class="font-bold text-orange-600">\${lead.score || 25} pts</span>
-              <div class="flex items-center gap-1">
-                <a href="/leads/\${lead.id}" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a>
-                <a href="/leads/\${lead.id}/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a>
-              </div>
-            </div>
-          \`;
-          kanbanCol.prepend(kCard);
-        }
-      });
-    }
-
-    // 2. Binary Tree DOM Sync
-    if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
-      DATA.deletedNodes.forEach(function(id) {
-        document.querySelectorAll('[data-node-id="' + id + '"]').forEach(function(el) { el.remove(); });
-      });
-    }
-
-    // 3. Contacts DOM Sync
-    if (DATA.contacts && DATA.contacts.length > 0) {
-      const contactsGrid = document.querySelector('.grid.grid-cols-1.md\\\\:grid-cols-2.lg\\\\:grid-cols-3');
-      if (contactsGrid) {
-        DATA.contacts.forEach(function(contact) {
-          if (document.querySelector('[data-contact-id="' + contact.id + '"]')) return;
-          const card = document.createElement('div');
-          card.setAttribute('data-contact-id', contact.id);
-          card.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-emerald-300 transition-all group';
-          card.innerHTML = \`
-            <div class="space-y-4">
-              <div class="flex items-start justify-between gap-3">
+          // Desktop Table Row
+          if (tableBody) {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-lead-id', lead.id);
+            tr.className = 'hover:bg-slate-50/70 transition-colors bg-orange-50/20';
+            tr.innerHTML = \`
+              <td class="py-3.5 px-4">
                 <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-2xl flex-shrink-0">
-                    \${contact.icon || '📞'}
+                  <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
+                    \${initialLetter}
                   </div>
                   <div>
-                    <h3 class="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">\${contact.department}</h3>
-                    \${contact.contact_person ? '<div class="text-xs font-medium text-slate-500 mt-0.5">' + contact.contact_person + '</div>' : ''}
+                    <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
+                      \${lead.name}
+                    </a>
+                    <div class="text-[11px] text-slate-400">
+                      \${lead.location || 'No location'} \${lead.profession_or_business ? '• ' + lead.profession_or_business : ''}
+                    </div>
                   </div>
                 </div>
-                \${contact.badge ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">' + contact.badge + '</span>' : ''}
-              </div>
-              <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
-                <div class="flex items-center justify-between">
-                  <span class="text-slate-500 font-medium">ফোন:</span>
-                  <span class="font-bold text-slate-900">\${contact.phone}</span>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-medium text-slate-800">\${lead.mobile}</div>
+                <div class="flex items-center gap-2 mt-1">
+                  <a href="tel:\${lead.mobile}" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a>
+                  <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a>
                 </div>
-                \${contact.whatsapp ? '<div class="flex items-center justify-between pt-1.5 border-t border-slate-200/60"><span class="text-emerald-600 font-bold">WhatsApp:</span><span class="font-bold text-slate-900">' + contact.whatsapp + '</span></div>' : ''}
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="font-medium text-slate-800 block">\${sourceName}</span>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
+                </div>
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+                  \${stageLabel}
+                </span>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-xs text-orange-600">\${lead.score || 25}</span>
+                  <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">\${lead.temperature || 'warm'}</span>
+                </div>
+              </td>
+              <td class="py-3.5 px-4">
+                \${lead.next_action_at ? '<div class="text-xs font-medium text-slate-700">' + (lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + lead.next_action_at + '</span></div>' : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>'}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  <a href="/leads/\${lead.id}" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a>
+                  <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a>
+                  <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button>
+                  </form>
+                </div>
+              </td>
+            \`;
+            tableBody.prepend(tr);
+          }
+
+          // Mobile Card Stack
+          if (mobileStack) {
+            const card = document.createElement('div');
+            card.setAttribute('data-lead-id', lead.id);
+            card.className = 'p-4 space-y-3 hover:bg-slate-50/50 transition-colors bg-orange-50/20';
+            card.innerHTML = \`
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
+                    \${initialLetter}
+                  </div>
+                  <div>
+                    <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
+                      \${lead.name}
+                    </a>
+                    <div class="text-xs text-slate-500">\${lead.mobile}</div>
+                  </div>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+                  \${stageLabel}
+                </span>
               </div>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <a href="tel:\${contact.phone}" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700">📞 Call</a>
-              <form action="/contacts/\${contact.id}" method="POST" onsubmit="return confirm('ডিলিট করতে চান?');" class="inline">
-                <input type="hidden" name="_method" value="DELETE">
-                <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button>
-              </form>
-            </div>
-          \`;
-          contactsGrid.prepend(card);
+              <div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1">
+                <span>\${sourceName}</span>
+                \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
+              </div>
+              <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                <div class="flex items-center gap-2">
+                  <a href="tel:\${lead.mobile}" class="text-emerald-600 font-semibold">📞 Call</a>
+                  <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <a href="/leads/\${lead.id}" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a>
+                  <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a>
+                  <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button>
+                  </form>
+                </div>
+              </div>
+            \`;
+            mobileStack.prepend(card);
+          }
+
+          // Kanban Board Card
+          const kanbanCol = document.querySelector('.kanban-cards-container[data-stage="' + (lead.stage || 'new') + '"]');
+          if (kanbanCol && !document.querySelector('.kanban-card[data-lead-id="' + lead.id + '"]')) {
+            const kCard = document.createElement('div');
+            kCard.setAttribute('data-lead-id', lead.id);
+            kCard.className = 'bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing kanban-card bg-orange-50/20';
+            kCard.innerHTML = \`
+              <div class="flex items-start justify-between gap-2">
+                <a href="/leads/\${lead.id}" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">
+                  \${lead.name}
+                </a>
+                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">
+                  \${lead.temperature || 'warm'}
+                </span>
+              </div>
+              <div class="text-xs text-slate-600 mt-1 flex items-center justify-between">
+                <span>\${lead.mobile}</span>
+                <span class="text-[11px] text-slate-400">\${sourceName}</span>
+              </div>
+              <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="font-bold text-orange-600">\${lead.score || 25} pts</span>
+                <div class="flex items-center gap-1">
+                  <a href="/leads/\${lead.id}" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a>
+                  <a href="/leads/\${lead.id}/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a>
+                </div>
+              </div>
+            \`;
+            kanbanCol.prepend(kCard);
+          }
         });
+      }
+    }
+
+    // ==========================================
+    // 2. TEAM & USERS SYNC - ONLY on /users!
+    // ==========================================
+    if (curPath === '/users' || curPath.startsWith('/users?')) {
+      if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
+        DATA.deletedUsers.forEach(function(id) {
+          document.querySelectorAll('[data-user-id="' + id + '"]').forEach(function(el) { el.remove(); });
+        });
+      }
+
+      if (DATA.users && DATA.users.length > 0) {
+        const userTableBody = document.querySelector('tbody.divide-y');
+        const userMobileContainer = document.querySelector('.md\\\\:hidden.space-y-3, div.space-y-3.md\\\\:hidden');
+
+        DATA.users.forEach(function(user) {
+          if (document.querySelector('[data-user-id="' + user.id + '"]')) return;
+
+          const initialLetter = (user.name || 'U').charAt(0).toUpperCase();
+          const roleLabel = user.role_name || 'Staff Member';
+
+          if (userTableBody) {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-user-id', user.id);
+            tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
+            tr.innerHTML = \`
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">
+                    \${initialLetter}
+                  </div>
+                  <div>
+                    <div class="font-semibold text-slate-900 flex items-center gap-2">
+                      <span>\${user.name}</span>
+                    </div>
+                    <div class="text-xs text-slate-400">\${user.email}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-200">
+                  \${roleLabel}
+                </span>
+              </td>
+              <td class="py-3 px-4">
+                <span class="text-slate-700 font-medium">\${user.designation || 'Staff Member'}</span>
+              </td>
+              <td class="py-3 px-4 text-xs">
+                \${user.phone ? '<span>📞 ' + user.phone + '</span>' : '<span class="text-slate-400 italic">No phone set</span>'}
+              </td>
+              <td class="py-3 px-4 text-center">
+                <div class="inline-flex items-center gap-2 text-xs">
+                  <span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span>
+                  <span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span>
+                </div>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Active
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right space-x-2">
+                <form action="/users/\${user.id}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete member \${user.name}?');">
+                  <input type="hidden" name="_method" value="DELETE">
+                  <button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            \`;
+            userTableBody.appendChild(tr);
+          }
+
+          if (userMobileContainer) {
+            const mCard = document.createElement('div');
+            mCard.setAttribute('data-user-id', user.id);
+            mCard.className = 'bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3 bg-orange-50/20';
+            mCard.innerHTML = \`
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700">
+                    \${initialLetter}
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                      <span>\${user.name}</span>
+                    </div>
+                    <div class="text-xs text-slate-500">\${user.designation || 'Staff Member'}</div>
+                    <div class="text-[11px] text-slate-400">\${user.email}</div>
+                  </div>
+                </div>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-800">
+                  \${roleLabel}
+                </span>
+              </div>
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                <div>\${user.phone ? '📞 ' + user.phone : 'Active'}</div>
+                <div>
+                  <form action="/users/\${user.id}" method="POST" onsubmit="return confirm('Delete?');" class="inline">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="text-rose-600 font-semibold text-xs">Delete</button>
+                  </form>
+                </div>
+              </div>
+            \`;
+            userMobileContainer.appendChild(mCard);
+          }
+        });
+      }
+    }
+
+    // ==========================================
+    // 3. BINARY TREE SYNC - ONLY on /binary!
+    // ==========================================
+    if (curPath === '/binary' || curPath.startsWith('/binary?')) {
+      if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
+        DATA.deletedNodes.forEach(function(id) {
+          document.querySelectorAll('[data-node-id="' + id + '"]').forEach(function(el) { el.remove(); });
+        });
+      }
+    }
+
+    // ==========================================
+    // 4. CONTACTS SYNC - ONLY on /contacts!
+    // ==========================================
+    if (curPath === '/contacts' || curPath.startsWith('/contacts?')) {
+      if (DATA.contacts && DATA.contacts.length > 0) {
+        const contactsGrid = document.querySelector('.grid.grid-cols-1.md\\\\:grid-cols-2.lg\\\\:grid-cols-3');
+        if (contactsGrid) {
+          DATA.contacts.forEach(function(contact) {
+            if (document.querySelector('[data-contact-id="' + contact.id + '"]')) return;
+            const card = document.createElement('div');
+            card.setAttribute('data-contact-id', contact.id);
+            card.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-emerald-300 transition-all group';
+            card.innerHTML = \`
+              <div class="space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-2xl flex-shrink-0">
+                      \${contact.icon || '📞'}
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">\${contact.department}</h3>
+                      \${contact.contact_person ? '<div class="text-xs font-medium text-slate-500 mt-0.5">' + contact.contact_person + '</div>' : ''}
+                    </div>
+                  </div>
+                  \${contact.badge ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">' + contact.badge + '</span>' : ''}
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-500 font-medium">ফোন:</span>
+                    <span class="font-bold text-slate-900">\${contact.phone}</span>
+                  </div>
+                  \${contact.whatsapp ? '<div class="flex items-center justify-between pt-1.5 border-t border-slate-200/60"><span class="text-emerald-600 font-bold">WhatsApp:</span><span class="font-bold text-slate-900">' + contact.whatsapp + '</span></div>' : ''}
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <a href="tel:\${contact.phone}" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700">📞 Call</a>
+                <form action="/contacts/\${contact.id}" method="POST" onsubmit="return confirm('ডিলিট করতে চান?');" class="inline">
+                  <input type="hidden" name="_method" value="DELETE">
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button>
+                </form>
+              </div>
+            \`;
+            contactsGrid.prepend(card);
+          });
+        }
       }
     }
   }
