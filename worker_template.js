@@ -1774,19 +1774,42 @@ export default {
             if (deletedLeadIds.length > 0) {
                 syncStyles +=
                     deletedLeadIds
-                        .map((id) => 'tr[data-lead-id="' + id + '"], .kanban-card[data-lead-id="' + id + '"], .divide-y > div[data-lead-id="' + id + '"]')
+                        .map(
+                            (id) =>
+                                'tr[data-lead-id="' +
+                                id +
+                                '"], .kanban-card[data-lead-id="' +
+                                id +
+                                '"], .divide-y > div[data-lead-id="' +
+                                id +
+                                '"]',
+                        )
                         .join(", ") + " { display: none !important; }\n";
             }
             if (deletedNodeIds.length > 0) {
                 syncStyles +=
                     deletedNodeIds
-                        .map((id) => 'tr[data-node-id="' + id + '"], [data-node-id="' + id + '"]')
+                        .map(
+                            (id) =>
+                                'tr[data-node-id="' +
+                                id +
+                                '"], [data-node-id="' +
+                                id +
+                                '"]',
+                        )
                         .join(", ") + " { display: none !important; }\n";
             }
             if (deletedUserIds.length > 0) {
                 syncStyles +=
                     deletedUserIds
-                        .map((id) => 'tr[data-user-id="' + id + '"], [data-user-id="' + id + '"]')
+                        .map(
+                            (id) =>
+                                'tr[data-user-id="' +
+                                id +
+                                '"], [data-user-id="' +
+                                id +
+                                '"]',
+                        )
                         .join(", ") + " { display: none !important; }\n";
             }
 
