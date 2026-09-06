@@ -337,21 +337,62 @@ class BinaryTreeService
         $rootStats = $this->calculateDynamicStats($root);
         $breadcrumbs = $this->getBreadcrumbs($root, $mainRoot);
 
-        $allNodeIds = [];
-        $hierarchyTree = $this->buildTenSlotHierarchyTree($root, $allNodeIds, 1, $maxDepth);
+        // Build direct 5 LEFT slots (strictly non-recursive for Team Explorer)
+        $directLeftChildren = $this->getDirectChildrenByBranch($root, 'LEFT');
+        $leftSlots = [];
+        for ($slot = 1; $slot <= 5; $slot++) {
+            if (isset($directLeftChildren[$slot])) {
+                $childNode = $directLeftChildren[$slot];
+                $childStats = $this->calculateDynamicStats($childNode);
+                $leftSlots[$slot] = $this->formatNodeForView($childNode, $childStats);
+                $leftSlots[$slot]['depth'] = 2;
+                $leftSlots[$slot]['generation'] = 1;
+                $leftSlots[$slot]['generation_label'] = 'GEN 1';
+            } else {
+                $leftSlots[$slot] = $this->formatVacantSlot($root->id, 'LEFT', $slot, 2);
+            }
+        }
+
+        // Build direct 5 RIGHT slots (strictly non-recursive for Team Explorer)
+        $directRightChildren = $this->getDirectChildrenByBranch($root, 'RIGHT');
+        $rightSlots = [];
+        for ($slot = 1; $slot <= 5; $slot++) {
+            if (isset($directRightChildren[$slot])) {
+                $childNode = $directRightChildren[$slot];
+                $childStats = $this->calculateDynamicStats($childNode);
+                $rightSlots[$slot] = $this->formatNodeForView($childNode, $childStats);
+                $rightSlots[$slot]['depth'] = 2;
+                $rightSlots[$slot]['generation'] = 1;
+                $rightSlots[$slot]['generation_label'] = 'GEN 1';
+            } else {
+                $rightSlots[$slot] = $this->formatVacantSlot($root->id, 'RIGHT', $slot, 2);
+            }
+        }
+
+        $formattedRoot = $this->formatNodeForView($root, $rootStats);
+        $formattedRoot['left_slots'] = $leftSlots;
+        $formattedRoot['right_slots'] = $rightSlots;
+
+        $parentNode = $root->parent_id ? BinaryNode::find($root->parent_id) : null;
 
         return [
             'root' => $root,
+            'current_member' => $formattedRoot,
             'main_root' => $mainRoot,
+            'parent_node' => $parentNode,
+            'is_main_root' => ($mainRoot && (int)$root->id === (int)$mainRoot->id),
             'breadcrumbs' => $breadcrumbs,
-            'tree' => $hierarchyTree,
-            'all_node_ids' => $allNodeIds,
+            'left_slots' => $leftSlots,
+            'right_slots' => $rightSlots,
+            'tree' => $formattedRoot,
+            'all_node_ids' => [$root->id],
             'stats' => [
                 'root_name' => $root->member_name,
                 'root_code' => $root->member_code ?: ('SBL-' . $root->id),
                 'sponsor_name' => $root->sponsor_name ?: ($root->sponsor?->member_name ?? ($root->parent_id === null ? 'Md. Samim' : 'Md. Abdul Hai')),
                 'direct_left_count' => $rootStats['direct_left_count'],
                 'direct_right_count' => $rootStats['direct_right_count'],
+                'direct_total_count' => $rootStats['direct_left_count'] + $rootStats['direct_right_count'],
                 'direct_left_display' => $rootStats['direct_left_display'],
                 'direct_right_display' => $rootStats['direct_right_display'],
                 'total_members' => $rootStats['total_team_members'],

@@ -19,9 +19,9 @@ class BinaryTeamController extends Controller
     }
 
     /**
-     * Display visual 10-slot (5L + 5R) team genealogy tree & member directory.
+     * Display visual 10-slot (5L + 5R) Team Explorer & member directory.
      */
-    public function index(Request $request): View
+    public function index(Request $request, $memberId = null): View
     {
         $currentUser = auth()->user();
         $isSuperAdmin = $currentUser ? ($currentUser->is_super_admin ?? ($currentUser->role === 'superadmin' || $currentUser->id === 1)) : true;
@@ -40,7 +40,7 @@ class BinaryTeamController extends Controller
         }
 
         $viewMode = $request->query('view', 'tree');
-        $nodeId = $request->query('node_id');
+        $nodeId = $memberId ?: ($request->query('node_id') ?: $request->query('member_id'));
         $treeData = $this->treeService->getVisualTree($nodeId ? (int)$nodeId : null, $ownerId, 2);
 
         $packages = [
@@ -56,7 +56,7 @@ class BinaryTeamController extends Controller
         $allNodes = $nodesQuery->get(['id', 'member_name', 'member_code', 'rank_name', 'branch', 'slot_number']);
         $users = User::orderBy('name')->get(['id', 'name', 'email', 'phone']);
 
-        $tableQuery = BinaryNode::with(['parent', 'user', 'children'])->orderBy('id');
+        $tableQuery = BinaryNode::with(['parent', 'user', 'children', 'investments'])->orderBy('id');
         if ($ownerId) {
             $tableQuery->where('tree_owner_id', $ownerId);
         }
@@ -72,6 +72,14 @@ class BinaryTeamController extends Controller
         $members = $tableQuery->paginate(15)->withQueryString();
 
         return view('binary.index', compact('treeData', 'packages', 'allNodes', 'users', 'viewMode', 'members', 'ownerId', 'isSuperAdmin'));
+    }
+
+    /**
+     * Show Team Explorer for a specific member ID.
+     */
+    public function show(Request $request, $memberId): View
+    {
+        return $this->index($request, (int)$memberId);
     }
 
     /**
@@ -91,7 +99,6 @@ class BinaryTeamController extends Controller
             $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
         }
 
-        // Support position or branch
         $branch = $request->input('branch') ?: $request->input('position');
         $branch = strtoupper((string)$branch);
         $request->merge(['branch' => $branch]);
@@ -131,7 +138,7 @@ class BinaryTeamController extends Controller
                 ? "পরিকল্পিত টার্গেট মেম্বার '{$node->member_name}' সফলভাবে {$parent->member_name}-এর {$slotText}-এ সংরক্ষিত হয়েছে।"
                 : "মেম্বার '{$node->member_name}' ({$node->member_code}) সফলভাবে {$parent->member_name}-এর {$slotText}-এ যুক্ত করা হয়েছে।";
 
-            return redirect()->route('binary.index', ['node_id' => $parent->id])
+            return redirect()->route('team.show', ['memberId' => $parent->id])
                 ->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
@@ -218,7 +225,7 @@ class BinaryTeamController extends Controller
 
             $this->treeService->deleteNode($node, $cascade);
 
-            $targetUrl = $parentId ? route('binary.index', ['node_id' => $parentId]) : route('binary.index');
+            $targetUrl = $parentId ? route('team.show', ['memberId' => $parentId]) : route('team.index');
 
             return redirect($targetUrl)
                 ->with('success', "মেম্বার '{$name}' ({$code}) সফলভাবে টিম থেকে রিমুভ করা হয়েছে।");
@@ -228,24 +235,39 @@ class BinaryTeamController extends Controller
     }
 
     /**
-     * Search member by name, code, or phone.
+     * Search member by name, code, phone, or username to open in Team Explorer.
      */
     public function search(Request $request): RedirectResponse
     {
-        $query = $request->input('search');
+        $query = trim((string)$request->input('search'));
         if (! $query) {
-            return redirect()->route('binary.index');
+            return redirect()->route('team.index');
         }
 
+        $cleanQuery = ltrim($query, '@');
+
         $node = BinaryNode::where('member_code', 'like', "%{$query}%")
+            ->orWhere('member_code', 'like', "%{$cleanQuery}%")
             ->orWhere('member_name', 'like', "%{$query}%")
             ->orWhere('phone', 'like', "%{$query}%")
             ->first();
 
         if ($node) {
-            return redirect()->route('binary.index', ['node_id' => $node->id]);
+            return redirect()->route('team.show', ['memberId' => $node->id]);
         }
 
         return redirect()->back()->with('error', "'{$query}' দিয়ে কোনো টিম মেম্বার খুঁজে পাওয়া যায়নি।");
+    }
+
+    /**
+     * Navigate extreme direction (left or right).
+     */
+    public function extreme(Request $request, BinaryNode $node, string $direction): RedirectResponse
+    {
+        $target = $direction === 'left'
+            ? $this->treeService->getExtremeLeft($node)
+            : $this->treeService->getExtremeRight($node);
+
+        return redirect()->route('team.show', ['memberId' => $target->id]);
     }
 }

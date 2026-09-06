@@ -1,13 +1,16 @@
 @extends('layouts.app')
 
-@section('page-title', '10-Slot Team Placement Engine')
-@section('page-subtitle', 'Hierarchical 5 Left + 5 Right Direct Placement Tree & Strategic Target Planning')
+@section('page-title', 'Team Explorer')
+@section('page-subtitle', 'Hierarchical 5 Left + 5 Right Direct Placement Dashboard & Team Management')
 
 @section('content')
 <div class="space-y-6" x-data="{
     viewMode: '{{ $viewMode }}',
+    detailsModalOpen: false,
     placementModalOpen: false,
     editModalOpen: false,
+    activeDetailsTab: 'overview', // 'overview', 'investments', 'direct'
+    detailsNode: {},
     editNode: {
         id: null,
         member_name: '',
@@ -36,105 +39,12 @@
     selectedBranch: 'LEFT',
     selectedSlotNumber: 1,
     isTargetMember: false,
-    memberMode: 'new',
-    selectedUserId: '',
-    expandedNodeIds: {{ json_encode($treeData['all_node_ids'] ?? []) }},
-    zoomLevel: 1.0,
-    panX: 0,
-    panY: 0,
-    isPanning: false,
-    panStartX: 0,
-    panStartY: 0,
-    hasDragged: false,
-    init() {
-        this.$nextTick(() => {
-            this.fitToScreen();
-        });
-    },
-    startPan(e) {
-        if (e.button !== 0) return;
-        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
-        if (['input', 'select', 'textarea', 'button', 'a'].includes(tag) || e.target.closest('button, a, input, select, textarea, [data-prevent-drag]')) {
-            return;
-        }
-        this.isPanning = true;
-        this.hasDragged = false;
-        this.panStartX = e.clientX - this.panX;
-        this.panStartY = e.clientY - this.panY;
-    },
-    onPan(e) {
-        if (!this.isPanning) return;
-        const newX = e.clientX - this.panStartX;
-        const newY = e.clientY - this.panStartY;
-        if (Math.abs(newX - this.panX) > 2 || Math.abs(newY - this.panY) > 2) {
-            this.hasDragged = true;
-        }
-        this.panX = newX;
-        this.panY = newY;
-    },
-    endPan() {
-        this.isPanning = false;
-    },
-    fitToScreen() {
-        const container = document.querySelector('#tree-viewport-container');
-        const content = document.querySelector('#tree-content-root');
-        if (container && content) {
-            const containerWidth = container.clientWidth;
-            const contentWidth = content.scrollWidth || content.clientWidth;
-            if (contentWidth > 0 && containerWidth > 0 && contentWidth > containerWidth) {
-                const ratio = (containerWidth - 48) / contentWidth;
-                this.zoomLevel = Math.max(0.40, Math.min(1.0, Math.round(ratio * 100) / 100));
-            } else {
-                this.zoomLevel = 1.0;
-            }
-        } else {
-            this.zoomLevel = 0.9;
-        }
-        this.panX = 0;
-        this.panY = 10;
-    },
-    centerRoot() {
-        this.zoomLevel = 1.0;
-        this.panX = 0;
-        this.panY = 10;
-    },
-    resetView() {
-        this.zoomLevel = 1.0;
-        this.panX = 0;
-        this.panY = 0;
-    },
-    zoomIn() {
-        this.zoomLevel = Math.min(1.8, Math.round((this.zoomLevel + 0.15) * 100) / 100);
-    },
-    zoomOut() {
-        this.zoomLevel = Math.max(0.30, Math.round((this.zoomLevel - 0.15) * 100) / 100);
-    },
-    handleWheel(e) {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            if (e.deltaY < 0) {
-                this.zoomIn();
-            } else {
-                this.zoomOut();
-            }
-        }
-    },
-    isExpanded(id) {
-        return this.expandedNodeIds.includes(Number(id));
-    },
-    toggleExpanded(id) {
-        id = Number(id);
-        if (this.expandedNodeIds.includes(id)) {
-            this.expandedNodeIds = this.expandedNodeIds.filter(i => i !== id);
-        } else {
-            this.expandedNodeIds.push(id);
-        }
-    },
-    expandAll() {
-        this.expandedNodeIds = {{ json_encode($treeData['all_node_ids'] ?? []) }};
-    },
-    collapseAll() {
-        this.expandedNodeIds = [{{ $treeData['root'] ? $treeData['root']->id : 0 }}];
+    showDetailsPass: false,
+    openDetailsModal(node) {
+        this.detailsNode = node || {};
+        this.showDetailsPass = false;
+        this.activeDetailsTab = 'overview';
+        this.detailsModalOpen = true;
     },
     openPlacementModal(parentId, parentName, parentCode, branch, slotNumber) {
         this.selectedParentId = parentId;
@@ -211,181 +121,135 @@
 }">
 
     @if(session('success'))
-    <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm font-semibold flex items-center justify-between shadow-xs">
+    <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm font-semibold flex items-center justify-between shadow-xs">
         <div class="flex items-center gap-2">
             <span>✅</span>
             <span>{{ session('success') }}</span>
         </div>
-        <button @click="$el.parentElement.remove()" class="text-emerald-700 hover:text-emerald-900 font-bold">&times;</button>
+        <button @click="$el.parentElement.remove()" class="text-emerald-700 hover:text-emerald-900 font-bold cursor-pointer">&times;</button>
     </div>
     @endif
 
     @if(session('error'))
-    <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-sm font-semibold flex items-center justify-between shadow-xs">
+    <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-sm font-semibold flex items-center justify-between shadow-xs">
         <div class="flex items-center gap-2">
             <span>⚠️</span>
             <span>{{ session('error') }}</span>
         </div>
-        <button @click="$el.parentElement.remove()" class="text-rose-700 hover:text-rose-900 font-bold">&times;</button>
+        <button @click="$el.parentElement.remove()" class="text-rose-700 hover:text-rose-900 font-bold cursor-pointer">&times;</button>
     </div>
     @endif
 
-    <!-- ==================== 1. TEAM PAGE HEADER & SUMMARY BAR ==================== -->
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-5 md:p-6 border border-slate-800 text-white shadow-xl space-y-4">
-        <!-- Top Row: Title, Root, Sponsor & Workspace Switcher -->
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-            <div class="space-y-1.5">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-orange-400 font-black text-sm uppercase tracking-wider flex items-center gap-1.5">
-                        <span>🌲</span> 5 Left + 5 Right Team Tree (১০ স্লট)
-                    </span>
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                        Rank: {{ $treeData['stats']['rank_name'] ?? 'Member' }}
-                    </span>
-                    @if(!empty($treeData['stats']['is_fme']))
-                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                        ★ FME Qualified (5L + 5R)
-                    </span>
-                    @endif
-                </div>
-
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-slate-400 text-xs font-medium">Root:</span>
-                        <strong class="text-white text-base font-bold">{{ $treeData['stats']['root_name'] ?? 'Md. Abdul Hai' }}</strong>
-                        <span class="text-xs text-slate-400 font-mono">({{ $treeData['stats']['root_code'] ?? 'SBL-1001' }})</span>
-                    </div>
-                    <span class="text-slate-600 hidden sm:inline">•</span>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-slate-400 text-xs font-medium">Sponsor:</span>
-                        <span class="text-orange-300 font-bold text-xs">{{ $treeData['stats']['sponsor_name'] ?? 'Md. Samim' }}</span>
-                    </div>
-                </div>
+    <!-- ==================== 1. TOP NAVIGATION & CONTROLS TOOLBAR ==================== -->
+    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-4 md:p-5 border border-slate-800 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        
+        <!-- Left Title & Navigation Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex items-center gap-2 pr-2 border-r border-slate-800">
+                <span class="text-base font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>👥</span> Team Explorer
+                </span>
             </div>
 
-            <!-- Workspace Switcher & View Mode -->
-            <div class="flex flex-wrap items-center gap-2.5">
-                <!-- Super Admin User Workspace Switcher -->
-                @if(!empty($isSuperAdmin) && count($users) > 0)
-                <div class="relative">
-                    <form action="{{ route('binary.index') }}" method="GET" class="flex items-center gap-1.5 bg-slate-800/90 rounded-xl px-2.5 py-1 border border-slate-700">
-                        <span class="text-[11px] text-slate-400 font-bold">👤 ট্রি:</span>
-                        <select name="owner_id" onchange="this.form.submit()" class="bg-transparent text-xs font-bold text-orange-300 border-none focus:ring-0 cursor-pointer pr-6 py-0.5">
-                            @foreach($users as $u)
-                            <option value="{{ $u->id }}" {{ (isset($ownerId) && (int)$ownerId === (int)$u->id) ? 'selected' : '' }} class="bg-slate-900 text-white">
-                                {{ $u->name }} ({{ $u->email }})
-                            </option>
-                            @endforeach
-                        </select>
-                    </form>
-                </div>
-                @endif
+            <!-- Home / Main Team Root -->
+            <a href="{{ route('team.index', ['owner_id' => request('owner_id')]) }}" 
+               class="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5" 
+               title="প্রধান রুট (Md. Abdul Hai)-এ ফিরে যান">
+                <span>🏠</span> <span>Home / Main Team</span>
+            </a>
 
-                <!-- View Mode Switcher -->
-                <div class="inline-flex rounded-xl bg-slate-800/90 p-1 border border-slate-700 shadow-xs">
-                    <a href="{{ route('binary.index', ['view' => 'tree', 'node_id' => request('node_id'), 'owner_id' => request('owner_id')]) }}" 
-                       class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                        🌲 Tree View
-                    </a>
-                    <a href="{{ route('binary.index', ['view' => 'table', 'owner_id' => request('owner_id')]) }}" 
-                       class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                        📋 Directory
-                    </a>
-                </div>
+            <!-- Back Button (Browser history or parent fallback) -->
+            <button type="button" 
+                    onclick="window.history.length > 1 ? window.history.back() : window.location.href='{{ route('team.index') }}'"
+                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                    title="আগের মেম্বারে ফিরে যান">
+                <span>◀</span> <span>Back</span>
+            </button>
 
-                <!-- Back to Main Root -->
-                <a href="{{ route('binary.index', ['owner_id' => request('owner_id')]) }}" 
-                   class="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1 shadow-sm active:scale-95" 
-                   title="প্রধান রুট-এ ফিরে যান">
-                    <span>🏠</span> Main Root
-                </a>
-
-                @if($treeData['root'] && $treeData['root']->parent_id)
-                <a href="{{ route('binary.index', ['node_id' => $treeData['root']->parent_id, 'owner_id' => request('owner_id')]) }}" 
-                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1 shadow-sm active:scale-95" 
-                   title="এক ধাপ আপলাইনে যান">
-                    <span>⬆️</span> Up Parent
-                </a>
-                @endif
-            </div>
+            <!-- Parent Member Button (if current member has parent) -->
+            @if(!empty($treeData['parent_node']))
+            <a href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => request('owner_id')]) }}" 
+               class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95" 
+               title="আপলাইন প্যারেন্ট ({{ $treeData['parent_node']->member_name }})-এর টিমে যান">
+                <span>⬆️</span> <span>Parent ({{ $treeData['parent_node']->member_name }})</span>
+            </a>
+            @endif
         </div>
 
-        <!-- Breadcrumb Bar -->
-        @if(!empty($treeData['breadcrumbs']) && count($treeData['breadcrumbs']) > 1)
-        <div class="flex items-center gap-2 text-xs bg-slate-950/70 px-4 py-2 rounded-xl border border-slate-800 text-slate-300 overflow-x-auto">
-            <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Breadcrumb:</span>
-            @foreach($treeData['breadcrumbs'] as $idx => $bc)
-                @if($idx > 0)
-                <span class="text-slate-600 font-bold">›</span>
+        <!-- Right Search & View Switcher -->
+        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <!-- Search Member Form -->
+            <form action="{{ route('team.search') }}" method="GET" class="flex-1 md:w-72 flex items-center gap-1.5">
+                @if(request('owner_id'))
+                <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
                 @endif
-                @if($bc['is_current'])
-                <span class="text-amber-300 font-bold whitespace-nowrap">{{ $bc['name'] }} ({{ $bc['slot_label'] }})</span>
-                @else
-                <a href="{{ route('binary.index', ['node_id' => $bc['id'], 'owner_id' => request('owner_id')]) }}" class="text-slate-300 hover:text-orange-400 transition-colors whitespace-nowrap font-medium">{{ $bc['name'] }}</a>
-                @endif
-            @endforeach
-        </div>
-        @endif
+                <div class="relative w-full">
+                    <input type="text" 
+                           name="search" 
+                           list="team_search_datalist"
+                           placeholder="মেম্বার খুঁজুন (নাম, কোড, মোবাইল)..." 
+                           class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    <datalist id="team_search_datalist">
+                        @foreach($allNodes as $an)
+                        <option value="{{ $an->member_code }}">{{ $an->member_name }} ({{ $an->member_code }})</option>
+                        @endforeach
+                    </datalist>
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors shrink-0 cursor-pointer">
+                    Search
+                </button>
+            </form>
 
-        <!-- Bottom Row: Dynamic 10-Slot Summary Counters -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-            <!-- Left Team -->
-            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-emerald-500/30 space-y-1">
-                <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>👈 LEFT TEAM (5 Slots)</span>
-                    <span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-black text-[10px]">{{ $treeData['stats']['direct_left_display'] ?? '0/5' }} Direct</span>
-                </div>
-                <div class="text-xl font-black text-white">
-                    {{ $treeData['stats']['total_left_network'] ?? 0 }} <span class="text-xs font-normal text-slate-400">জন Net</span>
-                </div>
-                <div class="text-xs text-emerald-300 font-semibold truncate">
-                    Vol: <span x-text="$store.currency ? $store.currency.format({{ (float)($treeData['stats']['left_investment_volume'] ?? 0) }}) : '{{ \App\Services\CurrencyService::format((float)($treeData['stats']['left_investment_volume'] ?? 0)) }}'">{{ \App\Services\CurrencyService::format((float)($treeData['stats']['left_investment_volume'] ?? 0)) }}</span> ({{ number_format($treeData['stats']['left_bv'] ?? 0, 0) }} BV)
-                </div>
-            </div>
+            <!-- Super Admin User Workspace Switcher -->
+            @if(!empty($isSuperAdmin) && count($users) > 0)
+            <form action="{{ route('team.index') }}" method="GET" class="flex items-center gap-1 bg-slate-800/90 rounded-xl px-2 py-1 border border-slate-700">
+                <span class="text-[11px] text-slate-400 font-bold">👤</span>
+                <select name="owner_id" onchange="this.form.submit()" class="bg-transparent text-xs font-bold text-orange-300 border-none focus:ring-0 cursor-pointer pr-4 py-0.5">
+                    @foreach($users as $u)
+                    <option value="{{ $u->id }}" {{ (isset($ownerId) && (int)$ownerId === (int)$u->id) ? 'selected' : '' }} class="bg-slate-900 text-white">
+                        {{ $u->name }}
+                    </option>
+                    @endforeach
+                </select>
+            </form>
+            @endif
 
-            <!-- Right Team -->
-            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-blue-500/30 space-y-1">
-                <div class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>👉 RIGHT TEAM (5 Slots)</span>
-                    <span class="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-black text-[10px]">{{ $treeData['stats']['direct_right_display'] ?? '0/5' }} Direct</span>
-                </div>
-                <div class="text-xl font-black text-white">
-                    {{ $treeData['stats']['total_right_network'] ?? 0 }} <span class="text-xs font-normal text-slate-400">জন Net</span>
-                </div>
-                <div class="text-xs text-blue-300 font-semibold truncate">
-                    Vol: <span x-text="$store.currency ? $store.currency.format({{ (float)($treeData['stats']['right_investment_volume'] ?? 0) }}) : '{{ \App\Services\CurrencyService::format((float)($treeData['stats']['right_investment_volume'] ?? 0)) }}'">{{ \App\Services\CurrencyService::format((float)($treeData['stats']['right_investment_volume'] ?? 0)) }}</span> ({{ number_format($treeData['stats']['right_bv'] ?? 0, 0) }} BV)
-                </div>
-            </div>
-
-            <!-- Total Team & Matched Pairs -->
-            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-purple-500/30 space-y-1">
-                <div class="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>👥 Total Network</span>
-                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                </div>
-                <div class="text-xl font-black text-white">
-                    {{ $treeData['stats']['total_members'] ?? 1 }} <span class="text-xs font-normal text-slate-400">জন</span>
-                </div>
-                <div class="text-xs text-purple-300 font-semibold truncate">
-                    Pairs: <strong>{{ $treeData['stats']['matched_pairs'] ?? 0 }}</strong> ({{ number_format(($treeData['stats']['matched_pairs'] ?? 0) * 100, 0) }} BV)
-                </div>
-            </div>
-
-            <!-- Own Investment & Targets -->
-            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-amber-500/30 space-y-1">
-                <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>💼 Own Inv & Planning</span>
-                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                </div>
-                <div class="text-xl font-black text-amber-300 truncate">
-                    <span x-text="$store.currency ? $store.currency.format({{ (float)($treeData['stats']['own_investment'] ?? 0) }}) : '{{ \App\Services\CurrencyService::format((float)($treeData['stats']['own_investment'] ?? 0)) }}'">{{ \App\Services\CurrencyService::format((float)($treeData['stats']['own_investment'] ?? 0)) }}</span>
-                </div>
-                <div class="text-[11px] text-purple-300 truncate font-semibold">
-                    🎯 Targets: {{ (int)($treeData['stats']['target_left_count'] ?? 0) + (int)($treeData['stats']['target_right_count'] ?? 0) }} জন পরিকল্পিত
-                </div>
+            <!-- View Switcher -->
+            <div class="inline-flex rounded-xl bg-slate-800 p-0.5 border border-slate-700">
+                <a href="{{ route('team.index', ['view' => 'tree', 'node_id' => request('node_id') ?? request('memberId'), 'owner_id' => request('owner_id')]) }}" 
+                   class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                    👥 Explorer
+                </a>
+                <a href="{{ route('team.index', ['view' => 'table', 'owner_id' => request('owner_id')]) }}" 
+                   class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                    📋 Directory
+                </a>
             </div>
         </div>
     </div>
+
+    <!-- ==================== 2. BREADCRUMB NAVIGATION TRAIL ==================== -->
+    @if(!empty($treeData['breadcrumbs']) && count($treeData['breadcrumbs']) > 0)
+    <div class="flex items-center gap-2 text-xs bg-white rounded-2xl px-4 py-2.5 border border-slate-200/80 text-slate-600 shadow-xs overflow-x-auto">
+        <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Genealogy Path:</span>
+        @foreach($treeData['breadcrumbs'] as $idx => $bc)
+            @if($idx > 0)
+            <span class="text-slate-300 font-bold">›</span>
+            @endif
+            @if($bc['is_current'])
+            <span class="text-orange-600 font-black whitespace-nowrap bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-200">
+                {{ $bc['name'] }} ({{ $bc['slot_label'] }})
+            </span>
+            @else
+            <a href="{{ route('team.show', ['memberId' => $bc['id'], 'owner_id' => request('owner_id')]) }}" 
+               class="text-slate-700 hover:text-orange-600 font-bold transition-colors whitespace-nowrap">
+                {{ $bc['name'] }}
+            </a>
+            @endif
+        @endforeach
+    </div>
+    @endif
 
     @if($viewMode === 'table')
     <!-- ==================== MEMBER DIRECTORY TABLE VIEW ==================== -->
@@ -393,11 +257,11 @@
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
                 <h3 class="text-base font-bold text-slate-900">টিম মেম্বার তালিকা (10-Slot Member Directory)</h3>
-                <p class="text-xs text-slate-500">৫ বাম + ৫ ডান ডিরেক্ট প্লেসমেন্ট স্লটের মেম্বারদের তালিকা ও ডাউনলাইন ভলিউম।</p>
+                <p class="text-xs text-slate-500">সকল মেম্বারের বিবরণ, পজিশন ও ডাউনলাইন পরিসংখ্যান।</p>
             </div>
 
             <!-- Search Form -->
-            <form action="{{ route('binary.index') }}" method="GET" class="w-full sm:w-80 flex items-center gap-2">
+            <form action="{{ route('team.index') }}" method="GET" class="w-full sm:w-80 flex items-center gap-2">
                 <input type="hidden" name="view" value="table">
                 @if(request('owner_id'))
                 <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
@@ -410,7 +274,7 @@
                            class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <button type="submit" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors">
+                <button type="submit" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
                     Search
                 </button>
             </form>
@@ -423,10 +287,10 @@
                     <tr class="bg-slate-50/80 border-y border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         <th class="py-3 px-4">মেম্বার</th>
                         <th class="py-3 px-4">প্লেসমেন্ট স্লট</th>
-                        <th class="py-3 px-4">প্যাকেজ ও পদবী</th>
-                        <th class="py-3 px-4 text-center">বাম টিম (Left)</th>
-                        <th class="py-3 px-4 text-center">ডান টিম (Right)</th>
-                        <th class="py-3 px-4 text-center">টাইপ / স্ট্যাটাস</th>
+                        <th class="py-3 px-4">পদবী ও প্যাকেজ</th>
+                        <th class="py-3 px-4 text-center">ডিরেক্ট টিম</th>
+                        <th class="py-3 px-4 text-center">নিজস্ব ইনভেস্টমেন্ট</th>
+                        <th class="py-3 px-4 text-center">স্ট্যাটাস</th>
                         <th class="py-3 px-4 text-right">অ্যাকশন</th>
                     </tr>
                 </thead>
@@ -436,11 +300,14 @@
                         <!-- Member Profile -->
                         <td class="py-3.5 px-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl {{ $member->is_target ? 'bg-purple-900 text-purple-200' : 'bg-slate-900 text-orange-400' }} font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">
+                                <div class="w-9 h-9 rounded-xl {{ $member->is_target ? 'bg-purple-900 text-purple-200' : 'bg-slate-900 text-orange-400' }} font-black flex items-center justify-center text-xs flex-shrink-0 shadow-xs">
                                     {{ substr($member->member_name, 0, 1) }}
                                 </div>
                                 <div>
-                                    <div class="font-bold text-slate-900">{{ $member->member_name }}</div>
+                                    <div class="font-bold text-slate-900 hover:text-orange-600 transition-colors cursor-pointer"
+                                         @click="openDetailsModal({{ json_encode($member) }})">
+                                        {{ $member->member_name }}
+                                    </div>
                                     <div class="text-[11px] text-slate-400 font-mono">{{ $member->member_code }} @if($member->phone) • {{ $member->phone }} @endif</div>
                                 </div>
                             </div>
@@ -462,22 +329,21 @@
 
                         <!-- Package & Rank -->
                         <td class="py-3.5 px-4">
-                            <div class="font-semibold text-slate-900">{{ $member->package_name }}</div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
                                 {{ $member->rank_name }}
                             </span>
+                            <div class="text-[11px] text-slate-500 font-medium mt-0.5">{{ $member->package_name }}</div>
                         </td>
 
-                        <!-- Left Team Count & BV -->
+                        <!-- Direct Team Count -->
                         <td class="py-3.5 px-4 text-center">
-                            <span class="font-bold text-emerald-700">{{ $member->left_count }} জন</span>
-                            <div class="text-[11px] text-slate-500 font-medium">@currency($member->left_bv)</div>
+                            <span class="font-black text-slate-900">{{ ($member->left_count ?? 0) + ($member->right_count ?? 0) }} জন</span>
+                            <div class="text-[10px] text-slate-400">Total Net</div>
                         </td>
 
-                        <!-- Right Team Count & BV -->
-                        <td class="py-3.5 px-4 text-center">
-                            <span class="font-bold text-blue-700">{{ $member->right_count }} জন</span>
-                            <div class="text-[11px] text-slate-500 font-medium">@currency($member->right_bv)</div>
+                        <!-- Own Investment -->
+                        <td class="py-3.5 px-4 text-center font-bold text-amber-600">
+                            @currency($member->total_investment_amount ?: $member->point_value)
                         </td>
 
                         <!-- Type & Status -->
@@ -494,57 +360,18 @@
                         <!-- Actions -->
                         <td class="py-3.5 px-4 text-right">
                             <div class="flex items-center justify-end gap-1.5">
-                                @if($member->is_target)
-                                <form action="{{ route('binary.convert-target', $member->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-[10px] transition-colors" title="টার্গেট থেকে অ্যাক্টিভ করুন">
-                                        🚀 Convert
-                                    </button>
-                                </form>
-                                @endif
-
-                                <a href="{{ route('binary.index', ['node_id' => $member->id, 'owner_id' => request('owner_id')]) }}" 
-                                   class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
-                                   title="ট্রি ভিউতে দেখুন">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                <a href="{{ route('team.show', ['memberId' => $member->id, 'owner_id' => request('owner_id')]) }}" 
+                                   class="px-2 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1" 
+                                   title="এই মেম্বারের টিম এক্সপ্লোরারে যান">
+                                    <span>👥</span> <span>View Team</span>
                                 </a>
 
                                 <button type="button" 
-                                        @click="openEditModal({
-                                            id: {{ $member->id }},
-                                            member_name: '{{ addslashes($member->member_name) }}',
-                                            member_code: '{{ $member->member_code }}',
-                                            phone: '{{ $member->phone }}',
-                                            email: '{{ $member->email }}',
-                                            password_plain: '{{ addslashes($member->password_plain ?? "sbl123456") }}',
-                                            tpin: '{{ $member->tpin ?? "1234" }}',
-                                            package_name: '{{ $member->package_name }}',
-                                            point_value: {{ (float)$member->point_value }},
-                                            contributions: {{ json_encode($member->contributions ?: [['amount' => (float)$member->point_value, 'date' => now()->toDateString(), 'note' => $member->package_name]]) }},
-                                            rank_name: '{{ $member->rank_name }}',
-                                            sponsor_id: '{{ $member->sponsor_id }}',
-                                            sponsor_name: '{{ addslashes($member->sponsor_name ?: ($member->sponsor?->member_name ?? ($member->parent_id === null ? "Md. Samim" : "Md. Abdul Hai"))) }}',
-                                            branch: '{{ $member->branch ?: ($member->position === "left" ? "LEFT" : "RIGHT") }}',
-                                            slot_number: {{ $member->slot_number ?: 1 }},
-                                            is_active: {{ $member->is_active ? 'true' : 'false' }},
-                                            is_target: {{ $member->is_target ? 'true' : 'false' }},
-                                            target_date: '{{ $member->target_date ? $member->target_date->toDateString() : "" }}',
-                                            target_notes: '{{ addslashes($member->target_notes ?? "") }}',
-                                            user_id: '{{ $member->user_id }}'
-                                        })"
-                                        class="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 transition-colors" 
-                                        title="মেম্বার এডিট করুন">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        @click="openDetailsModal({{ json_encode($member) }})"
+                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
+                                        title="মেম্বারের সম্পূর্ণ বিবরণ দেখুন">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </button>
-
-                                <form action="{{ route('binary.destroy', $member->id) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $member->member_name }}) রিমুভ করতে চান?');" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="cascade" value="1">
-                                    <button type="submit" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors" title="মেম্বার রিমুভ করুন">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                    </button>
-                                </form>
                             </div>
                         </td>
                     </tr>
@@ -567,162 +394,408 @@
     </div>
 
     @else
-    <!-- ==================== 2. SEARCH & CONTROLS TOOLBAR ==================== -->
-    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <!-- Search Member Form -->
-        <form action="{{ route('binary.search') }}" method="GET" class="w-full sm:w-96 flex items-center gap-2">
-            @if(request('owner_id'))
-            <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
-            @endif
-            <div class="relative flex-1">
-                <input type="text" 
-                       name="search" 
-                       list="tree_search_datalist"
-                       placeholder="মেম্বারের নাম বা কোড দিয়ে সার্চ করুন..." 
-                       class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all font-medium">
-                <datalist id="tree_search_datalist">
-                    @foreach($allNodes as $an)
-                    <option value="{{ $an->member_code }}">{{ $an->member_name }} ({{ $an->member_code }})</option>
-                    @endforeach
-                </datalist>
-                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
-            <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors shrink-0">
-                Search
-            </button>
-        </form>
+    <!-- ==================== 3. CURRENT MEMBER SUMMARY CARD (AT TOP) ==================== -->
+    @php
+        $curr = $treeData['current_member'] ?? [];
+        $directL = (int)($treeData['stats']['direct_left_count'] ?? 0);
+        $directR = (int)($treeData['stats']['direct_right_count'] ?? 0);
+        $directTotal = (int)($treeData['stats']['direct_total_count'] ?? ($directL + $directR));
+        $isFme = !empty($treeData['stats']['is_fme']);
+        $ownInv = (float)($treeData['stats']['own_investment'] ?? 0);
+        $sponsorName = $treeData['stats']['sponsor_name'] ?? 'Md. Samim';
+        $currCode = $treeData['stats']['root_code'] ?? 'SBL-1001';
+        $currUsername = $curr['username'] ?? (str_starts_with($currCode, '@') ? $currCode : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $currCode))));
+    @endphp
 
-        <!-- Current View Root Badge & Actions -->
-        <div class="flex items-center gap-2 flex-wrap">
-            <div class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                <span class="text-slate-400 text-[11px]">View Root:</span>
-                <span class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200">
-                    {{ $treeData['root'] ? $treeData['root']->member_name : 'No Root' }}
-                </span>
+    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-6 border-2 border-slate-800 text-white shadow-2xl space-y-5 relative overflow-hidden">
+        <!-- Subtle Glow Effect in Background -->
+        <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-500/10 blur-3xl pointer-events-none"></div>
+
+        <!-- Top Profile Row: Name, Rank, Sponsor & Action Buttons -->
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/90">
+            <div class="flex items-center gap-4">
+                <!-- Avatar / Initial -->
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    {{ substr($treeData['stats']['root_name'] ?? 'M', 0, 1) }}
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">
+                            {{ $treeData['stats']['root_name'] ?? 'Md. Abdul Hai' }}
+                        </h2>
+                        
+                        <!-- Rank Badge -->
+                        <span class="px-3 py-0.5 rounded-full text-xs font-black {{ $isFme ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30' : 'bg-slate-800 text-amber-300 border border-amber-400/40' }}">
+                            {{ $treeData['stats']['rank_name'] ?? 'Member' }}
+                        </span>
+
+                        @if(!empty($treeData['is_main_root']))
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                            ★ Main Team Root
+                        </span>
+                        @endif
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                        <span class="font-mono text-slate-300 font-bold flex items-center gap-1">
+                            <span>{{ $currUsername }}</span>
+                            <button type="button" @click="navigator.clipboard.writeText('{{ $currUsername }}'); alert('Username copied: {{ $currUsername }}');" class="hover:text-white cursor-pointer" title="Copy username">
+                                <svg class="w-3.5 h-3.5 inline opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </span>
+                        <span>•</span>
+                        <span>Sponsor / Upline: <strong class="text-orange-300">{{ $sponsorName }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions -->
+            <div class="flex items-center gap-2">
+                <button type="button" 
+                        @click="openDetailsModal({{ json_encode($curr) }})"
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                    <span>ℹ️</span> <span>Full Details</span>
+                </button>
+
+                <button type="button" 
+                        @click="openEditModal({{ json_encode($curr) }})"
+                        class="px-4 py-2 bg-orange-600/90 hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                    <span>✏️</span> <span>Edit Member</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Metrics Grid: Direct Team, Own Investment & FME Progress -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+            <!-- 1. Direct Team Count -->
+            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Direct Team</span>
+                    <span class="text-white font-black">{{ $directTotal }}/10</span>
+                </div>
+                <div class="text-2xl font-black text-white flex items-baseline gap-2">
+                    <span>{{ $directTotal }}</span>
+                    <span class="text-xs font-semibold text-slate-400">/ 10 ডিরেক্ট স্লট</span>
+                </div>
+                <div class="text-xs text-slate-300 font-bold flex items-center gap-3 pt-1">
+                    <span class="text-emerald-400">👈 Left: {{ $directL }}/5</span>
+                    <span class="text-slate-600">|</span>
+                    <span class="text-blue-400">👉 Right: {{ $directR }}/5</span>
+                </div>
+            </div>
+
+            <!-- 2. Own Investment -->
+            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
+                <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Own Investment</span>
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                </div>
+                <div class="text-2xl font-black text-amber-300 truncate">
+                    <span x-text="$store.currency ? $store.currency.format({{ $ownInv }}) : '{{ \App\Services\CurrencyService::format($ownInv) }}'">{{ \App\Services\CurrencyService::format($ownInv) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 truncate">
+                    {{ count($curr['contributions'] ?? []) }} টি ইনভেস্টমেন্ট রেকর্ড
+                </div>
+            </div>
+
+            <!-- 3. FME Progress -->
+            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
+                <div class="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center justify-between">
+                    <span>FME Status & Progress</span>
+                    @if($isFme)
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">
+                        Achieved
+                    </span>
+                    @else
+                    <span class="text-slate-400 text-[10px] font-bold">5L + 5R Target</span>
+                    @endif
+                </div>
+
+                @if($isFme)
+                <div class="text-base font-black text-emerald-400 flex items-center gap-1.5 pt-1">
+                    <span>★</span> <span>FME Qualified (5/5 L + 5/5 R)</span>
+                </div>
+                <div class="text-[11px] text-slate-400">
+                    ১০টি ডিরেক্ট প্লেসমেন্ট স্লট পূর্ণ হয়েছে।
+                </div>
+                @else
+                <div class="space-y-1.5 pt-0.5">
+                    <div class="flex items-center justify-between text-xs font-bold">
+                        <span class="text-emerald-400">Left: {{ $directL }}/5</span>
+                        <span class="text-blue-400">Right: {{ $directR }}/5</span>
+                    </div>
+                    <!-- Dual progress bar -->
+                    <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
+                        <div class="h-full bg-emerald-500 transition-all duration-300" style="width: {{ ($directL / 10) * 100 }}%"></div>
+                        <div class="h-full bg-blue-500 transition-all duration-300" style="width: {{ ($directR / 10) * 100 }}%"></div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- ==================== 3. 10-SLOT FIGJAM INTERACTIVE TREE CANVAS ==================== -->
-    <div class="bg-[#121e28] rounded-2xl border border-slate-700/80 p-4 md:p-6 shadow-2xl relative select-none"
-         @wheel="handleWheel($event)">
+    <!-- ==================== 4. DIRECT TEAM SECTIONS (5 LEFT + 5 RIGHT) ==================== -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         
-        <!-- Canvas Floating Top Toolbar -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-700/60 text-white">
-            <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🎨</span> 10-Slot Placement Canvas
-                </span>
-                <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium flex items-center gap-1">
-                    <span>🖱️</span> মাউস ড্র্যাগ করে স্ক্রোল করুন
-                </span>
-            </div>
-
-            <!-- Viewport & Zoom Controls -->
-            <div class="flex flex-wrap items-center gap-1.5">
-                <button type="button" 
-                        @click="fitToScreen()"
-                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
-                        title="সম্পূর্ণ ট্রি স্ক্রিনে ফিট করুন">
-                    <span>🔍</span> Fit
-                </button>
-
-                <button type="button" 
-                        @click="centerRoot()"
-                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
-                        title="রুট সেন্টারে আনুন">
-                    <span>🎯</span> Center
-                </button>
-
-                <button type="button" 
-                        @click="resetView()"
-                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95">
-                    <span>🔄</span> Reset
-                </button>
-
-                <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
-
-                <div class="inline-flex items-center rounded-xl bg-slate-800 p-0.5 border border-slate-700 shadow-sm">
-                    <button type="button" 
-                            @click="zoomOut()" 
-                            class="px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-bold transition-all">
-                        −
-                    </button>
-                    <button type="button" 
-                            @click="resetView()" 
-                            class="px-2.5 py-1 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg text-[11px] font-mono font-bold transition-all">
-                        <span x-text="Math.round(zoomLevel * 100) + '%'">100%</span>
-                    </button>
-                    <button type="button" 
-                            @click="zoomIn()" 
-                            class="px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-bold transition-all">
-                        +
-                    </button>
+        <!-- ==================== LEFT DIRECT TEAM (5 POSITIONS) ==================== -->
+        <div class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 border-2 border-emerald-500/40 shadow-2xl space-y-4">
+            <!-- Section Header -->
+            <div class="flex items-center justify-between border-b border-emerald-500/30 pb-3.5">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/60 animate-pulse"></span>
+                    <h3 class="font-black text-base text-emerald-300 uppercase tracking-wider">
+                        👈 LEFT DIRECT TEAM
+                    </h3>
                 </div>
+                <div class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
+                    {{ $directL }}/5 Positions Filled
+                </div>
+            </div>
 
-                <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
-
-                <button type="button" 
-                        @click="expandAll()"
-                        class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95">
-                    <span>🌲</span> Expand
-                </button>
-                <button type="button" 
-                        @click="collapseAll()"
-                        class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95">
-                    <span>📁</span> Collapse
-                </button>
+            <!-- 5 Left Slot Cards (L1 through L5) -->
+            <div class="space-y-3">
+                @for($s = 1; $s <= 5; $s++)
+                    @php
+                        $slotNode = $treeData['left_slots'][$s] ?? null;
+                    @endphp
+                    @if($slotNode)
+                        @include('binary.partials.node_card', ['node' => $slotNode, 'depth' => 2])
+                    @endif
+                @endfor
             </div>
         </div>
 
-        <!-- Viewport Container -->
-        <div id="tree-viewport-container"
-             class="overflow-hidden min-h-[680px] relative rounded-xl bg-[#0c161e]/90 border border-slate-800/80 cursor-grab active:cursor-grabbing select-none"
-             :class="isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'"
-             @mousedown="startPan($event)"
-             @mousemove="onPan($event)"
-             @mouseup="endPan()"
-             @mouseleave="endPan()">
-            
-            <div id="tree-content-root"
-                 :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + '); transform-origin: top center; transition: ' + (isPanning ? 'none' : 'transform 0.12s ease-out') + ';'"
-                 class="w-full flex justify-center items-start pt-8 pb-20 px-6">
-                
-                @if(empty($treeData['tree']))
-                    <div class="text-center py-20 text-white">
-                        <div class="text-5xl mb-3">🌲</div>
-                        <h3 class="text-lg font-bold">কোনো টিম ডাটা নেই</h3>
-                        <p class="text-xs text-slate-300">দয়া করে নতুন রুট মেম্বার যুক্ত করুন।</p>
-                    </div>
-                @else
-                    @include('binary.partials.figjam_node', ['node' => $treeData['tree'], 'depth' => 1])
-                @endif
-
+        <!-- ==================== RIGHT DIRECT TEAM (5 POSITIONS) ==================== -->
+        <div class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 border-2 border-blue-500/40 shadow-2xl space-y-4">
+            <!-- Section Header -->
+            <div class="flex items-center justify-between border-b border-blue-500/30 pb-3.5">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-blue-400 shadow-md shadow-blue-400/60 animate-pulse"></span>
+                    <h3 class="font-black text-base text-blue-300 uppercase tracking-wider">
+                        RIGHT DIRECT TEAM 👉
+                    </h3>
+                </div>
+                <div class="px-3 py-1 rounded-xl bg-blue-500/20 text-blue-300 font-black text-xs border border-blue-500/40">
+                    {{ $directR }}/5 Positions Filled
+                </div>
             </div>
 
-            <!-- Draggable Navigator Hint -->
-            <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-slate-900/85 backdrop-blur-sm border border-slate-700/80 text-[11px] text-slate-300 pointer-events-none flex items-center gap-2 shadow-xl z-30">
-                <span>🖱️ ড্র্যাগ করে সরান</span>
-                <span class="opacity-40">•</span>
-                <span>Ctrl + স্ক্রোল করে জুম</span>
+            <!-- 5 Right Slot Cards (R1 through R5) -->
+            <div class="space-y-3">
+                @for($s = 1; $s <= 5; $s++)
+                    @php
+                        $slotNode = $treeData['right_slots'][$s] ?? null;
+                    @endphp
+                    @if($slotNode)
+                        @include('binary.partials.node_card', ['node' => $slotNode, 'depth' => 2])
+                    @endif
+                @endfor
             </div>
         </div>
+
     </div>
     @endif
 
-    <!-- ==================== PLACEMENT MODAL (+ ADD MEMBER) ==================== -->
+    <!-- ==================== 5. MEMBER DETAILS MODAL / DRAWER ==================== -->
+    <div x-show="detailsModalOpen" 
+         x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
+         x-cloak>
+        <div @click.outside="detailsModalOpen = false" 
+             class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-5 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-600 text-white font-black text-xl flex items-center justify-center shadow-md">
+                        <span x-text="(detailsNode.member_name || 'M').charAt(0)">M</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900" x-text="detailsNode.member_name"></h3>
+                        <div class="text-xs text-slate-500 font-mono" x-text="detailsNode.username || detailsNode.member_code"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <a :href="'/team/' + detailsNode.id" 
+                       class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1">
+                        <span>👥</span> <span>View Team</span>
+                    </a>
+                    <button @click="detailsModalOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl font-bold cursor-pointer">&times;</button>
+                </div>
+            </div>
+
+            <!-- Modal Tab Switcher (Overview vs Investments) -->
+            <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <button type="button" 
+                        @click="activeDetailsTab = 'overview'"
+                        class="px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer"
+                        :class="activeDetailsTab === 'overview' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'">
+                    📋 Overview & Placement
+                </button>
+                <button type="button" 
+                        @click="activeDetailsTab = 'investments'"
+                        class="px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer"
+                        :class="activeDetailsTab === 'investments' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'">
+                    💼 Investment History
+                </button>
+            </div>
+
+            <!-- Tab 1: Overview & Placement -->
+            <div x-show="activeDetailsTab === 'overview'" class="space-y-4">
+                <!-- Info Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">পদবী (Rank)</span>
+                        <div class="font-black text-slate-900 text-sm mt-0.5" x-text="detailsNode.rank_name || 'Member'"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">প্লেসমেন্ট স্লট</span>
+                        <div class="font-black text-orange-600 text-sm mt-0.5" x-text="detailsNode.slot_label || 'ROOT'"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">স্পন্সর নাম</span>
+                        <div class="font-bold text-slate-900 text-sm mt-0.5" x-text="detailsNode.sponsor_name || 'Md. Samim'"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">মোবাইল নম্বর</span>
+                        <div class="font-bold text-slate-900 mt-0.5" x-text="detailsNode.phone || '01700000000'"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">ইমেইল</span>
+                        <div class="font-bold text-slate-900 mt-0.5 truncate" x-text="detailsNode.email || 'N/A'"></div>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase">প্যাকেজ</span>
+                        <div class="font-bold text-slate-900 mt-0.5" x-text="detailsNode.package_name || 'National 120k'"></div>
+                    </div>
+                </div>
+
+                <!-- SBL Ecosystem Credentials Box -->
+                <div class="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
+                    <div class="text-[11px] font-bold text-orange-300 uppercase tracking-wider flex items-center justify-between">
+                        <span>🔐 SBL Ecosystem Login Credentials</span>
+                        <span class="text-[10px] text-slate-400 font-normal">পোর্টাল লগইন</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                        <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <div>
+                                <span class="text-slate-400 text-[10px] font-medium">SBL Password:</span>
+                                <div class="font-mono font-bold text-white text-sm" x-text="showDetailsPass ? (detailsNode.password_plain || 'sbl123456') : '••••••••'"></div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <button type="button" @click="showDetailsPass = !showDetailsPass" class="p-1 text-slate-400 hover:text-white" :title="showDetailsPass ? 'Hide' : 'Show'">
+                                    <span x-text="showDetailsPass ? '🙈' : '👁️'">👁️</span>
+                                </button>
+                                <button type="button" @click="navigator.clipboard.writeText(detailsNode.password_plain || 'sbl123456'); alert('SBL Password copied!');" class="p-1 text-slate-400 hover:text-white" title="Copy">
+                                    📋
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                            <div>
+                                <span class="text-slate-400 text-[10px] font-medium">SBL TPIN:</span>
+                                <div class="font-mono font-bold text-white text-sm" x-text="detailsNode.tpin || '1234'"></div>
+                            </div>
+                            <button type="button" @click="navigator.clipboard.writeText(detailsNode.tpin || '1234'); alert('TPIN copied!');" class="p-1 text-slate-400 hover:text-white" title="Copy">
+                                📋
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Direct Team Counts -->
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                    <div class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        Direct Team Positions (সর্বোচ্চ ১০টি)
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                            <span class="text-slate-400 text-[10px] font-bold">Left Direct</span>
+                            <div class="font-black text-emerald-700 text-base" x-text="(detailsNode.direct_left_count || 0) + '/5'"></div>
+                        </div>
+                        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                            <span class="text-slate-400 text-[10px] font-bold">Right Direct</span>
+                            <div class="font-black text-blue-700 text-base" x-text="(detailsNode.direct_right_count || 0) + '/5'"></div>
+                        </div>
+                        <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                            <span class="text-slate-400 text-[10px] font-bold">Total Direct</span>
+                            <div class="font-black text-purple-700 text-base" x-text="((detailsNode.direct_left_count || 0) + (detailsNode.direct_right_count || 0)) + '/10'"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Investment History -->
+            <div x-show="activeDetailsTab === 'investments'" class="space-y-4">
+                <div class="flex items-center justify-between bg-amber-50 border border-amber-200/80 p-3.5 rounded-2xl">
+                    <div>
+                        <span class="text-xs font-bold text-amber-900">সর্বমোট নিজস্ব ইনভেস্টমেন্ট</span>
+                        <div class="text-xl font-black text-amber-700" x-text="$store.currency ? $store.currency.format(detailsNode.own_investment || detailsNode.total_investment || 0) : '{{ \App\Services\CurrencyService::format(0) }}'"></div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-black text-xs">
+                        Active Portfolio
+                    </span>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">ইনভেস্টমেন্ট রেকর্ড তালিকা</h4>
+                    <div class="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+                        <template x-for="(c, idx) in (detailsNode.contributions || [])" :key="idx">
+                            <div class="p-3 flex items-center justify-between text-xs hover:bg-slate-50">
+                                <div>
+                                    <div class="font-bold text-slate-900" x-text="c.note || 'Investment Record'"></div>
+                                    <div class="text-[11px] text-slate-400" x-text="c.date || 'Active'"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-black text-emerald-700 text-sm" x-text="$store.currency ? $store.currency.format(parseFloat(c.amount || 0)) : (parseFloat(c.amount || 0) + ' BDT')"></div>
+                                    <span class="px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">Active</span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button type="button" 
+                        @click="openEditModal(detailsNode); detailsModalOpen = false;"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                    ✏️ তথ্য পরিবর্তন করুন
+                </button>
+
+                <button type="button" 
+                        @click="detailsModalOpen = false" 
+                        class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                    বন্ধ করুন
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 6. PLACEMENT MODAL (+ ADD MEMBER) ==================== -->
     <div x-show="placementModalOpen" 
          x-transition.opacity
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
          x-cloak>
         <div @click.outside="placementModalOpen = false" 
-             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+             class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span>➕</span> নতুন মেম্বার প্লেসমেন্ট (১০-স্লট আর্কিটেকচার)
+                    <span>➕</span> নতুন মেম্বার প্লেসমেন্ট
                 </h3>
-                <button @click="placementModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                <button @click="placementModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
             <!-- Placement Slot Indicator -->
@@ -838,11 +911,9 @@
                 <!-- SBL Ecosystem Login Password & TPIN -->
                 <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
                     <div>
-                        <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                            <span>SBL Ecosystem পাসওয়ার্ড</span>
-                        </label>
+                        <label class="block text-xs font-bold text-slate-800 mb-1">SBL Ecosystem পাসওয়ার্ড</label>
                         <input type="text" name="password_plain" value="sbl123456" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="SBL Ecosystem Pass">
-                        <span class="text-[10px] text-slate-500 font-medium">অফিসিয়াল SBL পোর্টাল লগইন পাসওয়ার্ড (অ্যাপ পাসওয়ার্ড থেকে আলাদা)</span>
+                        <span class="text-[10px] text-slate-500 font-medium">অফিসিয়াল SBL পোর্টাল লগইন পাসওয়ার্ড</span>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-800 mb-1">SBL TPIN (সিক্রেট পিন)</label>
@@ -852,10 +923,10 @@
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
+                    <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
                         বাতিল
                     </button>
-                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95">
+                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer">
                         সংরক্ষণ ও প্লেসমেন্ট করুন
                     </button>
                 </div>
@@ -863,19 +934,19 @@
         </div>
     </div>
 
-    <!-- ==================== EDIT MEMBER MODAL ==================== -->
+    <!-- ==================== 7. EDIT MEMBER MODAL ==================== -->
     <div x-show="editModalOpen" 
          x-transition.opacity
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
          x-cloak>
         <div @click.outside="editModalOpen = false" 
-             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+             class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>✏️</span> মেম্বার তথ্য ও ইনভেস্টমেন্ট এডিট
                 </h3>
-                <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+                <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
             <form id="edit-member-form" action="" method="POST" class="space-y-3.5">
@@ -967,7 +1038,7 @@
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-bold text-slate-900">💼 নিজস্ব ইনভেস্টমেন্ট ও কিস্তি রেকর্ড</label>
-                        <button type="button" @click="addContributionRow()" class="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]">
+                        <button type="button" @click="addContributionRow()" class="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] cursor-pointer">
                             + কিস্তি যোগ করুন
                         </button>
                     </div>
@@ -979,16 +1050,16 @@
                             <input type="number" x-model="c.amount" @input="recalcTotalContribution()" placeholder="পরিমাণ" class="w-24 p-1 text-xs border rounded font-mono font-bold">
                             <input type="date" x-model="c.date" class="w-32 p-1 text-xs border rounded">
                             <input type="text" x-model="c.note" placeholder="নোট / বিবরণ" class="flex-1 p-1 text-xs border rounded">
-                            <button type="button" @click="removeContributionRow(idx)" class="text-rose-600 hover:text-rose-800 font-bold px-1">&times;</button>
+                            <button type="button" @click="removeContributionRow(idx)" class="text-rose-600 hover:text-rose-800 font-bold px-1 cursor-pointer">&times;</button>
                         </div>
                     </template>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">
+                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
                         বাতিল
                     </button>
-                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md active:scale-95">
+                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 cursor-pointer">
                         আপডেট সংরক্ষণ করুন
                     </button>
                 </div>

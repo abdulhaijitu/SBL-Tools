@@ -65,13 +65,17 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'update'])->name('contacts.update');
     Route::delete('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'destroy'])->name('contacts.destroy');
 
-    // SBL Binary Team Tree & Placement Engine
+    // SBL Team Explorer & 10-Slot Placement Engine
+    Route::get('/team', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('team.index');
+    Route::get('/team/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->name('team.show');
     Route::get('/binary', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('binary.index');
+    Route::get('/binary/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->name('binary.show');
     Route::post('/binary/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('binary.store');
     Route::post('/binary/{node}/convert-target', [\App\Http\Controllers\BinaryTeamController::class, 'convertTarget'])->name('binary.convert-target');
     Route::put('/binary/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'update'])->name('binary.update');
     Route::delete('/binary/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'destroy'])->name('binary.destroy');
     Route::get('/binary/search', [\App\Http\Controllers\BinaryTeamController::class, 'search'])->name('binary.search');
+    Route::get('/team-search', [\App\Http\Controllers\BinaryTeamController::class, 'search'])->name('team.search');
     Route::get('/binary/{node}/extreme/{direction}', [\App\Http\Controllers\BinaryTeamController::class, 'extreme'])->name('binary.extreme');
 
     // Team & User Management CRUD

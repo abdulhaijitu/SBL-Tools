@@ -26,15 +26,14 @@ class BinaryTeamTest extends TestCase
 
     public function test_authenticated_user_can_view_binary_tree(): void
     {
-        $response = $this->actingAs($this->admin)->get(route('binary.index'));
+        $response = $this->actingAs($this->admin)->get(route('team.index'));
 
         $response->assertOk();
-        $response->assertSee('5 Left + 5 Right Team Tree');
+        $response->assertSee('Team Explorer');
         $response->assertSee('Md. Abdul Hai');
         $response->assertSee('Md. Samim');
         $response->assertSee('Tahmina Akter');
         $response->assertSee('Khaled Saifulla');
-        $response->assertSee('Md. Zobayer Abdullah');
     }
 
     public function test_admin_can_place_new_member_in_vacant_slot(): void
@@ -91,18 +90,19 @@ class BinaryTeamTest extends TestCase
         $tahmina = BinaryNode::where('member_code', '@taminaakter')->first();
         $this->assertNotNull($tahmina);
 
-        $response = $this->actingAs($this->admin)->get(route('binary.index', ['node_id' => $tahmina->id]));
+        $response = $this->actingAs($this->admin)->get(route('team.show', ['memberId' => $tahmina->id]));
         $response->assertOk();
         $response->assertSee('Tahmina Akter');
         $response->assertSee('Md. Abdul Hai');
+        $response->assertSee('Md. Zobayer Abdullah');
     }
 
     public function test_binary_search_redirects_to_focused_member(): void
     {
         $target = BinaryNode::where('member_code', '@zobayerabdullah')->first();
 
-        $response = $this->actingAs($this->admin)->get(route('binary.search', ['search' => '@zobayerabdullah']));
+        $response = $this->actingAs($this->admin)->get(route('team.search', ['search' => '@zobayerabdullah']));
 
-        $response->assertRedirect(route('binary.index', ['node_id' => $target->id]));
+        $response->assertRedirect(route('team.show', ['memberId' => $target->id]));
     }
 }

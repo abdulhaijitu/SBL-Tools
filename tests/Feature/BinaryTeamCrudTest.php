@@ -47,7 +47,7 @@ class BinaryTeamCrudTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('SBL Founder');
-        $response->assertSee('Tree View');
+        $response->assertSee('Explorer');
         $response->assertSee('Directory');
     }
 
