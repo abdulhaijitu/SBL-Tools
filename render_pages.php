@@ -48,6 +48,12 @@ $pages = [
     'contacts' => function() {
         return app(App\Http\Controllers\SblContactController::class)->index(request())->render();
     },
+    'leads_create' => function() {
+        return app(App\Http\Controllers\LeadController::class)->create()->render();
+    },
+    'presentations' => function() {
+        return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
+    },
 ];
 
 $rendered = [];
