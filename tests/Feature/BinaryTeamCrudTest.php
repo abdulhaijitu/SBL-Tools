@@ -56,7 +56,7 @@ class BinaryTeamCrudTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('binary.index', ['view' => 'table']));
 
         $response->assertStatus(200);
-        $response->assertSee('টিম মেম্বার তালিকা');
+        $response->assertSee('10-Slot Member Directory');
         $response->assertSee('SBL Founder');
         $response->assertSee('SBL-ROOT');
     }

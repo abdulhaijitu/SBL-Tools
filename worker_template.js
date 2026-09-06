@@ -669,128 +669,111 @@ export default {
                 if (effectiveMethod === "PUT" && nodeId && formData) {
                     if (db) {
                         try {
-                            const memberName =
-                                formData.get("member_name") || "Unnamed Member";
-                            const memberCode =
-                                formData.get("member_code") || null;
-                            const phone = formData.get("phone") || null;
-                            const email = formData.get("email") || null;
-                            const passwordPlain =
-                                formData.get("password_plain") ||
-                                formData.get("password") ||
-                                null;
-                            const tpin = formData.get("tpin") || null;
-                            const packageName =
-                                formData.get("package_name") || "National 120k";
-                            const rankName =
-                                formData.get("rank_name") || "Member";
-                            const sponsorName =
-                                formData.get("sponsor_name") || null;
-                            const sponsorId =
-                                formData.get("sponsor_id") &&
-                                formData.get("sponsor_id") !== ""
-                                    ? Number(formData.get("sponsor_id"))
-                                    : null;
-                            const isTarget = formData.get("is_target") ? 1 : 0;
-                            const targetDate =
-                                formData.get("target_date") || null;
-                            const targetNotes =
-                                formData.get("target_notes") || null;
-                            let contributions =
-                                formData.get("contributions") || "[]";
-                            let contributionsArr = [];
-                            try {
-                                contributionsArr =
-                                    typeof contributions === "string"
-                                        ? JSON.parse(contributions)
-                                        : contributions;
-                            } catch (e) {}
-                            let pointValue =
-                                formData.get("point_value") !== null &&
-                                formData.get("point_value") !== ""
-                                    ? Number(formData.get("point_value"))
-                                    : 0;
-                            if (
-                                Array.isArray(contributionsArr) &&
-                                contributionsArr.length > 0
-                            ) {
-                                pointValue = contributionsArr.reduce(
-                                    (sum, c) => sum + (Number(c.amount) || 0),
-                                    0,
-                                );
-                                contributions =
-                                    JSON.stringify(contributionsArr);
-                            } else if (typeof contributions !== "string") {
-                                contributions = JSON.stringify(contributions);
-                            }
-                            const leftCount =
-                                formData.get("left_count") !== null &&
-                                formData.get("left_count") !== ""
-                                    ? Number(formData.get("left_count"))
-                                    : 0;
-                            const rightCount =
-                                formData.get("right_count") !== null &&
-                                formData.get("right_count") !== ""
-                                    ? Number(formData.get("right_count"))
-                                    : 0;
-                            const leftTargetCount =
-                                formData.get("left_target_count") !== null &&
-                                formData.get("left_target_count") !== ""
-                                    ? Number(formData.get("left_target_count"))
-                                    : 5;
-                            const rightTargetCount =
-                                formData.get("right_target_count") !== null &&
-                                formData.get("right_target_count") !== ""
-                                    ? Number(formData.get("right_target_count"))
-                                    : 5;
-                            const leftBv =
-                                formData.get("left_bv") !== null &&
-                                formData.get("left_bv") !== ""
-                                    ? Number(formData.get("left_bv"))
-                                    : 0;
-                            const rightBv =
-                                formData.get("right_bv") !== null &&
-                                formData.get("right_bv") !== ""
-                                    ? Number(formData.get("right_bv"))
-                                    : 0;
-                            const userId =
-                                formData.get("user_id") &&
-                                formData.get("user_id") !== ""
-                                    ? Number(formData.get("user_id"))
-                                    : null;
-                            const isActive = formData.has("is_active") ? 1 : 0;
+                            const existing = await db
+                                .prepare("SELECT * FROM binary_nodes WHERE id = ?")
+                                .bind(nodeId)
+                                .first();
 
-                            await db
-                                .prepare(
-                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, left_count = ?, right_count = ?, left_target_count = ?, right_target_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(
-                                    memberName,
-                                    memberCode,
-                                    phone,
-                                    email,
-                                    passwordPlain,
-                                    tpin,
-                                    packageName,
-                                    rankName,
-                                    sponsorId,
-                                    sponsorName,
-                                    pointValue,
-                                    contributions,
-                                    isTarget,
-                                    targetDate,
-                                    targetNotes,
-                                    leftCount,
-                                    rightCount,
-                                    leftTargetCount,
-                                    rightTargetCount,
-                                    leftBv,
-                                    rightBv,
-                                    userId,
-                                    isActive,
-                                    nodeId,
-                                )
-                                .run();
+                            if (existing) {
+                                const memberName =
+                                    formData.get("member_name") || existing.member_name || "Unnamed Member";
+                                const memberCode =
+                                    formData.get("member_code") || existing.member_code;
+                                const phone = formData.has("phone")
+                                    ? formData.get("phone")
+                                    : existing.phone;
+                                const email = formData.has("email")
+                                    ? formData.get("email")
+                                    : existing.email;
+                                const passwordPlain =
+                                    formData.get("password_plain") ||
+                                    formData.get("password") ||
+                                    existing.password_plain ||
+                                    "sbl123456";
+                                const tpin =
+                                    formData.get("tpin") || existing.tpin || "1234";
+                                const packageName =
+                                    formData.get("package_name") ||
+                                    existing.package_name ||
+                                    "National 120k";
+                                const rankName =
+                                    formData.get("rank_name") || existing.rank_name || "Member";
+                                const sponsorName = formData.has("sponsor_name")
+                                    ? formData.get("sponsor_name")
+                                    : existing.sponsor_name;
+                                const sponsorId =
+                                    formData.has("sponsor_id") && formData.get("sponsor_id") !== ""
+                                        ? Number(formData.get("sponsor_id"))
+                                        : existing.sponsor_id;
+                                const isTarget = formData.has("is_target")
+                                    ? (formData.get("is_target") === "1" || formData.get("is_target") === "on" ? 1 : 0)
+                                    : (formData.has("member_name") ? 0 : (existing.is_target ? 1 : 0));
+                                const targetDate = formData.has("target_date")
+                                    ? formData.get("target_date")
+                                    : existing.target_date;
+                                const targetNotes = formData.has("target_notes")
+                                    ? formData.get("target_notes")
+                                    : existing.target_notes;
+
+                                let contributions = formData.get("contributions");
+                                let pointValue = Number(existing.point_value) || 0;
+                                if (contributions) {
+                                    let contributionsArr = [];
+                                    try {
+                                        contributionsArr =
+                                            typeof contributions === "string"
+                                                ? JSON.parse(contributions)
+                                                : contributions;
+                                    } catch (e) {}
+                                    if (Array.isArray(contributionsArr) && contributionsArr.length > 0) {
+                                        pointValue = contributionsArr.reduce(
+                                            (sum, c) => sum + (Number(c.amount) || 0),
+                                            0,
+                                        );
+                                        contributions = JSON.stringify(contributionsArr);
+                                    }
+                                } else {
+                                    contributions = existing.contributions || "[]";
+                                }
+
+                                if (formData.has("point_value") && formData.get("point_value") !== "") {
+                                    pointValue = Number(formData.get("point_value")) || pointValue;
+                                }
+
+                                const userId =
+                                    formData.has("user_id") && formData.get("user_id") !== ""
+                                        ? Number(formData.get("user_id"))
+                                        : existing.user_id;
+                                const isActive = formData.has("is_active")
+                                    ? (formData.get("is_active") === "1" || formData.get("is_active") === "true" ? 1 : 0)
+                                    : (existing.is_active !== undefined ? existing.is_active : 1);
+
+                                await db
+                                    .prepare(
+                                        "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        memberName,
+                                        memberCode,
+                                        phone,
+                                        email,
+                                        passwordPlain,
+                                        tpin,
+                                        packageName,
+                                        rankName,
+                                        sponsorId,
+                                        sponsorName,
+                                        pointValue,
+                                        contributions,
+                                        isTarget,
+                                        targetDate,
+                                        targetNotes,
+                                        userId,
+                                        isActive,
+                                        nodeId,
+                                    )
+                                    .run();
+                            }
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
                         }
@@ -2910,7 +2893,7 @@ export default {
           if (ownInvEl) ownInvEl.textContent = fmtMoney(pv);
 
           const invCountEl = document.querySelector('[data-current-investment-count]');
-          if (invCountEl) invCountEl.textContent = contribs.length + ' টি ইনভেস্টমেন্ট রেকর্ড';
+          if (invCountEl) invCountEl.textContent = contribs.length + ' Investment Records';
 
           const lHdrCount = document.querySelector('[data-left-header-count]');
           if (lHdrCount) lHdrCount.textContent = currentMember.direct_left_count + '/5 Positions Filled';
@@ -2941,14 +2924,14 @@ export default {
               return '<div class="w-full p-4 rounded-2xl border-2 border-dashed ' + (isLeft ? 'border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-900/30' : 'border-blue-500/30 bg-blue-950/20 hover:bg-blue-900/30') + ' transition-all flex flex-col justify-between space-y-3 text-white shadow-md group relative">' +
                 '<div class="flex items-center justify-between">' +
                   '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ' + (isLeft ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40') + '">' + slotLabel + '</span>' +
-                  '<span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">খালি পজিশন</span>' +
+                  '<span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Vacant Slot</span>' +
                 '</div>' +
                 '<div class="py-2 text-center">' +
                   '<div class="w-10 h-10 mx-auto rounded-full ' + (isLeft ? 'bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950' : 'bg-blue-500/20 text-blue-400 group-hover:bg-blue-500 group-hover:text-slate-950') + ' flex items-center justify-center text-xl font-black transition-all">+</div>' +
-                  '<div class="text-xs font-bold text-slate-300 mt-1">' + slotLabel + ' স্লট খালি রয়েছে</div>' +
+                  '<div class="text-xs font-bold text-slate-300 mt-1">' + slotLabel + ' is Available</div>' +
                 '</div>' +
                 '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openPlacementModal(' + parentId + ', \'' + (parentName || '').replace(/'/g, "\\'") + '\', \'' + (parentCode || '') + '\', \'' + branch + '\', ' + slotNumber + '); } })() : null" class="w-full py-2 px-3 rounded-xl ' + (isLeft ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500') + ' text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">' +
-                  '<span>+</span> <span>স্লটে মেম্বার যোগ করুন</span>' +
+                  '<span>+</span> <span>Add Member</span>' +
                 '</button>' +
               '</div>';
             }
@@ -3007,8 +2990,8 @@ export default {
                 '</div>' +
               '</div>' +
               '<div class="pt-1 flex items-center gap-2">' +
-                '<a href="/team/' + node.id + '" class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5" title="এই মেম্বারের ১০-স্লট টিম এক্সপ্লোর করুন"><span>👥</span> <span>View Team</span></a>' +
-                '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' + node.id + '); } })() : null" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer" title="মেম্বারের সম্পূর্ণ বিবরণ দেখুন"><span>ℹ️</span> <span>Details</span></button>' +
+                '<a href="/team/' + node.id + '" class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5" title="Explore this member\'s 10-slot team"><span>👥</span> <span>View Team</span></a>' +
+                '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' + node.id + '); } })() : null" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer" title="View member details"><span>ℹ️</span> <span>Details</span></button>' +
               '</div>' +
             '</div>';
           }

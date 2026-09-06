@@ -12,7 +12,7 @@
                 {{ $slotLabel }}
             </span>
             <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                খালি পজিশন
+                Vacant Slot
             </span>
         </div>
 
@@ -21,14 +21,14 @@
                 +
             </div>
             <div class="text-xs font-bold text-slate-300 mt-1">
-                {{ $slotLabel }} স্লট খালি রয়েছে
+                {{ $slotLabel }} is Available
             </div>
         </div>
 
         <button type="button" 
                 @click="openPlacementModal({{ $node['parent_id'] }}, '{{ addslashes($node['parent_name'] ?? '') }}', '{{ $node['parent_code'] ?? '' }}', '{{ $branch }}', {{ $slotNumber }})"
                 class="w-full py-2 px-3 rounded-xl {{ $isLeft ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500' }} text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
-            <span>+</span> <span>স্লটে মেম্বার যোগ করুন</span>
+            <span>+</span> <span>Add Member</span>
         </button>
     </div>
 
@@ -123,7 +123,7 @@
             <!-- 👥 View Team (Drills into that member's 10-slot tree) -->
             <a href="{{ route('team.show', ['memberId' => $node['id']]) }}" 
                class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
-               title="এই মেম্বারের ১০-স্লট টিম এক্সপ্লোর করুন">
+               title="Explore this member's 10-slot direct team">
                 <span>👥</span> <span>View Team</span>
             </a>
 
@@ -131,7 +131,7 @@
             <button type="button" 
                     @click="openDetailsModal({{ json_encode($node) }})"
                     class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
-                    title="মেম্বারের সম্পূর্ণ বিবরণ ও ইনভেস্টমেন্ট হিস্টোরি দেখুন">
+                    title="View full member details and investment records">
                 <span>ℹ️</span> <span>Details</span>
             </button>
         </div>
