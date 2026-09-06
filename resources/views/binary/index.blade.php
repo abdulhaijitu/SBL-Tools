@@ -40,8 +40,55 @@
     selectedSlotNumber: 1,
     isTargetMember: false,
     showDetailsPass: false,
+    getNodeData(node) {
+        if (!node) return {};
+        const id = (typeof node === 'object' && node !== null) ? node.id : node;
+        if (window.DATA && window.DATA.nodes && Array.isArray(window.DATA.nodes)) {
+            const live = window.DATA.nodes.find(n => Number(n.id) === Number(id));
+            if (live) {
+                let contribs = [];
+                try {
+                    contribs = typeof live.contributions === 'string' ? JSON.parse(live.contributions) : (live.contributions || []);
+                } catch(e) {}
+                let pv = Number(live.point_value) || 0;
+                if (Array.isArray(contribs) && contribs.length > 0) {
+                    pv = contribs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+                }
+                const code = live.member_code || ('SBL-' + live.id);
+                const username = live.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
+                return {
+                    ...live,
+                    id: live.id,
+                    member_name: live.member_name,
+                    member_code: live.member_code,
+                    username: username,
+                    phone: live.phone || '',
+                    email: live.email || '',
+                    password_plain: live.password_plain || 'sbl123456',
+                    tpin: live.tpin || '1234',
+                    sponsor_id: live.sponsor_id,
+                    sponsor_name: live.sponsor_name || 'Md. Samim',
+                    user_id: live.user_id,
+                    point_value: pv,
+                    total_investment: pv,
+                    own_investment: pv,
+                    contributions: contribs,
+                    rank_name: live.rank_name || 'Member',
+                    is_active: live.is_active !== undefined ? Boolean(Number(live.is_active)) : true,
+                    is_target: Boolean(Number(live.is_target)),
+                    target_date: live.target_date || '',
+                    target_notes: live.target_notes || '',
+                    branch: live.branch || (live.position === 'left' ? 'LEFT' : 'RIGHT'),
+                    slot_number: Number(live.slot_number) || 1,
+                    direct_left_count: Number(live.left_count) || 0,
+                    direct_right_count: Number(live.right_count) || 0
+                };
+            }
+        }
+        return (typeof node === 'object' && node !== null) ? node : { id: node };
+    },
     openDetailsModal(node) {
-        this.detailsNode = node || {};
+        this.detailsNode = this.getNodeData(node);
         this.showDetailsPass = false;
         this.activeDetailsTab = 'overview';
         this.detailsModalOpen = true;
@@ -78,47 +125,48 @@
         }
     },
     openEditModal(node) {
+        const liveNode = this.getNodeData(node);
         let contribs = [];
-        if (node.contributions) {
-            contribs = typeof node.contributions === 'string' ? JSON.parse(node.contributions) : node.contributions;
+        if (liveNode.contributions) {
+            contribs = typeof liveNode.contributions === 'string' ? JSON.parse(liveNode.contributions) : liveNode.contributions;
         }
         if (!contribs || contribs.length === 0) {
             contribs = [
-                { amount: node.total_investment || node.point_value || 0, date: new Date().toISOString().slice(0, 10), note: node.package_name || 'Initial' }
+                { amount: liveNode.total_investment || liveNode.point_value || 0, date: new Date().toISOString().slice(0, 10), note: liveNode.package_name || 'Initial' }
             ];
         }
 
         this.editNode = {
-            id: node.id,
-            member_name: node.member_name || '',
-            member_code: node.member_code || '',
-            phone: node.phone || '',
-            email: node.email || '',
-            password_plain: node.password_plain || 'sbl123456',
-            tpin: node.tpin || '1234',
-            package_name: node.package_name || 'National 120k',
-            point_value: node.point_value !== undefined ? node.point_value : 100,
+            id: liveNode.id,
+            member_name: liveNode.member_name || '',
+            member_code: liveNode.member_code || '',
+            phone: liveNode.phone || '',
+            email: liveNode.email || '',
+            password_plain: liveNode.password_plain || 'sbl123456',
+            tpin: liveNode.tpin || '1234',
+            package_name: liveNode.package_name || 'National 120k',
+            point_value: liveNode.point_value !== undefined ? liveNode.point_value : 100,
             contributions: contribs,
-            rank_name: node.rank_name || 'Member',
-            sponsor_id: node.sponsor_id || '',
-            sponsor_name: node.sponsor_name || '',
-            branch: node.branch || 'LEFT',
-            slot_number: node.slot_number || 1,
-            is_active: node.is_active !== undefined ? Boolean(node.is_active) : true,
-            is_target: node.is_target !== undefined ? Boolean(node.is_target) : false,
-            target_date: node.target_date || '',
-            target_notes: node.target_notes || '',
-            user_id: node.user_id || ''
+            rank_name: liveNode.rank_name || 'Member',
+            sponsor_id: liveNode.sponsor_id || '',
+            sponsor_name: liveNode.sponsor_name || '',
+            branch: liveNode.branch || 'LEFT',
+            slot_number: liveNode.slot_number || 1,
+            is_active: liveNode.is_active !== undefined ? Boolean(liveNode.is_active) : true,
+            is_target: liveNode.is_target !== undefined ? Boolean(liveNode.is_target) : false,
+            target_date: liveNode.target_date || '',
+            target_notes: liveNode.target_notes || '',
+            user_id: liveNode.user_id || ''
         };
-            this.editModalOpen = true;
-            this.$nextTick(() => {
-                const form = document.querySelector('#edit-member-form');
-                if (form && node.id) {
-                    form.action = '/team/' + node.id;
-                }
-            });
-        }
-    }">
+        this.editModalOpen = true;
+        this.$nextTick(() => {
+            const form = document.querySelector('#edit-member-form');
+            if (form && liveNode.id) {
+                form.action = '/team/' + liveNode.id;
+            }
+        });
+    }
+}">
 
     @if(session('success'))
     <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm font-semibold flex items-center justify-between shadow-xs">
@@ -415,18 +463,18 @@
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/90">
             <div class="flex items-center gap-4">
                 <!-- Avatar / Initial -->
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <div data-current-member-initial class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg flex-shrink-0">
                     {{ substr($treeData['stats']['root_name'] ?? 'M', 0, 1) }}
                 </div>
 
                 <div class="space-y-1">
                     <div class="flex items-center gap-2.5 flex-wrap">
-                        <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">
+                        <h2 data-current-member-name class="text-xl md:text-2xl font-black text-white tracking-tight">
                             {{ $treeData['stats']['root_name'] ?? 'Md. Abdul Hai' }}
                         </h2>
                         
                         <!-- Rank Badge -->
-                        <span class="px-3 py-0.5 rounded-full text-xs font-black {{ $isFme ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30' : 'bg-slate-800 text-amber-300 border border-amber-400/40' }}">
+                        <span data-current-member-rank class="px-3 py-0.5 rounded-full text-xs font-black {{ $isFme ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30' : 'bg-slate-800 text-amber-300 border border-amber-400/40' }}">
                             {{ $treeData['stats']['rank_name'] ?? 'Member' }}
                         </span>
 
@@ -439,13 +487,13 @@
 
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
                         <span class="font-mono text-slate-300 font-bold flex items-center gap-1">
-                            <span>{{ $currUsername }}</span>
+                            <span data-current-member-username>{{ $currUsername }}</span>
                             <button type="button" @click="navigator.clipboard.writeText('{{ $currUsername }}'); alert('Username copied: {{ $currUsername }}');" class="hover:text-white cursor-pointer" title="Copy username">
                                 <svg class="w-3.5 h-3.5 inline opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             </button>
                         </span>
                         <span>•</span>
-                        <span>Sponsor / Upline: <strong class="text-orange-300">{{ $sponsorName }}</strong></span>
+                        <span>Sponsor / Upline: <strong data-current-member-sponsor class="text-orange-300">{{ $sponsorName }}</strong></span>
                     </div>
                 </div>
             </div>
@@ -453,12 +501,14 @@
             <!-- Header Quick Actions -->
             <div class="flex items-center gap-2">
                 <button type="button" 
+                        data-btn-full-details
                         @click="openDetailsModal({{ json_encode($curr) }})"
                         class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
                     <span>ℹ️</span> <span>Full Details</span>
                 </button>
 
                 <button type="button" 
+                        data-btn-edit-member
                         @click="openEditModal({{ json_encode($curr) }})"
                         class="px-4 py-2 bg-orange-600/90 hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
                     <span>✏️</span> <span>Edit Member</span>
@@ -472,13 +522,13 @@
             <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
                 <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                     <span>Direct Team</span>
-                    <span class="text-white font-black">{{ $directTotal }}/10</span>
+                    <span data-current-direct-total class="text-white font-black">{{ $directTotal }}/10</span>
                 </div>
                 <div class="text-2xl font-black text-white flex items-baseline gap-2">
-                    <span>{{ $directTotal }}</span>
+                    <span data-current-direct-sub>{{ $directTotal }}</span>
                     <span class="text-xs font-semibold text-slate-400">/ 10 ডিরেক্ট স্লট</span>
                 </div>
-                <div class="text-xs text-slate-300 font-bold flex items-center gap-3 pt-1">
+                <div data-current-direct-split class="text-xs text-slate-300 font-bold flex items-center gap-3 pt-1">
                     <span class="text-emerald-400">👈 Left: {{ $directL }}/5</span>
                     <span class="text-slate-600">|</span>
                     <span class="text-blue-400">👉 Right: {{ $directR }}/5</span>
@@ -491,10 +541,10 @@
                     <span>Own Investment</span>
                     <span class="w-2 h-2 rounded-full bg-amber-400"></span>
                 </div>
-                <div class="text-2xl font-black text-amber-300 truncate">
+                <div data-current-own-investment class="text-2xl font-black text-amber-300 truncate">
                     <span x-text="$store.currency ? $store.currency.format({{ $ownInv }}) : '{{ \App\Services\CurrencyService::format($ownInv) }}'">{{ \App\Services\CurrencyService::format($ownInv) }}</span>
                 </div>
-                <div class="text-[11px] text-slate-400 truncate">
+                <div data-current-investment-count class="text-[11px] text-slate-400 truncate">
                     {{ count($curr['contributions'] ?? []) }} টি ইনভেস্টমেন্ট রেকর্ড
                 </div>
             </div>
@@ -549,13 +599,13 @@
                         👈 LEFT DIRECT TEAM
                     </h3>
                 </div>
-                <div class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
+                <div data-left-header-count class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
                     {{ $directL }}/5 Positions Filled
                 </div>
             </div>
 
             <!-- 5 Left Slot Cards (L1 through L5) -->
-            <div class="space-y-3">
+            <div data-left-slots-container class="space-y-3">
                 @for($s = 1; $s <= 5; $s++)
                     @php
                         $slotNode = $treeData['left_slots'][$s] ?? null;
@@ -577,13 +627,13 @@
                         RIGHT DIRECT TEAM 👉
                     </h3>
                 </div>
-                <div class="px-3 py-1 rounded-xl bg-blue-500/20 text-blue-300 font-black text-xs border border-blue-500/40">
+                <div data-right-header-count class="px-3 py-1 rounded-xl bg-blue-500/20 text-blue-300 font-black text-xs border border-blue-500/40">
                     {{ $directR }}/5 Positions Filled
                 </div>
             </div>
 
             <!-- 5 Right Slot Cards (R1 through R5) -->
-            <div class="space-y-3">
+            <div data-right-slots-container class="space-y-3">
                 @for($s = 1; $s <= 5; $s++)
                     @php
                         $slotNode = $treeData['right_slots'][$s] ?? null;

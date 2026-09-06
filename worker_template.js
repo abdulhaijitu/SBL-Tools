@@ -405,7 +405,10 @@ export default {
 
             // 4b. SBL Team Explorer & Placement Handlers
             if (
-                (path === "/binary" || path === "/binary/place" || path === "/team" || path === "/team/place") &&
+                (path === "/binary" ||
+                    path === "/binary/place" ||
+                    path === "/team" ||
+                    path === "/team/place") &&
                 effectiveMethod === "POST" &&
                 formData
             ) {
@@ -424,9 +427,14 @@ export default {
                             formData.get("package_name") || "National 120k";
                         const rankName = formData.get("rank_name") || "Member";
                         const parentId = Number(formData.get("parent_id")) || 1;
-                        const branch = (formData.get("branch") || formData.get("position") || "LEFT").toUpperCase();
+                        const branch = (
+                            formData.get("branch") ||
+                            formData.get("position") ||
+                            "LEFT"
+                        ).toUpperCase();
                         const position = branch.toLowerCase();
-                        const slotNumber = Number(formData.get("slot_number")) || 1;
+                        const slotNumber =
+                            Number(formData.get("slot_number")) || 1;
                         let pointValue =
                             Number(formData.get("point_value")) || 100;
                         const leftTargetCount =
@@ -435,7 +443,8 @@ export default {
                             Number(formData.get("right_target_count")) || 5;
                         const isTarget = formData.get("is_target") ? 1 : 0;
                         const targetDate = formData.get("target_date") || null;
-                        const targetNotes = formData.get("target_notes") || null;
+                        const targetNotes =
+                            formData.get("target_notes") || null;
                         let contributions =
                             formData.get("contributions") || "[]";
                         if (typeof contributions !== "string") {
@@ -504,7 +513,8 @@ export default {
                     }
                 }
                 const ref = request.headers.get("referer");
-                if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                if (ref)
+                    return Response.redirect(new URL(ref, request.url), 302);
                 return Response.redirect(new URL("/team", request.url), 302);
             }
 
@@ -529,7 +539,8 @@ export default {
                     }
                 }
                 const ref = request.headers.get("referer");
-                if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                if (ref)
+                    return Response.redirect(new URL(ref, request.url), 302);
                 return Response.redirect(new URL("/team", request.url), 302);
             }
 
@@ -602,14 +613,20 @@ export default {
                                     .first();
                                 if (node && node.parent_id) {
                                     const pv = Number(node.point_value) || 0;
-                                    if (node.position === "left" || node.branch === "LEFT") {
+                                    if (
+                                        node.position === "left" ||
+                                        node.branch === "LEFT"
+                                    ) {
                                         await db
                                             .prepare(
                                                 "UPDATE binary_nodes SET left_count = MAX(0, left_count - 1), left_bv = MAX(0, left_bv - ?), carry_left = MAX(0, carry_left - ?) WHERE id = ?",
                                             )
                                             .bind(pv, pv, node.parent_id)
                                             .run();
-                                    } else if (node.position === "right" || node.branch === "RIGHT") {
+                                    } else if (
+                                        node.position === "right" ||
+                                        node.branch === "RIGHT"
+                                    ) {
                                         await db
                                             .prepare(
                                                 "UPDATE binary_nodes SET right_count = MAX(0, right_count - 1), right_bv = MAX(0, right_bv - ?), carry_right = MAX(0, carry_right - ?) WHERE id = ?",
@@ -638,7 +655,11 @@ export default {
                         }
                     }
                     const ref = request.headers.get("referer");
-                    if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                    if (ref)
+                        return Response.redirect(
+                            new URL(ref, request.url),
+                            302,
+                        );
                     return Response.redirect(
                         new URL("/team?deleted_node=" + nodeId, request.url),
                         302,
@@ -671,8 +692,10 @@ export default {
                                     ? Number(formData.get("sponsor_id"))
                                     : null;
                             const isTarget = formData.get("is_target") ? 1 : 0;
-                            const targetDate = formData.get("target_date") || null;
-                            const targetNotes = formData.get("target_notes") || null;
+                            const targetDate =
+                                formData.get("target_date") || null;
+                            const targetNotes =
+                                formData.get("target_notes") || null;
                             let contributions =
                                 formData.get("contributions") || "[]";
                             let contributionsArr = [];
@@ -773,7 +796,11 @@ export default {
                         }
                     }
                     const ref = request.headers.get("referer");
-                    if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                    if (ref)
+                        return Response.redirect(
+                            new URL(ref, request.url),
+                            302,
+                        );
                     return Response.redirect(
                         new URL("/team", request.url),
                         302,
@@ -2793,7 +2820,7 @@ export default {
       }
     }
 
-    // 5. BINARY TREE & DIRECTORY SYNC - ON /binary & /team!
+    // 5. TEAM EXPLORER (5 LEFT + 5 RIGHT) & DIRECTORY SYNC - ON /binary & /team!
     if (curPath === '/binary' || curPath.startsWith('/binary?') || curPath.startsWith('/binary/') || curPath === '/team' || curPath.startsWith('/team?') || curPath.startsWith('/team/')) {
       if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
         DATA.deletedNodes.forEach(function(id) {
@@ -2805,105 +2832,215 @@ export default {
         const nodeMap = {};
         DATA.nodes.forEach(function(n) { nodeMap[n.id] = n; });
 
-        // A. Sync Visual Tree Cards on Genealogy / Team Explorer Canvas
-        DATA.nodes.forEach(function(node) {
-          const cardEl = document.querySelector('div[data-node-id="' + node.id + '"]');
-          if (cardEl) {
-            let contributionsArr = [];
-            try {
-              contributionsArr = typeof node.contributions === 'string' ? JSON.parse(node.contributions) : (node.contributions || []);
-            } catch(e) {}
-            let pv = Number(node.point_value) || 0;
-            if (Array.isArray(contributionsArr) && contributionsArr.length > 0) {
-              pv = contributionsArr.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-            }
-            const leftCount = Number(node.left_count) || 0;
-            const rightCount = Number(node.right_count) || 0;
-            const code = node.member_code || ('SBL-' + node.id);
-            const username = node.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
-            const email = node.email || ('member' + node.id + '@gmail.com');
-            const phone = node.phone || '';
-            const password = node.password_plain || 'sbl123456';
-            const tpin = node.tpin || '1234';
-            const sponsorName = node.sponsor_name || (node.sponsor_id && nodeMap[node.sponsor_id] ? nodeMap[node.sponsor_id].member_name : (node.parent_id && nodeMap[node.parent_id] ? nodeMap[node.parent_id].member_name : 'Md. Samim'));
-
-            // 1. Member Full Name
-            const nameEl = cardEl.querySelector('h4') || cardEl.querySelector('h3 span') || cardEl.querySelector('h2');
-            if (nameEl) nameEl.textContent = node.member_name;
-
-            // 2. Member Username & Phone
-            const userSpan = cardEl.querySelector('.font-mono span');
-            if (userSpan) userSpan.textContent = username;
-
-            // 3. Rank badge
-            const rankBadge = cardEl.querySelector('span.rounded-full:not(.uppercase)');
-            if (rankBadge) rankBadge.textContent = node.rank_name || 'Member';
-
-            // 4. Currency Formatter Helper
-            const activeCurr = localStorage.getItem('sbl_currency') || 'BDT';
-            const fmtMoney = function(numVal) {
-              const num = parseFloat(numVal) || 0;
-              if (activeCurr === 'USD') {
-                return '$' + Math.round(num / 120).toLocaleString();
-              }
-              return '৳ ' + Math.round(num).toLocaleString();
-            };
-
-            // 5. Total Investment / Point Value
-            const invEl = cardEl.querySelector('.text-amber-300 span') || cardEl.querySelector('.text-amber-300');
-            if (invEl) invEl.textContent = fmtMoney(pv);
-
-            // 6. Direct Team counts
-            const directTotalEl = cardEl.querySelector('div.font-black.text-white');
-            if (directTotalEl) {
-              directTotalEl.innerHTML = '<span>' + (leftCount + rightCount) + '/10</span><span class="text-[10px] text-slate-400 font-normal">(' + leftCount + 'L | ' + rightCount + 'R)</span>';
-            }
-
-            // 7. Rebind node object with fresh data
-            const updatedNodeObj = {
-              id: node.id,
-              member_name: node.member_name,
-              member_code: node.member_code,
-              username: username,
-              phone: phone,
-              email: email,
-              password_plain: password,
-              tpin: tpin,
-              sponsor_id: node.sponsor_id,
-              sponsor_name: sponsorName,
-              user_id: node.user_id,
-              is_active: Boolean(node.is_active),
-              is_target: Boolean(node.is_target),
-              target_date: node.target_date || '',
-              target_notes: node.target_notes || '',
-              package_name: node.package_name || 'National 120k',
-              point_value: pv,
-              total_investment: pv,
-              contributions: contributionsArr,
-              rank_name: node.rank_name || 'Member',
-              branch: node.branch || (node.position === 'left' ? 'LEFT' : 'RIGHT'),
-              slot_number: node.slot_number || 1,
-              position: node.position,
-              left_count: leftCount,
-              right_count: rightCount,
-              parent_id: node.parent_id
-            };
-
-            // Rebind click to openDetailsModal or openEditModal
-            const triggerDetails = function(e) {
-              e.stopPropagation();
-              const container = document.querySelector('[x-data]');
-              if (container && container._x_dataStack) {
-                container._x_dataStack[0].openDetailsModal(updatedNodeObj);
-              }
-            };
-            const detailsBtn = cardEl.querySelector('button[title*="বিবরণ"], button[title*="Details"]');
-            if (detailsBtn) detailsBtn.onclick = triggerDetails;
-            if (nameEl) nameEl.onclick = triggerDetails;
-          }
+        // Calculate dynamic direct left and right counts for every node
+        DATA.nodes.forEach(function(n) {
+          const directL = DATA.nodes.filter(function(c) {
+            return Number(c.parent_id) === Number(n.id) && (c.branch === 'LEFT' || c.position === 'left');
+          }).length;
+          const directR = DATA.nodes.filter(function(c) {
+            return Number(c.parent_id) === Number(n.id) && (c.branch === 'RIGHT' || c.position === 'right');
+          }).length;
+          n.direct_left_count = directL;
+          n.direct_right_count = directR;
+          n.direct_total_count = directL + directR;
+          n.is_fme = (directL >= 5 && directR >= 5);
         });
 
-        // B. Sync Member Directory Table
+        // Determine currently viewed member
+        let viewedMemberId = null;
+        const m = curPath.match(/\/(?:team|binary)\/(\d+)/);
+        if (m) {
+          viewedMemberId = parseInt(m[1], 10);
+        }
+        let currentMember = null;
+        if (viewedMemberId) {
+          currentMember = nodeMap[viewedMemberId];
+        }
+        if (!currentMember) {
+          const roots = DATA.nodes.filter(function(n) { return !n.parent_id; });
+          currentMember = roots.length > 0 ? roots[0] : DATA.nodes[0];
+        }
+
+        const activeCurr = localStorage.getItem('sbl_currency') || 'BDT';
+        const fmtMoney = function(numVal) {
+          const num = parseFloat(numVal) || 0;
+          if (activeCurr === 'USD') return '$' + Math.round(num / 120).toLocaleString();
+          return '৳ ' + Math.round(num).toLocaleString();
+        };
+
+        // A. Sync Top Current Member Summary Card
+        if (currentMember) {
+          let contribs = [];
+          try {
+            contribs = typeof currentMember.contributions === 'string' ? JSON.parse(currentMember.contributions) : (currentMember.contributions || []);
+          } catch(e) {}
+          let pv = Number(currentMember.point_value) || 0;
+          if (Array.isArray(contribs) && contribs.length > 0) {
+            pv = contribs.reduce(function(sum, c) { return sum + (Number(c.amount) || 0); }, 0);
+          }
+          const code = currentMember.member_code || ('SBL-' + currentMember.id);
+          const username = currentMember.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
+          const sponsorName = currentMember.sponsor_name || (currentMember.sponsor_id && nodeMap[currentMember.sponsor_id] ? nodeMap[currentMember.sponsor_id].member_name : (currentMember.parent_id && nodeMap[currentMember.parent_id] ? nodeMap[currentMember.parent_id].member_name : 'Md. Samim'));
+
+          const initEl = document.querySelector('[data-current-member-initial]');
+          if (initEl) initEl.textContent = (currentMember.member_name || 'M').charAt(0).toUpperCase();
+
+          const nameEl = document.querySelector('[data-current-member-name]');
+          if (nameEl) nameEl.textContent = currentMember.member_name;
+
+          const rankEl = document.querySelector('[data-current-member-rank]');
+          if (rankEl) rankEl.textContent = currentMember.rank_name || 'Member';
+
+          const userEl = document.querySelector('[data-current-member-username]');
+          if (userEl) userEl.textContent = username;
+
+          const sponEl = document.querySelector('[data-current-member-sponsor]');
+          if (sponEl) sponEl.textContent = sponsorName;
+
+          const dTotEl = document.querySelector('[data-current-direct-total]');
+          if (dTotEl) dTotEl.textContent = currentMember.direct_total_count + '/10';
+
+          const dSubEl = document.querySelector('[data-current-direct-sub]');
+          if (dSubEl) dSubEl.textContent = currentMember.direct_total_count;
+
+          const dSplitEl = document.querySelector('[data-current-direct-split]');
+          if (dSplitEl) dSplitEl.innerHTML = '<span class="text-emerald-400">👈 Left: ' + currentMember.direct_left_count + '/5</span><span class="text-slate-600">|</span><span class="text-blue-400">👉 Right: ' + currentMember.direct_right_count + '/5</span>';
+
+          const ownInvEl = document.querySelector('[data-current-own-investment]');
+          if (ownInvEl) ownInvEl.textContent = fmtMoney(pv);
+
+          const invCountEl = document.querySelector('[data-current-investment-count]');
+          if (invCountEl) invCountEl.textContent = contribs.length + ' টি ইনভেস্টমেন্ট রেকর্ড';
+
+          const lHdrCount = document.querySelector('[data-left-header-count]');
+          if (lHdrCount) lHdrCount.textContent = currentMember.direct_left_count + '/5 Positions Filled';
+
+          const rHdrCount = document.querySelector('[data-right-header-count]');
+          if (rHdrCount) rHdrCount.textContent = currentMember.direct_right_count + '/5 Positions Filled';
+
+          const btnDetails = document.querySelector('[data-btn-full-details]');
+          if (btnDetails) {
+            btnDetails.onclick = function() {
+              var c = document.querySelector('[x-data]');
+              if (c && c._x_dataStack) c._x_dataStack[0].openDetailsModal(currentMember.id);
+            };
+          }
+          const btnEdit = document.querySelector('[data-btn-edit-member]');
+          if (btnEdit) {
+            btnEdit.onclick = function() {
+              var c = document.querySelector('[x-data]');
+              if (c && c._x_dataStack) c._x_dataStack[0].openEditModal(currentMember.id);
+            };
+          }
+
+          // Render Slot Card Helper
+          function renderSlotCard(node, branch, slotNumber, parentId, parentName, parentCode) {
+            const isLeft = branch === 'LEFT';
+            const slotLabel = branch + '-' + slotNumber;
+            if (!node || node.is_vacant) {
+              return '<div class="w-full p-4 rounded-2xl border-2 border-dashed ' + (isLeft ? 'border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-900/30' : 'border-blue-500/30 bg-blue-950/20 hover:bg-blue-900/30') + ' transition-all flex flex-col justify-between space-y-3 text-white shadow-md group relative">' +
+                '<div class="flex items-center justify-between">' +
+                  '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ' + (isLeft ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-blue-500/20 text-blue-300 border border-blue-500/40') + '">' + slotLabel + '</span>' +
+                  '<span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">খালি পজিশন</span>' +
+                '</div>' +
+                '<div class="py-2 text-center">' +
+                  '<div class="w-10 h-10 mx-auto rounded-full ' + (isLeft ? 'bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950' : 'bg-blue-500/20 text-blue-400 group-hover:bg-blue-500 group-hover:text-slate-950') + ' flex items-center justify-center text-xl font-black transition-all">+</div>' +
+                  '<div class="text-xs font-bold text-slate-300 mt-1">' + slotLabel + ' স্লট খালি রয়েছে</div>' +
+                '</div>' +
+                '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openPlacementModal(' + parentId + ', \'' + (parentName || '').replace(/'/g, "\\'") + '\', \'' + (parentCode || '') + '\', \'' + branch + '\', ' + slotNumber + '); } })() : null" class="w-full py-2 px-3 rounded-xl ' + (isLeft ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500') + ' text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">' +
+                  '<span>+</span> <span>স্লটে মেম্বার যোগ করুন</span>' +
+                '</button>' +
+              '</div>';
+            }
+
+            const isTarget = Boolean(Number(node.is_target));
+            let cardBorder = '';
+            let slotBadge = '';
+            if (isTarget) {
+              cardBorder = 'border-purple-500/40 bg-gradient-to-b from-purple-950/70 via-slate-900/90 to-purple-950/60';
+              slotBadge = 'bg-purple-500/30 text-purple-300 border-purple-400/40';
+            } else if (isLeft) {
+              cardBorder = 'border-emerald-500/35 bg-gradient-to-b from-emerald-950/50 via-slate-900/95 to-slate-950';
+              slotBadge = 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
+            } else {
+              cardBorder = 'border-blue-500/35 bg-gradient-to-b from-blue-950/50 via-slate-900/95 to-slate-950';
+              slotBadge = 'bg-blue-500/25 text-blue-300 border-blue-500/40';
+            }
+
+            const cCode = node.member_code || ('SBL-' + node.id);
+            const cUser = node.username || (cCode.startsWith('@') ? cCode : ('@' + cCode.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
+            const dL = Number(node.direct_left_count) || 0;
+            const dR = Number(node.direct_right_count) || 0;
+            const dTot = dL + dR;
+            let cContribs = [];
+            try {
+              cContribs = typeof node.contributions === 'string' ? JSON.parse(node.contributions) : (node.contributions || []);
+            } catch(e) {}
+            let cPv = Number(node.point_value) || 0;
+            if (Array.isArray(cContribs) && cContribs.length > 0) {
+              cPv = cContribs.reduce(function(sum, c) { return sum + (Number(c.amount) || 0); }, 0);
+            }
+
+            return '<div data-node-id="' + node.id + '" class="w-full rounded-2xl border ' + cardBorder + ' shadow-xl p-4 flex flex-col justify-between space-y-3.5 text-white select-none transition-all duration-200 hover:shadow-2xl hover:border-orange-500/50">' +
+              '<div class="flex items-center justify-between gap-1">' +
+                '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ' + slotBadge + ' border">' + slotLabel + '</span>' +
+                '<div class="flex items-center gap-1.5">' +
+                  (isTarget ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/30 text-purple-200 border border-purple-400/40">🎯 Target</span>' : '') +
+                  '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black ' + (node.is_fme ? 'bg-amber-400 text-slate-950 font-black shadow-xs' : 'bg-slate-800 text-slate-200 border border-slate-700') + '">' + escapeHtml(node.rank_name || 'Member') + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<div class="space-y-1">' +
+                '<h4 class="font-black text-base text-white leading-tight tracking-tight hover:text-orange-400 transition-colors cursor-pointer" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' + node.id + '); } })() : null">' + escapeHtml(node.member_name) + '</h4>' +
+                '<div class="text-xs text-slate-400 font-mono flex items-center gap-1.5">' +
+                  '<span>' + escapeHtml(cUser) + '</span>' +
+                  (node.phone ? '<span class="text-slate-600">•</span><span class="text-slate-300 font-sans">' + escapeHtml(node.phone) + '</span>' : '') +
+                '</div>' +
+              '</div>' +
+              '<div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">' +
+                '<div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800 space-y-0.5">' +
+                  '<div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Own Inv</div>' +
+                  '<div class="font-black text-amber-300 truncate"><span>' + fmtMoney(cPv) + '</span></div>' +
+                '</div>' +
+                '<div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800 space-y-0.5">' +
+                  '<div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Direct Team</div>' +
+                  '<div class="font-black text-white flex items-center justify-between"><span>' + dTot + '/10</span><span class="text-[10px] text-slate-400 font-normal">(' + dL + 'L | ' + dR + 'R)</span></div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="pt-1 flex items-center gap-2">' +
+                '<a href="/team/' + node.id + '" class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5" title="এই মেম্বারের ১০-স্লট টিম এক্সপ্লোর করুন"><span>👥</span> <span>View Team</span></a>' +
+                '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' + node.id + '); } })() : null" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer" title="মেম্বারের সম্পূর্ণ বিবরণ দেখুন"><span>ℹ️</span> <span>Details</span></button>' +
+              '</div>' +
+            '</div>';
+          }
+
+          // B. Sync 5 LEFT Slots
+          const leftContainer = document.querySelector('[data-left-slots-container]');
+          if (leftContainer) {
+            let leftHtml = '';
+            for (let s = 1; s <= 5; s++) {
+              const child = DATA.nodes.find(function(n) {
+                return Number(n.parent_id) === Number(currentMember.id) && (n.branch === 'LEFT' || n.position === 'left') && Number(n.slot_number || 1) === s;
+              });
+              leftHtml += renderSlotCard(child, 'LEFT', s, currentMember.id, currentMember.member_name, currentMember.member_code || ('SBL-' + currentMember.id));
+            }
+            leftContainer.innerHTML = leftHtml;
+          }
+
+          // C. Sync 5 RIGHT Slots
+          const rightContainer = document.querySelector('[data-right-slots-container]');
+          if (rightContainer) {
+            let rightHtml = '';
+            for (let s = 1; s <= 5; s++) {
+              const child = DATA.nodes.find(function(n) {
+                return Number(n.parent_id) === Number(currentMember.id) && (n.branch === 'RIGHT' || n.position === 'right') && Number(n.slot_number || 1) === s;
+              });
+              rightHtml += renderSlotCard(child, 'RIGHT', s, currentMember.id, currentMember.member_name, currentMember.member_code || ('SBL-' + currentMember.id));
+            }
+            rightContainer.innerHTML = rightHtml;
+          }
+        }
+
+        // D. Sync Member Directory Table
         const binaryTableBody = document.querySelector('tbody[data-binary-table-body]');
         if (binaryTableBody) {
           DATA.nodes.forEach(function(node) {
@@ -2918,7 +3055,7 @@ export default {
               tr.setAttribute('data-node-id', node.id);
               tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
               const initLetter = (node.member_name || 'M').charAt(0).toUpperCase();
-              tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">' + initLetter + '</div><div><div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">' + escapeHtml(node.member_name) + '</div><div class="text-[11px] text-slate-400 font-mono">' + escapeHtml(node.member_code || ('SBL-' + node.id)) + '</div></div></div></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800">' + (node.parent_id ? 'Node #' + node.parent_id : 'Top Root') + '</span><span class="block text-[10px] text-slate-400 uppercase">' + (node.position || 'Root') + '</span></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800 block">' + (node.package_name || 'National 120k') + '</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700">' + (node.rank_name || 'Member') + '</span></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-emerald-700">' + (node.left_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.left_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-blue-700">' + (node.right_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.right_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center font-bold text-orange-600">' + (node.matched_pairs || 0) + '</td><td class="py-3.5 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td><td class="py-3.5 px-4 text-right"><form action="/binary/' + node.id + '" method="POST" onsubmit="return confirm(&quot;Delete member?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></td>';
+              tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">' + initLetter + '</div><div><div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">' + escapeHtml(node.member_name) + '</div><div class="text-[11px] text-slate-400 font-mono">' + escapeHtml(node.member_code || ('SBL-' + node.id)) + '</div></div></div></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800">' + (node.parent_id ? 'Node #' + node.parent_id : 'Top Root') + '</span><span class="block text-[10px] text-slate-400 uppercase">' + (node.position || 'Root') + '</span></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800 block">' + (node.package_name || 'National 120k') + '</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700">' + (node.rank_name || 'Member') + '</span></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-emerald-700">' + (node.left_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.left_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-blue-700">' + (node.right_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.right_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center font-bold text-orange-600">' + (node.matched_pairs || 0) + '</td><td class="py-3.5 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td><td class="py-3.5 px-4 text-right"><form action="/team/' + node.id + '" method="POST" onsubmit="return confirm(&quot;Delete member?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></td>';
               binaryTableBody.prepend(tr);
             }
           });
