@@ -54,6 +54,9 @@ $pages = [
     'presentations' => function() {
         return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
     },
+    'binary' => function() {
+        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+    },
 ];
 
 $rendered = [];

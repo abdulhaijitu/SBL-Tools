@@ -63,6 +63,12 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'update'])->name('contacts.update');
     Route::delete('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'destroy'])->name('contacts.destroy');
 
+    // SBL Binary Team Tree & Placement Engine
+    Route::get('/binary', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('binary.index');
+    Route::post('/binary/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('binary.store');
+    Route::get('/binary/search', [\App\Http\Controllers\BinaryTeamController::class, 'search'])->name('binary.search');
+    Route::get('/binary/{node}/extreme/{direction}', [\App\Http\Controllers\BinaryTeamController::class, 'extreme'])->name('binary.extreme');
+
     // Team & User Management CRUD
     Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
     Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
