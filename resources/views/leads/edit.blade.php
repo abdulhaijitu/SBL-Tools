@@ -133,11 +133,11 @@
             </div>
 
             <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-                <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-xs font-semibold text-rose-600 hover:text-rose-700">Delete Lead</button>
-                </form>
+                <button type="button" 
+                        onclick="if(confirm('Are you sure you want to delete this lead?')) document.getElementById('delete-lead-form-{{ $lead->id }}').submit();"
+                        class="text-xs font-semibold text-rose-600 hover:text-rose-700">
+                    Delete Lead
+                </button>
 
                 <div class="flex items-center gap-2">
                     <a href="{{ route('leads.show', $lead->id) }}" class="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</a>
@@ -145,6 +145,11 @@
                 </div>
             </div>
 
+        </form>
+
+        <form id="delete-lead-form-{{ $lead->id }}" action="{{ route('leads.destroy', $lead->id) }}" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
         </form>
     </div>
 </div>

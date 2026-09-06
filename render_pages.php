@@ -57,6 +57,14 @@ $pages = [
     'binary' => function() {
         return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
     },
+    'leads_show' => function() {
+        $lead = App\Models\Lead::first();
+        return $lead ? app(App\Http\Controllers\LeadController::class)->show($lead)->render() : '';
+    },
+    'leads_edit' => function() {
+        $lead = App\Models\Lead::first();
+        return $lead ? app(App\Http\Controllers\LeadController::class)->edit($lead)->render() : '';
+    },
 ];
 
 $rendered = [];
