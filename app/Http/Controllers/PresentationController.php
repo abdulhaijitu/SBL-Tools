@@ -24,7 +24,7 @@ class PresentationController extends Controller
         $query = Presentation::with(['lead', 'user'])->orderBy('date_time', 'desc');
 
         $presentations = $query->paginate(15);
-        $leads = Lead::activePipeline()->orderBy('name')->get();
+        $leads = Lead::orderBy('name')->get();
         $types = PresentationType::cases();
         $outcomes = PresentationOutcome::cases();
 
@@ -103,6 +103,13 @@ class PresentationController extends Controller
         }
 
         return back()->with('success', 'Presentation recorded successfully!');
+    }
+
+    public function destroy(Presentation $presentation): RedirectResponse
+    {
+        $presentation->delete();
+
+        return back()->with('success', 'Presentation session removed.');
     }
 }
 

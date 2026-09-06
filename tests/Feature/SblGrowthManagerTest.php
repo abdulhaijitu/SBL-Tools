@@ -209,6 +209,126 @@ class SblGrowthManagerTest extends TestCase
         $calendarRes->assertSee('Content Calendar');
     }
 
+    public function test_user_can_update_and_delete_task(): void
+    {
+        $lead = Lead::create([
+            'name' => 'Fahim Ahmed',
+            'mobile' => '01511223344',
+            'lead_source_id' => $this->source->id,
+            'stage' => LeadStage::NEW,
+            'temperature' => LeadTemperature::COLD,
+            'score' => 20,
+            'owner_user_id' => $this->user->id,
+        ]);
+
+        $task = Task::create([
+            'title' => 'Initial Follow-up',
+            'type' => TaskType::FOLLOW_UP,
+            'related_lead_id' => $lead->id,
+            'user_id' => $this->user->id,
+            'due_at' => now()->addDay(),
+            'priority' => TaskPriority::MEDIUM,
+            'status' => TaskStatus::PENDING,
+        ]);
+
+        // Test update
+        $updateRes = $this->actingAs($this->user)->put("/tasks/{$task->id}", [
+            'title' => 'Updated Task Title',
+            'type' => TaskType::CALL->value,
+            'due_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
+            'priority' => TaskPriority::HIGH->value,
+            'notes' => 'Updated notes for task',
+            'related_lead_id' => $lead->id,
+        ]);
+
+        $updateRes->assertStatus(302);
+        $this->assertDatabaseHas('tasks', [
+            'id' => $task->id,
+            'title' => 'Updated Task Title',
+            'priority' => TaskPriority::HIGH->value,
+        ]);
+
+        // Test delete
+        $delRes = $this->actingAs($this->user)->delete("/tasks/{$task->id}");
+        $delRes->assertStatus(302);
+        $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+    }
+
+    public function test_user_can_delete_presentation(): void
+    {
+        $lead = Lead::create([
+            'name' => 'Khurshid Alam',
+            'mobile' => '01411223344',
+            'lead_source_id' => $this->source->id,
+            'stage' => LeadStage::PRESENTATION,
+            'temperature' => LeadTemperature::WARM,
+            'score' => 50,
+            'owner_user_id' => $this->user->id,
+        ]);
+
+        $presentation = \App\Models\Presentation::create([
+            'lead_id' => $lead->id,
+            'user_id' => $this->user->id,
+            'date_time' => now(),
+            'type' => PresentationType::ONE_TO_ONE,
+            'topic' => 'Test Topic',
+        ]);
+
+        $delRes = $this->actingAs($this->user)->delete("/presentations/{$presentation->id}");
+        $delRes->assertStatus(302);
+        $this->assertDatabaseMissing('presentations', ['id' => $presentation->id]);
+    }
+
+    public function test_user_can_crud_content_calendar(): void
+    {
+        // 1. Create
+        $storeRes = $this->actingAs($this->user)->post('/marketing/content-calendar', [
+            'title' => 'Product Launch Video',
+            'platform' => 'Facebook Page',
+            'status' => 'Planned',
+            'scheduled_at' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            'topic' => 'Organic Cosmetics',
+            'caption' => 'Check out our new launch!',
+            'cta' => 'Order Now',
+        ]);
+        $storeRes->assertStatus(302);
+        $this->assertDatabaseHas('content_items', [
+            'title' => 'Product Launch Video',
+            'platform' => 'Facebook Page',
+        ]);
+
+        $item = \App\Models\ContentItem::where('title', 'Product Launch Video')->first();
+        $this->assertNotNull($item);
+
+        // 2. Update
+        $updateRes = $this->actingAs($this->user)->put("/marketing/content-calendar/{$item->id}", [
+            'title' => 'Updated Product Launch Video',
+            'platform' => 'YouTube',
+            'status' => 'Published',
+            'scheduled_at' => now()->addDays(2)->format('Y-m-d\TH:i'),
+            'topic' => 'Herbal Hair Oil',
+            'caption' => 'Full review video is out!',
+            'cta' => 'Subscribe',
+            'reach' => 1200,
+            'engagement' => 350,
+            'leads_generated' => 15,
+            'conversions' => 4,
+            'notes' => 'Great engagement achieved',
+        ]);
+        $updateRes->assertStatus(302);
+        $this->assertDatabaseHas('content_items', [
+            'id' => $item->id,
+            'title' => 'Updated Product Launch Video',
+            'platform' => 'YouTube',
+            'reach' => 1200,
+        ]);
+
+        // 3. Delete
+        $delRes = $this->actingAs($this->user)->delete("/marketing/content-calendar/{$item->id}");
+        $delRes->assertStatus(302);
+        $this->assertDatabaseMissing('content_items', ['id' => $item->id]);
+    }
+
     public function test_user_can_view_toolkit_plans_and_counseling_guide(): void
     {
         $this->seed(\Database\Seeders\SblPdfDataSeeder::class);
@@ -222,4 +342,5 @@ class SblGrowthManagerTest extends TestCase
         $response->assertSee('Live ROI & Commission Calculator', false);
     }
 }
+
 

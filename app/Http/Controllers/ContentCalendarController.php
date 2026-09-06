@@ -79,7 +79,13 @@ class ContentCalendarController extends Controller
     public function update(Request $request, ContentItem $contentItem): RedirectResponse
     {
         $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'platform' => 'required|string',
             'status' => 'required|string',
+            'scheduled_at' => 'required|date',
+            'topic' => 'nullable|string|max:255',
+            'caption' => 'nullable|string',
+            'cta' => 'nullable|string|max:255',
             'reach' => 'nullable|integer',
             'engagement' => 'nullable|integer',
             'inbox_count' => 'nullable|integer',
@@ -88,7 +94,14 @@ class ContentCalendarController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $contentItem->title = $validated['title'];
+        $contentItem->platform = ContentPlatform::from($validated['platform']);
         $contentItem->status = ContentStatus::from($validated['status']);
+        $contentItem->scheduled_at = $validated['scheduled_at'];
+        $contentItem->topic = $validated['topic'] ?? null;
+        $contentItem->caption = $validated['caption'] ?? null;
+        $contentItem->cta = $validated['cta'] ?? null;
+
         if ($contentItem->status === ContentStatus::PUBLISHED && ! $contentItem->published_at) {
             $contentItem->published_at = now();
         }

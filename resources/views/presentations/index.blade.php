@@ -22,7 +22,6 @@
     <!-- Presentations Grid / Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @forelse ($presentations as $pres)
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between">
             <div data-presentation-id="{{ $pres->id }}" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between gap-2 mb-2">
@@ -68,11 +67,19 @@
 
                 <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                     <span>{{ $pres->date_time->format('d M, Y h:i A') }}</span>
-                    <span>By {{ $pres->user->name ?? 'Admin' }}</span>
+                    <div class="flex items-center gap-2">
+                        <span>By {{ $pres->user->name ?? 'Admin' }}</span>
+                        <form action="{{ route('presentations.destroy', $pres->id) }}" method="POST" onsubmit="return confirm('Delete presentation record?')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="p-1 text-slate-400 hover:text-rose-600" title="Delete Presentation">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         @empty
-            <div class="col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs">
             <div class="col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs empty-presentations-notice">
                 No presentations recorded yet. Click "Record Presentation" above to log a session.
             </div>
@@ -101,9 +108,9 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Select Lead <span class="text-rose-500">*</span></label>
                     <select name="lead_id" required class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 bg-white">
+                        <option value="">Select a Lead...</option>
                         @foreach ($leads as $lead)
                             <option value="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }}) - {{ $lead->stage->label() }}</option>
-                            <option value="{{ $lead->id }}" data-lead-id="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }}) - {{ $lead->stage->label() }}</option>
                         @endforeach
                     </select>
                 </div>

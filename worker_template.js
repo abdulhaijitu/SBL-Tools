@@ -892,6 +892,60 @@ export default {
                         302,
                     );
                 }
+                if (effectiveMethod === "PUT" && taskId && formData) {
+                    if (db) {
+                        try {
+                            const title = formData.get("title") || "Task";
+                            const type = formData.get("type") || "Follow-up";
+                            const dueAt =
+                                formData.get("due_at") ||
+                                new Date().toISOString();
+                            const priority =
+                                formData.get("priority") || "Medium";
+                            const notes = formData.get("notes") || null;
+                            const leadId = formData.get("related_lead_id")
+                                ? Number(formData.get("related_lead_id"))
+                                : null;
+
+                            await db
+                                .prepare(
+                                    "UPDATE tasks SET title = ?, type = ?, due_at = ?, priority = ?, notes = ?, related_lead_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    title,
+                                    type,
+                                    dueAt,
+                                    priority,
+                                    notes,
+                                    leadId,
+                                    taskId,
+                                )
+                                .run();
+
+                            if (leadId) {
+                                await db
+                                    .prepare(
+                                        "UPDATE leads SET next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(type, dueAt, leadId)
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Tasks update error:", e);
+                        }
+                    }
+                    const ref = request.headers.get("referer") || "";
+                    const m = ref.match(/\/leads\/(\d+)/);
+                    if (m)
+                        return Response.redirect(
+                            new URL("/leads/" + m[1], request.url),
+                            302,
+                        );
+                    return Response.redirect(
+                        new URL("/tasks", request.url),
+                        302,
+                    );
+                }
                 if (effectiveMethod === "DELETE" && taskId) {
                     if (db) {
                         try {
@@ -1139,26 +1193,40 @@ export default {
                 if (db) {
                     try {
                         const title = formData.get("title") || "New Post";
-                        const platform = formData.get("platform") || "Facebook";
-                        const status = formData.get("status") || "Draft";
+                        const platform = formData.get("platform") || "Facebook Profile";
+                        const status = formData.get("status") || "Planned";
                         const scheduledAt =
                             formData.get("scheduled_at") ||
                             new Date().toISOString();
-                        const copyText = formData.get("copy_text") || null;
-                        const mediaUrl = formData.get("media_url") || null;
+                        const topic = formData.get("topic") || null;
+                        const caption = formData.get("caption") || null;
+                        const cta = formData.get("cta") || null;
+                        const reach = formData.get("reach") ? Number(formData.get("reach")) : null;
+                        const engagement = formData.get("engagement") ? Number(formData.get("engagement")) : null;
+                        const inboxCount = formData.get("inbox_count") ? Number(formData.get("inbox_count")) : null;
+                        const leadsGenerated = formData.get("leads_generated") ? Number(formData.get("leads_generated")) : null;
+                        const conversions = formData.get("conversions") ? Number(formData.get("conversions")) : null;
+                        const notes = formData.get("notes") || null;
 
                         await db
                             .prepare(
-                                "INSERT INTO content_items (title, platform, status, scheduled_at, copy_text, media_url, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO content_items (title, platform, status, scheduled_at, topic, caption, cta, reach, engagement, inbox_count, leads_generated, conversions, notes, user_id, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 title,
                                 platform,
                                 status,
                                 scheduledAt,
-                                copyText,
-                                mediaUrl,
+                                topic,
+                                caption,
+                                cta,
+                                reach,
+                                engagement,
+                                inboxCount,
+                                leadsGenerated,
+                                conversions,
+                                notes,
                             )
                             .run();
                     } catch (e) {
@@ -1188,6 +1256,55 @@ export default {
                                 "D1 Content Calendar delete error:",
                                 e,
                             );
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/marketing/content-calendar", request.url),
+                        302,
+                    );
+                }
+                if (effectiveMethod === "PUT" && itemId && formData) {
+                    if (db) {
+                        try {
+                            const title = formData.get("title") || "Post";
+                            const platform = formData.get("platform") || "Facebook Profile";
+                            const status = formData.get("status") || "Planned";
+                            const scheduledAt =
+                                formData.get("scheduled_at") ||
+                                new Date().toISOString();
+                            const topic = formData.get("topic") || null;
+                            const caption = formData.get("caption") || null;
+                            const cta = formData.get("cta") || null;
+                            const reach = formData.get("reach") ? Number(formData.get("reach")) : null;
+                            const engagement = formData.get("engagement") ? Number(formData.get("engagement")) : null;
+                            const inboxCount = formData.get("inbox_count") ? Number(formData.get("inbox_count")) : null;
+                            const leadsGenerated = formData.get("leads_generated") ? Number(formData.get("leads_generated")) : null;
+                            const conversions = formData.get("conversions") ? Number(formData.get("conversions")) : null;
+                            const notes = formData.get("notes") || null;
+
+                            await db
+                                .prepare(
+                                    "UPDATE content_items SET title = ?, platform = ?, status = ?, scheduled_at = ?, topic = ?, caption = ?, cta = ?, reach = ?, engagement = ?, inbox_count = ?, leads_generated = ?, conversions = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    title,
+                                    platform,
+                                    status,
+                                    scheduledAt,
+                                    topic,
+                                    caption,
+                                    cta,
+                                    reach,
+                                    engagement,
+                                    inboxCount,
+                                    leadsGenerated,
+                                    conversions,
+                                    notes,
+                                    itemId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Content Calendar update error:", e);
                         }
                     }
                     return Response.redirect(
@@ -2454,7 +2571,7 @@ export default {
 
             const dtStr = pres.date_time ? new Date(pres.date_time).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
 
-            card.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">' + (pres.type || '1-on-1') + '</span>' + outcomeBadge + '</div><h4 class="font-bold text-sm text-slate-900 mb-1">' + (pres.topic || 'SBL Ecosystem Presentation') + '</h4>' + leadBox + qaBox + '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>' + dtStr + '</span><span>By ' + (pres.user_name || 'Admin') + '</span></div>';
+            card.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">' + (pres.type || '1-on-1') + '</span>' + outcomeBadge + '</div><h4 class="font-bold text-sm text-slate-900 mb-1">' + (pres.topic || 'SBL Ecosystem Presentation') + '</h4>' + leadBox + qaBox + '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>' + dtStr + '</span><div class="flex items-center gap-2"><span>By ' + (pres.user_name || 'Admin') + '</span><form action="/presentations/' + pres.id + '" method="POST" onsubmit="return confirm(&quot;Delete presentation record?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1 text-slate-400 hover:text-rose-600" title="Delete Presentation">🗑️</button></form></div></div>';
             presGrid.prepend(card);
           });
         }
@@ -2475,7 +2592,24 @@ export default {
               const dtStr = task.due_at ? new Date(task.due_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
               const isCompleted = task.status === 'Completed';
 
-              row.innerHTML = '<div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 flex-shrink-0 mt-0.5">' + (task.priority || 'Medium') + '</span><div><div class="text-sm font-bold text-slate-900 flex items-center gap-2"><span>' + task.title + '</span><span class="px-2 py-0.5 rounded text-[10px] font-medium border ' + (isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200') + '">' + (task.status || 'Pending') + '</span></div><div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3"><span class="font-medium text-slate-700">' + (task.type || 'Follow-up') + '</span>' + (task.related_lead_id ? ('<span>•</span><a href="/leads/' + task.related_lead_id + '" class="text-orange-600 font-semibold hover:underline">Lead: ' + (task.lead_name || '#' + task.related_lead_id) + '</a>') : '') + '<span>•</span><span>Due: ' + dtStr + '</span></div>' + (task.notes ? ('<p class="text-xs text-slate-600 mt-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100 inline-block">' + task.notes + '</p>') : '') + (task.outcome ? ('<div class="mt-2 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-flex items-center gap-1.5"><span>✓ Outcome:</span><span class="font-medium">' + task.outcome + '</span></div>') : '') + '</div></div>';
+              const editDataJson = JSON.stringify({
+                id: task.id,
+                title: task.title || '',
+                type: task.type || 'Follow-up',
+                priority: task.priority || 'Medium',
+                related_lead_id: task.related_lead_id || '',
+                due_at: task.due_at ? task.due_at.slice(0, 16) : '',
+                notes: task.notes || ''
+              }).replace(/"/g, '&quot;');
+
+              let actionsHtml = '<div class="flex items-center gap-2 self-end sm:self-center">';
+              if (!isCompleted) {
+                actionsHtml += '<button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].completeTaskId = ' + task.id + '; c._x_dataStack[0].completeTaskTitle = \'' + (task.title || '').replace(/'/g, "\\'") + '\'; c._x_dataStack[0].completeModal = true; }" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors">✓ Complete</button>';
+              }
+              actionsHtml += '<button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openEditTask(' + JSON.stringify(task).replace(/"/g, '&quot;') + '); }" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-700 font-semibold text-xs transition-colors">Edit</button>';
+              actionsHtml += '<form action="/tasks/' + task.id + '" method="POST" onsubmit="return confirm(&quot;Delete task?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Delete Task">🗑️</button></form></div>';
+
+              row.innerHTML = '<div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 flex-shrink-0 mt-0.5">' + (task.priority || 'Medium') + '</span><div><div class="text-sm font-bold text-slate-900 flex items-center gap-2"><span>' + task.title + '</span><span class="px-2 py-0.5 rounded text-[10px] font-medium border ' + (isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200') + '">' + (task.status || 'Pending') + '</span></div><div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3"><span class="font-medium text-slate-700">' + (task.type || 'Follow-up') + '</span>' + (task.related_lead_id ? ('<span>•</span><a href="/leads/' + task.related_lead_id + '" class="text-orange-600 font-semibold hover:underline">Lead: ' + (task.lead_name || '#' + task.related_lead_id) + '</a>') : '') + '<span>•</span><span>Due: ' + dtStr + '</span></div>' + (task.notes ? ('<p class="text-xs text-slate-600 mt-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100 inline-block">' + task.notes + '</p>') : '') + (task.outcome ? ('<div class="mt-2 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-flex items-center gap-1.5"><span>✓ Outcome:</span><span class="font-medium">' + task.outcome + '</span></div>') : '') + '</div></div>' + actionsHtml;
               tasksContainer.prepend(row);
             }
           });
@@ -2494,7 +2628,8 @@ export default {
             cCard.setAttribute('data-content-id', item.id);
             cCard.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-300 transition-all flex flex-col justify-between';
             const dtStr = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
-            cCard.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">' + (item.platform || 'General') + '</span><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">' + (item.status || 'Draft') + '</span></div><h4 class="font-bold text-slate-900 text-sm mb-1">' + item.title + '</h4>' + (item.copy_text ? ('<p class="text-xs text-slate-600 line-clamp-3 mb-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">' + item.copy_text + '</p>') : '') + '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400"><span>' + dtStr + '</span><form action="/marketing/content-calendar/' + item.id + '" method="POST" onsubmit="return confirm(&quot;Delete post?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-rose-600 text-xs font-semibold">Delete</button></form></div>';
+
+            cCard.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200">' + (item.platform || 'Facebook Profile') + '</span><span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">' + (item.status || 'Planned') + '</span></div><h4 class="font-bold text-slate-900 text-sm mb-1">' + item.title + '</h4>' + (item.topic ? ('<div class="text-xs text-slate-500 mb-2">Topic: <span class="font-medium text-slate-700">' + item.topic + '</span></div>') : '') + (item.caption ? ('<p class="text-xs text-slate-600 line-clamp-3 mb-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">' + item.caption + '</p>') : '') + (item.cta ? ('<div class="text-[11px] text-orange-700 bg-orange-50/70 px-2 py-1 rounded-lg border border-orange-200/60 mb-3"><span class="font-semibold">CTA:</span> ' + item.cta + '</div>') : '') + '<div class="grid grid-cols-3 gap-2 bg-slate-50/70 p-2 rounded-xl text-center text-xs"><div><span class="text-[10px] text-slate-400 block uppercase">Reach</span><span class="font-bold text-slate-800">' + (item.reach || 0) + '</span></div><div><span class="text-[10px] text-slate-400 block uppercase">Leads</span><span class="font-bold text-orange-600">' + (item.leads_generated || 0) + '</span></div><div><span class="text-[10px] text-slate-400 block uppercase">Converted</span><span class="font-bold text-emerald-600">' + (item.conversions || 0) + '</span></div></div></div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400"><span>' + dtStr + '</span><div class="flex items-center gap-1.5"><button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openEdit(' + JSON.stringify(item).replace(/"/g, '&quot;') + '); }" class="px-2.5 py-1 bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-700 rounded-lg text-xs font-semibold transition-colors">Edit</button><form action="/marketing/content-calendar/' + item.id + '" method="POST" onsubmit="return confirm(&quot;Remove content item?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Delete Item">🗑️</button></form></div></div>';
             calContainer.prepend(cCard);
           });
         }

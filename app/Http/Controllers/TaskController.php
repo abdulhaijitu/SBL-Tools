@@ -107,6 +107,41 @@ class TaskController extends Controller
     }
 
     /**
+     * Update existing task
+     */
+    public function update(Request $request, Task $task): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|string',
+            'related_lead_id' => 'nullable|exists:leads,id',
+            'due_at' => 'required|date',
+            'priority' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $task->update([
+            'title' => $validated['title'],
+            'type' => TaskType::from($validated['type']),
+            'related_lead_id' => $validated['related_lead_id'] ?? null,
+            'due_at' => $validated['due_at'],
+            'priority' => TaskPriority::from($validated['priority']),
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($task->related_lead_id) {
+            $lead = Lead::find($task->related_lead_id);
+            if ($lead) {
+                $lead->next_action_type = $task->type->value;
+                $lead->next_action_at = $task->due_at;
+                $lead->save();
+            }
+        }
+
+        return back()->with('success', 'Task updated successfully!');
+    }
+
+    /**
      * Mark task as completed with outcome & optional next action (Section 9)
      */
     public function complete(Request $request, Task $task): RedirectResponse

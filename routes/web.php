@@ -32,12 +32,14 @@ Route::middleware(['auth'])->group(function () {
     // Tasks & Follow-ups
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::post('/tasks/{task}/complete', [TaskController::class, 'complete'])->name('tasks.complete');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
     // Presentations
     Route::get('/presentations', [PresentationController::class, 'index'])->name('presentations.index');
     Route::post('/presentations', [PresentationController::class, 'store'])->name('presentations.store');
+    Route::delete('/presentations/{presentation}', [PresentationController::class, 'destroy'])->name('presentations.destroy');
 
     // Marketing & Content Calendar
     Route::get('/marketing/content-calendar', [ContentCalendarController::class, 'index'])->name('marketing.content-calendar');
