@@ -24,3 +24,4 @@ class Rank extends Model
         'order' => 'integer',
     ];
 }
+

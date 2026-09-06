@@ -32,3 +32,4 @@ class InvestmentPlan extends Model
         'active' => 'boolean',
     ];
 }
+

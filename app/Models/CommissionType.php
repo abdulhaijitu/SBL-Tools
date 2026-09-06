@@ -21,3 +21,4 @@ class CommissionType extends Model
         'active' => 'boolean',
     ];
 }
+
