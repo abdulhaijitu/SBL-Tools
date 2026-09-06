@@ -145,6 +145,10 @@
                     class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 text-xs font-semibold transition-colors flex items-center gap-1.5">
                 <span>⏰</span> Next Follow-up
             </button>
+            <a href="{{ route('toolkit.index') }}" target="_blank" 
+               class="px-3 py-1.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 text-orange-300 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 border border-orange-500/40">
+                <span>📖</span> Pitch Deck & Plans
+            </a>
         </div>
     </div>
 

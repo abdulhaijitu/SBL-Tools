@@ -208,5 +208,18 @@ class SblGrowthManagerTest extends TestCase
         $calendarRes->assertStatus(200);
         $calendarRes->assertSee('Content Calendar');
     }
+
+    public function test_user_can_view_toolkit_plans_and_counseling_guide(): void
+    {
+        $this->seed(\Database\Seeders\SblPdfDataSeeder::class);
+
+        $response = $this->actingAs($this->user)->get('/toolkit');
+        $response->assertStatus(200);
+        $response->assertSee('SBL Plans &amp; Toolkit', false);
+        $response->assertSee('National Package');
+        $response->assertSee('Field Marketing Executive');
+        $response->assertSee('Counseling Guide');
+        $response->assertSee('Live ROI & Commission Calculator', false);
+    }
 }
 

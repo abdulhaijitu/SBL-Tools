@@ -34,15 +34,9 @@
                class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 text-slate-200 flex flex-col transition-transform duration-200 ease-in-out md:static md:translate-x-0 border-r border-slate-800">
             
             <!-- Brand / Logo Header -->
-            <div class="h-16 px-5 flex items-center justify-between border-b border-slate-800/80">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-lg bg-orange-600 flex items-center justify-center font-bold text-white shadow-lg shadow-orange-600/30 text-lg">
-                        SBL
-                    </div>
-                    <div>
-                        <span class="font-bold text-base tracking-tight text-white block leading-tight">Growth Manager</span>
-                        <span class="text-[10px] text-orange-400 font-medium tracking-wider uppercase block">Operations CRM</span>
-                    </div>
+            <div class="h-20 px-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-950">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-2">
+                    <img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL The Ecommerce Ecosystem" class="h-14 w-auto max-w-[200px] object-contain">
                 </a>
                 <button @click="sidebarOpen = false" class="md:hidden text-slate-400 hover:text-white p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -83,11 +77,16 @@
                     <span>Content Calendar</span>
                 </a>
 
-                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Analytics</div>
+                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Analytics & Toolkit</div>
                 <a href="{{ route('reports.index') }}" 
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('reports.*') ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     <span>Funnel Reports</span>
+                </a>
+                <a href="{{ route('toolkit.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors {{ request()->routeIs('toolkit.*') ? 'bg-orange-600 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    <span>SBL Plans & Toolkit</span>
                 </a>
             </nav>
 
@@ -116,10 +115,13 @@
 
             <!-- Mobile Top Bar -->
             <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-30 md:px-8">
-                <div class="flex items-center gap-3">
-                    <button @click="sidebarOpen = true" class="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg">
+                <div class="flex items-center gap-2.5">
+                    <button @click="sidebarOpen = true" class="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
+                    <a href="{{ route('dashboard') }}" class="md:hidden flex-shrink-0">
+                        <img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" class="h-8 w-auto object-contain bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    </a>
                     <div>
                         <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-none">
                             @yield('page-title', 'Dashboard')
