@@ -4,6 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
+        "build:worker": "node build_worker.cjs",
         "dev": "vite"
     },
     "devDependencies": {
