@@ -4,7 +4,7 @@
 @section('page-subtitle', 'Official Business Packages, Compensation Models & Counseling Cheatsheet')
 
 @section('content')
-<div class="space-y-6" x-data="{ activeTab: '{{ request('tab', 'packages') }}' }">
+<div class="space-y-6" x-data="{ activeTab: (new URLSearchParams(window.location.search)).get('tab') || '{{ request('tab', 'packages') }}' }">
 
     <!-- Navigation Tabs -->
     <div class="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-xs flex items-center gap-2 overflow-x-auto text-xs font-semibold">

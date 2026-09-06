@@ -20,15 +20,23 @@ const jsContent = fs.readFileSync(path.join(__dirname, 'public', 'build', jsFile
 // 3. Read logo base64
 const logoBase64 = fs.readFileSync(path.join(__dirname, 'storage', 'logo_base64.txt'), 'utf8').trim();
 
-// 4. Ensure links in pages point to standard paths (DO NOT inline huge base64 in every img tag)
+// 4. Clean up and standardize rendered HTML
 for (const key of Object.keys(renderedPages)) {
     let html = renderedPages[key];
+
+    // Strip any hardcoded localhost URL (http://localhost or https://localhost)
+    html = html.replace(/https?:\/\/localhost\/?/g, '/');
+
     // Standardize image paths to /images/sbl-logo.png
     html = html.replace(/src="[^"]*sbl-logo\.(webp|png)"/g, 'src="/images/sbl-logo.png"');
     html = html.replace(/href="[^"]*sbl-logo\.(webp|png)"/g, 'href="/images/sbl-logo.png"');
     html = html.replace(/href="[^"]*favicon\.(png|ico)"/g, 'href="/favicon.png"');
     html = html.replace(/href="[^"]*apple-touch-icon\.png"/g, 'href="/apple-touch-icon.png"');
-    
+
+    // Ensure asset script and preload tags are relative
+    html = html.replace(new RegExp('http:\\/\\/localhost\\/build\\/' + cssFileName, 'g'), '/build/' + cssFileName);
+    html = html.replace(new RegExp('http:\\/\\/localhost\\/build\\/' + jsFileName, 'g'), '/build/' + jsFileName);
+
     renderedPages[key] = html;
 }
 
@@ -50,8 +58,8 @@ const parts = [
   '    const url = new URL(request.url);',
   '    const path = url.pathname;',
   '',
-  '    // 1. Static Compiled Assets',
-  '    if (path === CSS_PATH || path === "/build/assets/app.css") {',
+  '    // 1. Static Compiled CSS Assets',
+  '    if (path.endsWith(".css") || path === CSS_PATH || path === "/build/assets/app.css") {',
   '      return new Response(CSS_CONTENT, {',
   '        headers: {',
   '          "Content-Type": "text/css; charset=utf-8",',
@@ -60,7 +68,8 @@ const parts = [
   '      });',
   '    }',
   '',
-  '    if (path === JS_PATH || path === "/build/assets/app.js") {',
+  '    // 2. Static Compiled JS Assets',
+  '    if (path.endsWith(".js") || path === JS_PATH || path === "/build/assets/app.js") {',
   '      return new Response(JS_CONTENT, {',
   '        headers: {',
   '          "Content-Type": "application/javascript; charset=utf-8",',
@@ -69,8 +78,8 @@ const parts = [
   '      });',
   '    }',
   '',
-  '    // 2. Images & Favicons',
-  '    if (["/images/sbl-logo.png", "/images/sbl-logo.webp", "/favicon.png", "/favicon.ico", "/apple-touch-icon.png"].includes(path)) {',
+  '    // 3. Images & Favicons',
+  '    if (path.endsWith(".png") || path.endsWith(".ico") || path.endsWith(".webp") || path.includes("sbl-logo") || path.includes("favicon") || path.includes("apple-touch-icon")) {',
   '      const binaryString = atob(SBL_LOGO_BASE64);',
   '      const len = binaryString.length;',
   '      const bytes = new Uint8Array(len);',
@@ -89,7 +98,7 @@ const parts = [
   '      return new Response("pong", { status: 200 });',
   '    }',
   '',
-  '    // 3. Exact Laravel Blade Routes',
+  '    // 4. Exact Laravel Blade Routes',
   '    let html = null;',
   '',
   '    if (path === "/" || path === "/dashboard") {',
@@ -110,7 +119,13 @@ const parts = [
   '      html = PAGES.dashboard;',
   '    }',
   '',
-  '    return new Response(html, {',
+  '    // 5. Inject full compiled Tailwind CSS directly into <head> for zero-latency, unbreakable rendering',
+  '    let responseHtml = html;',
+  '    if (responseHtml && responseHtml.includes("</head>")) {',
+  '      responseHtml = responseHtml.replace("</head>", () => "<style id=\\"sbl-edge-styles\\">\\n" + CSS_CONTENT + "\\n</style>\\n</head>");',
+  '    }',
+  '',
+  '    return new Response(responseHtml, {',
   '      headers: {',
   '        "Content-Type": "text/html; charset=utf-8",',
   '        "Cache-Control": "public, max-age=0, must-revalidate",',
