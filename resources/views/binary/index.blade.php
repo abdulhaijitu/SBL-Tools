@@ -39,6 +39,51 @@
     selectedUserId: '',
     expandedNodeIds: {{ json_encode($treeData['all_node_ids'] ?? []) }},
     zoomLevel: 1.0,
+    panX: 0,
+    panY: 0,
+    isPanning: false,
+    panStartX: 0,
+    panStartY: 0,
+    hasDragged: false,
+    startPan(e) {
+        if (e.button !== 0) return;
+        const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
+        if (['input', 'select', 'textarea', 'button', 'a'].includes(tag) || e.target.closest('button, a, input, select, textarea, [data-prevent-drag]')) {
+            return;
+        }
+        this.isPanning = true;
+        this.hasDragged = false;
+        this.panStartX = e.clientX - this.panX;
+        this.panStartY = e.clientY - this.panY;
+    },
+    onPan(e) {
+        if (!this.isPanning) return;
+        const newX = e.clientX - this.panStartX;
+        const newY = e.clientY - this.panStartY;
+        if (Math.abs(newX - this.panX) > 2 || Math.abs(newY - this.panY) > 2) {
+            this.hasDragged = true;
+        }
+        this.panX = newX;
+        this.panY = newY;
+    },
+    endPan() {
+        this.isPanning = false;
+    },
+    resetCanvas() {
+        this.zoomLevel = 1.0;
+        this.panX = 0;
+        this.panY = 0;
+    },
+    handleWheel(e) {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
+        }
+    },
     isExpanded(id) {
         return this.expandedNodeIds.includes(Number(id));
     },
@@ -510,7 +555,8 @@
     </div>
 
     <!-- ==================== FIGJAM-STYLE INTERACTIVE GENEALOGY TREE CANVAS ==================== -->
-    <div class="bg-[#1b2b3a] rounded-2xl border border-slate-700/80 p-4 md:p-6 shadow-2xl relative">
+    <div class="bg-[#1b2b3a] rounded-2xl border border-slate-700/80 p-4 md:p-6 shadow-2xl relative select-none"
+         @wheel="handleWheel($event)">
         
         <!-- FigJam Canvas Floating Toolbar -->
         <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-700/60 text-white">
@@ -518,8 +564,8 @@
                 <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     <span>🎨</span> FigJam Tree Canvas
                 </span>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium">
-                    প্রতিটি মেম্বার থেকে আনলিমিটেড ব্রাঞ্চিং
+                <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium flex items-center gap-1">
+                    <span>🖱️</span> মাউস দিয়ে ড্র্যাগ ও প্যান করুন
                 </span>
             </div>
 
@@ -539,6 +585,14 @@
                 </button>
 
                 <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+                <!-- Center / Reset Position & Zoom -->
+                <button type="button" 
+                        @click="resetCanvas()"
+                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="ক্যানভাস পজিশন ও জুম রিসেট করুন">
+                    <span>🎯</span> সেন্টার ভিউ
+                </button>
 
                 <!-- Zoom Controls -->
                 <div class="inline-flex items-center rounded-xl bg-slate-800 p-0.5 border border-slate-700 shadow-sm">
@@ -564,10 +618,16 @@
             </div>
         </div>
 
-        <!-- Canvas Scrollable Viewport -->
-        <div class="overflow-auto min-h-[650px] p-4 md:p-8 flex justify-center items-start">
-            <div :style="'transform: scale(' + zoomLevel + '); transform-origin: top center; transition: transform 0.15s ease-out;'"
-                 class="inline-flex flex-col items-center">
+        <!-- Mouse Draggable & Zoomable Viewport -->
+        <div class="overflow-hidden min-h-[660px] relative rounded-xl bg-[#142330]/80 border border-slate-800/80 cursor-grab active:cursor-grabbing select-none"
+             :class="isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'"
+             @mousedown="startPan($event)"
+             @mousemove="onPan($event)"
+             @mouseup="endPan()"
+             @mouseleave="endPan()">
+            
+            <div :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + '); transform-origin: top center; transition: ' + (isPanning ? 'none' : 'transform 0.12s ease-out') + ';'"
+                 class="w-full flex justify-center items-start pt-8 pb-20 px-6">
                 
                 @if(empty($treeData['tree']))
                     <div class="text-center py-20 text-white">
@@ -580,6 +640,13 @@
                     @include('binary.partials.figjam_node', ['node' => $treeData['tree'], 'depth' => 1])
                 @endif
 
+            </div>
+
+            <!-- Floating Draggable Navigator Hint badge at bottom right -->
+            <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-slate-900/85 backdrop-blur-sm border border-slate-700/80 text-[11px] text-slate-300 pointer-events-none flex items-center gap-2 shadow-xl z-30">
+                <span>🖱️ মাউস ড্র্যাগ করে ক্যানভাস সরান</span>
+                <span class="opacity-40">•</span>
+                <span>Ctrl + স্ক্রোল করে জুম করুন</span>
             </div>
         </div>
     </div>
