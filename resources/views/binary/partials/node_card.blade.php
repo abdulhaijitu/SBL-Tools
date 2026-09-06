@@ -155,7 +155,7 @@
                     </button>
                 </div>
                 <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['left_count'] }}/{{ $leftTarget }}</div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- {{ (int)$node['left_bv'] }}$</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)$node['left_bv'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['left_bv']) }}'">{{ \App\Services\CurrencyService::format((float)$node['left_bv']) }}</span></div>
             </div>
 
             <!-- Right Leg -->
@@ -170,13 +170,13 @@
                     </button>
                 </div>
                 <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['right_count'] }}/{{ $rightTarget }}</div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- {{ (int)$node['right_bv'] }}$</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)$node['right_bv'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['right_bv']) }}'">{{ \App\Services\CurrencyService::format((float)$node['right_bv']) }}</span></div>
             </div>
         </div>
 
         <!-- 9. Bottom Total Contribution Row -->
         <div class="mt-2 pt-1.5 border-t border-white/20 text-xs font-semibold text-white/95 flex items-center justify-between px-1">
-            <span>Total Contribution: {{ (int)$node['point_value'] }}$</span>
+            <span>Total Contribution: <span x-text="$store.currency ? $store.currency.format({{ (float)$node['point_value'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['point_value']) }}'">{{ \App\Services\CurrencyService::format((float)$node['point_value']) }}</span></span>
             @if(!empty($node['contributions']) && count($node['contributions']) > 1)
             <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-bold" title="Multiple contributions added">
                 {{ count($node['contributions']) }} records

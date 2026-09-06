@@ -19,6 +19,47 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('currency', {
+            code: localStorage.getItem('sbl_currency') || '{{ \App\Services\CurrencyService::getCurrency() }}',
+            rate: 120,
+            symbol() {
+                return this.code === 'BDT' ? '৳' : '$';
+            },
+            convert(usdAmount) {
+                const num = parseFloat(usdAmount) || 0;
+                return this.code === 'BDT' ? (num * this.rate) : num;
+            },
+            format(usdAmount, includeSymbol = true) {
+                const converted = this.convert(usdAmount);
+                const formatted = new Intl.NumberFormat('en-US', {
+                    minimumFractionDigits: converted % 1 === 0 ? 0 : 2,
+                    maximumFractionDigits: 2
+                }).format(converted);
+                if (!includeSymbol) return formatted;
+                return this.code === 'BDT' ? `${formatted} ৳` : `$${formatted}`;
+            },
+            async set(newCode) {
+                newCode = (newCode || 'USD').toUpperCase();
+                this.code = newCode;
+                localStorage.setItem('sbl_currency', newCode);
+                document.cookie = `sbl_currency=${newCode}; path=/; max-age=31536000; SameSite=Lax`;
+                try {
+                    await fetch('/currency/switch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        },
+                        body: JSON.stringify({ currency: newCode })
+                    });
+                } catch(e) {}
+                window.dispatchEvent(new CustomEvent('currency-changed', { detail: { code: newCode } }));
+            }
+        });
+    });
+    </script>
 </head>
 <body class="h-full font-sans antialiased text-slate-900 selection:bg-orange-500 selection:text-white" 
       x-data="{ 
@@ -206,6 +247,27 @@
                 </div>
 
                 <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Currency Switcher (USD / BDT) -->
+                    <div x-data="{ currentCurr: '{{ \App\Services\CurrencyService::getCurrency() }}' }" 
+                         class="inline-flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shadow-2xs">
+                        <button type="button" 
+                                @click="if ($store.currency) { $store.currency.set('USD'); } else { document.cookie='sbl_currency=USD;path=/'; } currentCurr = 'USD'; location.href='/currency/USD';"
+                                :class="($store.currency ? $store.currency.code : currentCurr) === 'USD' ? 'bg-white text-orange-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+                                class="px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                                title="Switch to US Dollar (Default)">
+                            <span>🇺🇸</span>
+                            <span>USD ($)</span>
+                        </button>
+                        <button type="button" 
+                                @click="if ($store.currency) { $store.currency.set('BDT'); } else { document.cookie='sbl_currency=BDT;path=/'; } currentCurr = 'BDT'; location.href='/currency/BDT';"
+                                :class="($store.currency ? $store.currency.code : currentCurr) === 'BDT' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+                                class="px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                                title="Switch to Bangladeshi Taka (1 USD = 120 BDT)">
+                            <span>🇧🇩</span>
+                            <span>BDT (৳)</span>
+                        </button>
+                    </div>
+
                     <!-- Quick Add Lead Button (Desktop) -->
                     <a href="{{ route('leads.create') }}" 
                        class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95">

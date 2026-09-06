@@ -48,6 +48,19 @@ class AppServiceProvider extends ServiceProvider
         Blade::if('haspermission', function ($permission) {
             return auth()->check() && auth()->user()->hasPermission($permission);
         });
+
+        // 5. Blade directives for Currency
+        Blade::directive('currency', function ($expression) {
+            return "<?php echo \App\Services\CurrencyService::format((float)($expression)); ?>";
+        });
+
+        Blade::directive('currencySymbol', function () {
+            return "<?php echo \App\Services\CurrencyService::getSymbol(); ?>";
+        });
+
+        Blade::directive('currencyCode', function () {
+            return "<?php echo \App\Services\CurrencyService::getCurrency(); ?>";
+        });
     }
 }
 

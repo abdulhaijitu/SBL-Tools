@@ -270,13 +270,13 @@
                         <!-- Left Team Count & BV -->
                         <td class="py-3.5 px-4 text-center">
                             <span class="font-bold text-emerald-700">{{ $member->left_count }} জন</span>
-                            <div class="text-[11px] text-slate-500">{{ (int)$member->left_bv }} BV</div>
+                            <div class="text-[11px] text-slate-500 font-medium">@currency($member->left_bv) ({{ (int)$member->left_bv }} BV)</div>
                         </td>
 
                         <!-- Right Team Count & BV -->
                         <td class="py-3.5 px-4 text-center">
                             <span class="font-bold text-blue-700">{{ $member->right_count }} জন</span>
-                            <div class="text-[11px] text-slate-500">{{ (int)$member->right_bv }} BV</div>
+                            <div class="text-[11px] text-slate-500 font-medium">@currency($member->right_bv) ({{ (int)$member->right_bv }} BV)</div>
                         </td>
 
                         <!-- Matched Pairs -->
@@ -416,10 +416,10 @@
                     {{ $treeData['stats']['left_count'] }} <span class="text-xs font-normal text-slate-500">জন</span>
                 </div>
                 <div class="text-xs text-slate-600 font-medium">
-                    মোট ভলিউম: <strong class="text-emerald-700">{{ number_format($treeData['stats']['left_bv'], 0) }} BV</strong>
+                    মোট ভলিউম: <strong class="text-emerald-700">@currency($treeData['stats']['left_bv']) ({{ number_format($treeData['stats']['left_bv'], 0) }} BV)</strong>
                 </div>
                 <div class="text-[11px] text-slate-500 pt-1 border-t border-emerald-200/60">
-                    বর্তমান ক্যারি: <strong>{{ number_format($treeData['stats']['carry_left'], 0) }} BV</strong>
+                    বর্তমান ক্যারি: <strong>@currency($treeData['stats']['carry_left']) ({{ number_format($treeData['stats']['carry_left'], 0) }} BV)</strong>
                 </div>
             </div>
 
@@ -433,10 +433,10 @@
                     {{ $treeData['stats']['right_count'] }} <span class="text-xs font-normal text-slate-500">জন</span>
                 </div>
                 <div class="text-xs text-slate-600 font-medium">
-                    মোট ভলিউম: <strong class="text-blue-700">{{ number_format($treeData['stats']['right_bv'], 0) }} BV</strong>
+                    মোট ভলিউম: <strong class="text-blue-700">@currency($treeData['stats']['right_bv']) ({{ number_format($treeData['stats']['right_bv'], 0) }} BV)</strong>
                 </div>
                 <div class="text-[11px] text-slate-500 pt-1 border-t border-blue-200/60">
-                    বর্তমান ক্যারি: <strong>{{ number_format($treeData['stats']['carry_right'], 0) }} BV</strong>
+                    বর্তমান ক্যারি: <strong>@currency($treeData['stats']['carry_right']) ({{ number_format($treeData['stats']['carry_right'], 0) }} BV)</strong>
                 </div>
             </div>
 
@@ -450,7 +450,7 @@
                     {{ $treeData['stats']['matched_pairs'] }} <span class="text-xs font-normal text-slate-500">টি পেয়ার</span>
                 </div>
                 <div class="text-xs text-slate-600">
-                    ম্যাচিং পয়েন্ট: <strong>{{ number_format($treeData['stats']['matched_pairs'] * 100, 0) }} BV</strong>
+                    ম্যাচিং পয়েন্ট: <strong>@currency($treeData['stats']['matched_pairs'] * 100) ({{ number_format($treeData['stats']['matched_pairs'] * 100, 0) }} BV)</strong>
                 </div>
                 <div class="text-[11px] text-purple-700 font-semibold pt-1 border-t border-purple-200/60">
                     সফল ম্যাচিং কমপ্লিট
@@ -819,10 +819,10 @@
                     </div>
 
                     <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
-                        <span class="font-bold text-slate-700">Total Contribution ($/BV):</span>
+                        <span class="font-bold text-slate-700">Total Contribution (USD / BV):</span>
                         <div class="flex items-center gap-2">
                             <input type="number" step="1" min="0" name="point_value" x-model="editNode.point_value" class="w-24 px-2 py-1 text-xs bg-white border border-slate-300 rounded font-extrabold text-emerald-700 text-right">
-                            <span class="font-extrabold text-emerald-800">$</span>
+                            <span class="font-bold text-emerald-800 text-xs" x-text="$store.currency ? ($store.currency.code === 'BDT' ? ('≈ ' + $store.currency.format(editNode.point_value)) : '$ USD') : '$ USD'">$ USD</span>
                         </div>
                     </div>
                 </div>

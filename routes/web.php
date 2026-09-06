@@ -86,6 +86,10 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/roles/{role}', [\App\Http\Controllers\RoleController::class, 'update'])->name('roles.update');
     Route::delete('/roles/{role}', [\App\Http\Controllers\RoleController::class, 'destroy'])->name('roles.destroy');
 
+    // Currency Switcher
+    Route::post('/currency/switch', [\App\Http\Controllers\CurrencyController::class, 'switch'])->name('currency.switch');
+    Route::get('/currency/{code}', [\App\Http\Controllers\CurrencyController::class, 'switch'])->name('currency.switch.get');
+
     // User Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

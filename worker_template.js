@@ -74,7 +74,8 @@ export default {
             request.method === "POST" ||
             request.method === "PUT" ||
             request.method === "PATCH" ||
-            request.method === "DELETE"
+            request.method === "DELETE" ||
+            path.startsWith("/currency")
         ) {
             let effectiveMethod = request.method;
             let formData = null;
@@ -94,6 +95,50 @@ export default {
                 } catch (e) {
                     console.error("Error parsing formData:", e);
                 }
+            }
+
+            // Currency Switch Handler
+            if (path === "/currency/switch" || path.startsWith("/currency/")) {
+                let curr = "USD";
+                if (formData && formData.get("currency")) {
+                    curr = formData.get("currency").toUpperCase();
+                } else if (contentType.includes("json")) {
+                    try {
+                        const jsonBody = await request.json();
+                        if (jsonBody && jsonBody.currency) {
+                            curr = jsonBody.currency.toUpperCase();
+                        }
+                    } catch(e) {}
+                } else {
+                    const parts = path.split("/");
+                    if (parts[2]) curr = parts[2].toUpperCase();
+                }
+                if (curr !== "USD" && curr !== "BDT") curr = "USD";
+
+                const cookieHeader = `sbl_currency=${curr}; Path=/; Max-Age=31536000; SameSite=Lax`;
+                if (contentType.includes("json") || request.headers.get("accept")?.includes("json")) {
+                    return new Response(
+                        JSON.stringify({
+                            success: true,
+                            currency: curr,
+                            symbol: curr === "BDT" ? "৳" : "$",
+                            rate: curr === "BDT" ? 120 : 1
+                        }),
+                        {
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Set-Cookie": cookieHeader
+                            }
+                        }
+                    );
+                }
+                return new Response(null, {
+                    status: 302,
+                    headers: {
+                        "Location": request.headers.get("Referer") || "/",
+                        "Set-Cookie": cookieHeader
+                    }
+                });
             }
 
             // 4a. Leads Handlers
@@ -2719,21 +2764,31 @@ export default {
             const sponsorEl = cardEl.querySelector('div.text-xs.font-medium.pt-0\\.5');
             if (sponsorEl) sponsorEl.textContent = 'By ' + sponsorName;
 
+            // Currency Formatter Helper
+            const activeCurr = localStorage.getItem('sbl_currency') || 'USD';
+            const fmtMoney = function(usdVal) {
+              const num = parseFloat(usdVal) || 0;
+              if (activeCurr === 'BDT') {
+                return Math.round(num * 120).toLocaleString() + ' ৳';
+              }
+              return '$' + Math.round(num).toLocaleString();
+            };
+
             // 9. Left & Right team stats
             const lStats = cardEl.querySelectorAll('.pr-2 .text-\\[11px\\]');
             if (lStats.length >= 2) {
               lStats[0].textContent = 'Team- ' + leftCount + '/' + leftTarget;
-              lStats[1].textContent = 'Vol- ' + Math.round(leftBv) + '$';
+              lStats[1].textContent = 'Vol- ' + fmtMoney(leftBv);
             }
             const rStats = cardEl.querySelectorAll('.pl-2 .text-\\[11px\\]');
             if (rStats.length >= 2) {
               rStats[0].textContent = 'Team- ' + rightCount + '/' + rightTarget;
-              rStats[1].textContent = 'Vol- ' + Math.round(rightBv) + '$';
+              rStats[1].textContent = 'Vol- ' + fmtMoney(rightBv);
             }
 
             // 10. Total Contribution
             const contribEl = cardEl.querySelector('div.border-t.text-xs.font-semibold span');
-            if (contribEl) contribEl.textContent = 'Total Contribution: ' + Math.round(pv) + '$';
+            if (contribEl) contribEl.textContent = 'Total Contribution: ' + fmtMoney(pv);
 
             // 11. Rebind edit click with fresh node data
             const updatedNodeObj = {
