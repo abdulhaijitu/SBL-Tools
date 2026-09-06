@@ -110,15 +110,15 @@
             target_notes: node.target_notes || '',
             user_id: node.user_id || ''
         };
-        this.editModalOpen = true;
-        this.$nextTick(() => {
-            const form = document.querySelector('#edit-member-form');
-            if (form && node.id) {
-                form.action = '/binary/' + node.id;
-            }
-        });
-    }
-}">
+            this.editModalOpen = true;
+            this.$nextTick(() => {
+                const form = document.querySelector('#edit-member-form');
+                if (form && node.id) {
+                    form.action = '/team/' + node.id;
+                }
+            });
+        }
+    }">
 
     @if(session('success'))
     <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm font-semibold flex items-center justify-between shadow-xs">
@@ -768,11 +768,21 @@
 
             <!-- Modal Footer -->
             <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <button type="button" 
-                        @click="openEditModal(detailsNode); detailsModalOpen = false;"
-                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer">
-                    ✏️ তথ্য পরিবর্তন করুন
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" 
+                            @click="openEditModal(detailsNode); detailsModalOpen = false;"
+                            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer">
+                        ✏️ তথ্য পরিবর্তন করুন
+                    </button>
+                    <template x-if="detailsNode.is_target">
+                        <form :action="'/team/' + detailsNode.id + '/convert-target'" method="POST" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('এই টার্গেট মেম্বারকে অ্যাক্টিভ কনফার্ম মেম্বারে রূপান্তর করতে চান?');" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1">
+                                <span>🎯</span> <span>অ্যাক্টিভ মেম্বারে রূপান্তর</span>
+                            </button>
+                        </form>
+                    </template>
+                </div>
 
                 <button type="button" 
                         @click="detailsModalOpen = false" 
@@ -949,7 +959,7 @@
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <form id="edit-member-form" action="" method="POST" class="space-y-3.5">
+            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" class="space-y-3.5">
                 @csrf
                 @method('PUT')
 
@@ -1055,14 +1065,28 @@
                     </template>
                 </div>
 
-                <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
-                        বাতিল
+                <div class="pt-2 flex items-center justify-between border-t border-slate-100">
+                    <button type="button" 
+                            x-show="editNode.id"
+                            @click="if (confirm('সতর্কতা: এই মেম্বারকে টিম থেকে স্থায়ীভাবে মুছে ফেলতে চান?')) { const delForm = document.querySelector('#delete-member-form'); delForm.action = '/team/' + editNode.id; delForm.submit(); }"
+                            class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors cursor-pointer flex items-center gap-1">
+                        <span>🗑️</span> <span>মুছে ফেলুন</span>
                     </button>
-                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 cursor-pointer">
-                        আপডেট সংরক্ষণ করুন
-                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" @click="editModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
+                            বাতিল
+                        </button>
+                        <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 cursor-pointer">
+                            আপডেট সংরক্ষণ করুন
+                        </button>
+                    </div>
                 </div>
+            </form>
+
+            <form id="delete-member-form" action="" method="POST" class="hidden">
+                @csrf
+                @method('DELETE')
+                <input type="hidden" name="cascade" value="1">
             </form>
         </div>
     </div>

@@ -403,9 +403,9 @@ export default {
                 }
             }
 
-            // 4b. Binary Tree Handlers
+            // 4b. SBL Team Explorer & Placement Handlers
             if (
-                (path === "/binary" || path === "/binary/place") &&
+                (path === "/binary" || path === "/binary/place" || path === "/team" || path === "/team/place") &&
                 effectiveMethod === "POST" &&
                 formData
             ) {
@@ -424,13 +424,18 @@ export default {
                             formData.get("package_name") || "National 120k";
                         const rankName = formData.get("rank_name") || "Member";
                         const parentId = Number(formData.get("parent_id")) || 1;
-                        const position = formData.get("position") || "left";
+                        const branch = (formData.get("branch") || formData.get("position") || "LEFT").toUpperCase();
+                        const position = branch.toLowerCase();
+                        const slotNumber = Number(formData.get("slot_number")) || 1;
                         let pointValue =
                             Number(formData.get("point_value")) || 100;
                         const leftTargetCount =
                             Number(formData.get("left_target_count")) || 5;
                         const rightTargetCount =
                             Number(formData.get("right_target_count")) || 5;
+                        const isTarget = formData.get("is_target") ? 1 : 0;
+                        const targetDate = formData.get("target_date") || null;
+                        const targetNotes = formData.get("target_notes") || null;
                         let contributions =
                             formData.get("contributions") || "[]";
                         if (typeof contributions !== "string") {
@@ -450,8 +455,8 @@ export default {
 
                         await db
                             .prepare(
-                                "INSERT INTO binary_nodes (member_name, member_code, phone, email, password_plain, tpin, package_name, rank_name, parent_id, sponsor_id, sponsor_name, user_id, position, point_value, left_target_count, right_target_count, contributions, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO binary_nodes (member_name, member_code, phone, email, password_plain, tpin, package_name, rank_name, parent_id, sponsor_id, sponsor_name, user_id, branch, slot_number, position, point_value, left_target_count, right_target_count, contributions, is_active, is_target, target_date, target_notes, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 memberName,
@@ -466,11 +471,16 @@ export default {
                                 sponsorId,
                                 sponsorName,
                                 userId,
+                                branch,
+                                slotNumber,
                                 position,
                                 pointValue,
                                 leftTargetCount,
                                 rightTargetCount,
                                 contributions,
+                                isTarget,
+                                targetDate,
+                                targetNotes,
                             )
                             .run();
 
@@ -493,10 +503,37 @@ export default {
                         console.error("D1 Binary create error:", e);
                     }
                 }
-                return Response.redirect(new URL("/binary", request.url), 302);
+                const ref = request.headers.get("referer");
+                if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                return Response.redirect(new URL("/team", request.url), 302);
             }
 
-            if (path.startsWith("/binary/")) {
+            // Convert Target to Active handler
+            if (
+                (path.startsWith("/binary/") || path.startsWith("/team/")) &&
+                path.endsWith("/convert-target") &&
+                effectiveMethod === "POST"
+            ) {
+                const parts = path.split("/");
+                const nodeId = parseInt(parts[2], 10);
+                if (nodeId && db) {
+                    try {
+                        await db
+                            .prepare(
+                                "UPDATE binary_nodes SET is_target = 0, is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                            )
+                            .bind(nodeId)
+                            .run();
+                    } catch (e) {
+                        console.error("D1 Binary convert-target error:", e);
+                    }
+                }
+                const ref = request.headers.get("referer");
+                if (ref) return Response.redirect(new URL(ref, request.url), 302);
+                return Response.redirect(new URL("/team", request.url), 302);
+            }
+
+            if (path.startsWith("/binary/") || path.startsWith("/team/")) {
                 const parts = path.split("/");
                 const nodeId = parseInt(parts[2], 10);
                 if (effectiveMethod === "DELETE" && nodeId) {
@@ -565,14 +602,14 @@ export default {
                                     .first();
                                 if (node && node.parent_id) {
                                     const pv = Number(node.point_value) || 0;
-                                    if (node.position === "left") {
+                                    if (node.position === "left" || node.branch === "LEFT") {
                                         await db
                                             .prepare(
                                                 "UPDATE binary_nodes SET left_count = MAX(0, left_count - 1), left_bv = MAX(0, left_bv - ?), carry_left = MAX(0, carry_left - ?) WHERE id = ?",
                                             )
                                             .bind(pv, pv, node.parent_id)
                                             .run();
-                                    } else if (node.position === "right") {
+                                    } else if (node.position === "right" || node.branch === "RIGHT") {
                                         await db
                                             .prepare(
                                                 "UPDATE binary_nodes SET right_count = MAX(0, right_count - 1), right_bv = MAX(0, right_bv - ?), carry_right = MAX(0, carry_right - ?) WHERE id = ?",
@@ -600,8 +637,10 @@ export default {
                             console.error("D1 Binary delete error:", e);
                         }
                     }
+                    const ref = request.headers.get("referer");
+                    if (ref) return Response.redirect(new URL(ref, request.url), 302);
                     return Response.redirect(
-                        new URL("/binary?deleted_node=" + nodeId, request.url),
+                        new URL("/team?deleted_node=" + nodeId, request.url),
                         302,
                     );
                 }
@@ -631,6 +670,9 @@ export default {
                                 formData.get("sponsor_id") !== ""
                                     ? Number(formData.get("sponsor_id"))
                                     : null;
+                            const isTarget = formData.get("is_target") ? 1 : 0;
+                            const targetDate = formData.get("target_date") || null;
+                            const targetNotes = formData.get("target_notes") || null;
                             let contributions =
                                 formData.get("contributions") || "[]";
                             let contributionsArr = [];
@@ -697,7 +739,7 @@ export default {
 
                             await db
                                 .prepare(
-                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, left_count = ?, right_count = ?, left_target_count = ?, right_target_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, left_count = ?, right_count = ?, left_target_count = ?, right_target_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 )
                                 .bind(
                                     memberName,
@@ -712,6 +754,9 @@ export default {
                                     sponsorName,
                                     pointValue,
                                     contributions,
+                                    isTarget,
+                                    targetDate,
+                                    targetNotes,
                                     leftCount,
                                     rightCount,
                                     leftTargetCount,
@@ -727,8 +772,10 @@ export default {
                             console.error("D1 Binary update error:", e);
                         }
                     }
+                    const ref = request.headers.get("referer");
+                    if (ref) return Response.redirect(new URL(ref, request.url), 302);
                     return Response.redirect(
-                        new URL("/binary", request.url),
+                        new URL("/team", request.url),
                         302,
                     );
                 }
@@ -2758,7 +2805,7 @@ export default {
         const nodeMap = {};
         DATA.nodes.forEach(function(n) { nodeMap[n.id] = n; });
 
-        // A. Sync Visual Tree Cards on Genealogy Canvas
+        // A. Sync Visual Tree Cards on Genealogy / Team Explorer Canvas
         DATA.nodes.forEach(function(node) {
           const cardEl = document.querySelector('div[data-node-id="' + node.id + '"]');
           if (cardEl) {
@@ -2770,91 +2817,49 @@ export default {
             if (Array.isArray(contributionsArr) && contributionsArr.length > 0) {
               pv = contributionsArr.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
             }
-            const isContributed = pv > 0;
             const leftCount = Number(node.left_count) || 0;
             const rightCount = Number(node.right_count) || 0;
-            const leftTarget = node.left_target_count !== null && node.left_target_count !== undefined ? Number(node.left_target_count) : leftCount;
-            const rightTarget = node.right_target_count !== null && node.right_target_count !== undefined ? Number(node.right_target_count) : rightCount;
-            const leftBv = Number(node.left_bv) || 0;
-            const rightBv = Number(node.right_bv) || 0;
             const code = node.member_code || ('SBL-' + node.id);
             const username = node.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
             const email = node.email || ('member' + node.id + '@gmail.com');
-            const phone = node.phone || '01700000000';
+            const phone = node.phone || '';
             const password = node.password_plain || 'sbl123456';
             const tpin = node.tpin || '1234';
-            const sponsorName = node.sponsor_name || (node.sponsor_id && nodeMap[node.sponsor_id] ? nodeMap[node.sponsor_id].member_name : (node.parent_id && nodeMap[node.parent_id] ? nodeMap[node.parent_id].member_name : 'Md Abdul Hai'));
+            const sponsorName = node.sponsor_name || (node.sponsor_id && nodeMap[node.sponsor_id] ? nodeMap[node.sponsor_id].member_name : (node.parent_id && nodeMap[node.parent_id] ? nodeMap[node.parent_id].member_name : 'Md. Samim'));
 
-            // 1. Color theme based on contribution
-            if (isContributed) {
-              cardEl.classList.remove('bg-[#c89e4c]', 'border-[#ead599]');
-              cardEl.classList.add('bg-[#367e6c]', 'border-[#6ea99b]');
-            } else {
-              cardEl.classList.remove('bg-[#367e6c]', 'border-[#6ea99b]');
-              cardEl.classList.add('bg-[#c89e4c]', 'border-[#ead599]');
-            }
-
-            // 2. Member Full Name
-            const nameEl = cardEl.querySelector('h3 span');
+            // 1. Member Full Name
+            const nameEl = cardEl.querySelector('h4') || cardEl.querySelector('h3 span') || cardEl.querySelector('h2');
             if (nameEl) nameEl.textContent = node.member_name;
 
-            // 3. Member Username
-            const userEl = cardEl.querySelector('.font-mono span');
-            if (userEl) userEl.textContent = username;
+            // 2. Member Username & Phone
+            const userSpan = cardEl.querySelector('.font-mono span');
+            if (userSpan) userSpan.textContent = username;
 
-            // 4. Member Phone
-            const phoneLink = cardEl.querySelector('a[href^="tel:"]');
-            if (phoneLink) {
-              phoneLink.href = 'tel:' + phone;
-              const phoneSpan = phoneLink.querySelector('span');
-              if (phoneSpan) phoneSpan.textContent = phone;
-            }
+            // 3. Rank badge
+            const rankBadge = cardEl.querySelector('span.rounded-full:not(.uppercase)');
+            if (rankBadge) rankBadge.textContent = node.rank_name || 'Member';
 
-            // 5. Rank
-            const rankEl = cardEl.querySelector('div.text-xs:not(.font-mono):not(.pt-0\\.5)');
-            if (rankEl) rankEl.textContent = 'Rank: ' + (node.rank_name || 'Member');
-
-            // 6. Email
-            const emailContainer = cardEl.querySelector('div.text-\\[11px\\] span.truncate');
-            if (emailContainer) emailContainer.textContent = '(' + email;
-
-            // 7. Password & TPIN
-            const tpinSpan = cardEl.querySelectorAll('div.text-\\[10px\\] span.font-mono.font-bold');
-            if (tpinSpan && tpinSpan.length >= 2) {
-              tpinSpan[1].textContent = tpin;
-            }
-
-            // 8. Sponsor Name (By)
-            const sponsorEl = cardEl.querySelector('div.text-xs.font-medium.pt-0\\.5');
-            if (sponsorEl) sponsorEl.textContent = 'By ' + sponsorName;
-
-            // Currency Formatter Helper
-            const activeCurr = localStorage.getItem('sbl_currency') || 'USD';
-            const fmtMoney = function(usdVal) {
-              const num = parseFloat(usdVal) || 0;
-              if (activeCurr === 'BDT') {
-                return Math.round(num * 120).toLocaleString() + ' ৳';
+            // 4. Currency Formatter Helper
+            const activeCurr = localStorage.getItem('sbl_currency') || 'BDT';
+            const fmtMoney = function(numVal) {
+              const num = parseFloat(numVal) || 0;
+              if (activeCurr === 'USD') {
+                return '$' + Math.round(num / 120).toLocaleString();
               }
-              return '$' + Math.round(num).toLocaleString();
+              return '৳ ' + Math.round(num).toLocaleString();
             };
 
-            // 9. Left & Right team stats
-            const lStats = cardEl.querySelectorAll('.pr-2 .text-\\[11px\\]');
-            if (lStats.length >= 2) {
-              lStats[0].textContent = 'Team- ' + leftCount + '/' + leftTarget;
-              lStats[1].textContent = 'Vol- ' + fmtMoney(leftBv);
-            }
-            const rStats = cardEl.querySelectorAll('.pl-2 .text-\\[11px\\]');
-            if (rStats.length >= 2) {
-              rStats[0].textContent = 'Team- ' + rightCount + '/' + rightTarget;
-              rStats[1].textContent = 'Vol- ' + fmtMoney(rightBv);
+            // 5. Total Investment / Point Value
+            const invEl = cardEl.querySelector('.text-amber-300 span') || cardEl.querySelector('.text-amber-300');
+            if (invEl) invEl.textContent = fmtMoney(pv);
+
+            // 6. Direct Team counts
+            const directTotalEl = cardEl.querySelector('div.font-black.text-white');
+            if (directTotalEl) {
+              directTotalEl.innerHTML = '<span>' + (leftCount + rightCount) + '/10</span><span class="text-[10px] text-slate-400 font-normal">(' + leftCount + 'L | ' + rightCount + 'R)</span>';
             }
 
-            // 10. Total Contribution
-            const contribEl = cardEl.querySelector('div.border-t.text-xs.font-semibold span');
-            if (contribEl) contribEl.textContent = 'Total Contribution: ' + fmtMoney(pv);
-
-            // 11. Rebind edit click with fresh node data
+            // 7. Rebind node object with fresh data
             const updatedNodeObj = {
               id: node.id,
               member_name: node.member_name,
@@ -2868,31 +2873,33 @@ export default {
               sponsor_name: sponsorName,
               user_id: node.user_id,
               is_active: Boolean(node.is_active),
+              is_target: Boolean(node.is_target),
+              target_date: node.target_date || '',
+              target_notes: node.target_notes || '',
               package_name: node.package_name || 'National 120k',
               point_value: pv,
+              total_investment: pv,
               contributions: contributionsArr,
               rank_name: node.rank_name || 'Member',
+              branch: node.branch || (node.position === 'left' ? 'LEFT' : 'RIGHT'),
+              slot_number: node.slot_number || 1,
               position: node.position,
               left_count: leftCount,
               right_count: rightCount,
-              left_target_count: leftTarget,
-              right_target_count: rightTarget,
-              left_bv: leftBv,
-              right_bv: rightBv,
               parent_id: node.parent_id
             };
 
-            const triggerEdit = function(e) {
+            // Rebind click to openDetailsModal or openEditModal
+            const triggerDetails = function(e) {
               e.stopPropagation();
               const container = document.querySelector('[x-data]');
               if (container && container._x_dataStack) {
-                container._x_dataStack[0].openEditModal(updatedNodeObj);
+                container._x_dataStack[0].openDetailsModal(updatedNodeObj);
               }
             };
-            const editBtn = cardEl.querySelector('button[title*="এডিট"]');
-            const mainBox = cardEl.querySelector('.cursor-pointer');
-            if (editBtn) editBtn.onclick = triggerEdit;
-            if (mainBox) mainBox.onclick = triggerEdit;
+            const detailsBtn = cardEl.querySelector('button[title*="বিবরণ"], button[title*="Details"]');
+            if (detailsBtn) detailsBtn.onclick = triggerDetails;
+            if (nameEl) nameEl.onclick = triggerDetails;
           }
         });
 
