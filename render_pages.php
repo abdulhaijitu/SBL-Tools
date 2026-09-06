@@ -10,6 +10,8 @@ if ($user) {
     Illuminate\Support\Facades\Auth::login($user);
 }
 
+Illuminate\Support\Facades\View::share('errors', new Illuminate\Support\ViewErrorBag);
+
 echo "Bootstrap successful. User: " . (Illuminate\Support\Facades\Auth::user()->email ?? 'None') . "\n";
 
 $pages = [

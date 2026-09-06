@@ -34,7 +34,7 @@
             this.toasts = this.toasts.filter(t => t.id !== id);
         }
       }"
-      x-init="@if(session('success')) addToast('{{ addslashes(session('success')) }}', 'success'); @endif @if(session('error')) addToast('{{ addslashes(session('error')) }}', 'error'); @endif"
+      x-init="@if(session('success')) addToast('{{ addslashes(session('success')) }}', 'success'); @endif @if(session('error')) addToast('{{ addslashes(session('error')) }}', 'error'); @endif @if(isset($errors) && $errors->any()) addToast('{{ addslashes($errors->first()) }}', 'error'); @endif"
       @notify.window="addToast($event.detail.message, $event.detail.type || 'success')">
 
     <!-- Global Floating Toast Notification Stack -->

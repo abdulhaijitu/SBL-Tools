@@ -12,7 +12,9 @@ use App\Models\Lead;
 use App\Models\LeadInterest;
 use App\Models\LeadSource;
 use App\Models\Presentation;
+use App\Models\SblContact;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,6 +68,9 @@ class LeadController extends Controller
         }
 
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
+        if ($sources->isEmpty()) {
+            $sources = LeadSource::orderBy('id')->get();
+        }
         $stages = LeadStage::cases();
         $temperatures = LeadTemperature::cases();
 
@@ -92,9 +97,14 @@ class LeadController extends Controller
     public function create(): View
     {
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
+        if ($sources->isEmpty()) {
+            $sources = LeadSource::orderBy('id')->get();
+        }
         $stages = LeadStage::cases();
+        $sblContacts = SblContact::orderBy('sort_order')->orderBy('department')->get();
+        $teamMembers = User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get();
 
-        return view('leads.create', compact('sources', 'stages'));
+        return view('leads.create', compact('sources', 'stages', 'sblContacts', 'teamMembers'));
     }
 
     /**
@@ -102,15 +112,20 @@ class LeadController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Sanitize facebook_url if given without scheme
+        if ($request->filled('facebook_url') && !preg_match('#^https?://#i', $request->input('facebook_url'))) {
+            $request->merge(['facebook_url' => 'https://' . ltrim($request->input('facebook_url'), '/')]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'mobile' => 'required|string|max:30',
             'whatsapp' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:255',
-            'facebook_url' => 'nullable|url|max:255',
+            'facebook_url' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'profession_or_business' => 'nullable|string|max:255',
-            'lead_source_id' => 'required|exists:lead_sources,id',
+            'lead_source_id' => 'required|integer',
             'lead_source_detail' => 'nullable|string|max:255',
             'interest_types' => 'nullable|array',
             'lead_tag' => 'nullable|string|max:20',
@@ -123,12 +138,12 @@ class LeadController extends Controller
         ]);
 
         DB::transaction(function () use ($validated, $request, &$lead) {
-            $stage = ! empty($validated['stage']) ? LeadStage::from($validated['stage']) : LeadStage::NEW;
+            $stage = ! empty($validated['stage']) ? (LeadStage::tryFrom($validated['stage']) ?? LeadStage::NEW) : LeadStage::NEW;
 
             $lead = new Lead();
             $lead->fill($validated);
             $lead->stage = $stage;
-            $lead->owner_user_id = Auth::id() ?? 1;
+            $lead->owner_user_id = Auth::id() ?: 1;
             $lead->interest_types = $validated['interest_types'] ?? [];
             $lead->last_contact_at = now();
 
@@ -149,10 +164,10 @@ class LeadController extends Controller
             // Create timeline activity
             Activity::create([
                 'lead_id' => $lead->id,
-                'user_id' => Auth::id() ?? 1,
+                'user_id' => Auth::id() ?: 1,
                 'type' => 'lead_created',
                 'title' => 'New Lead Added',
-                'description' => "Initial Stage: {$lead->stage->label()}, Source: {$lead->source->name}",
+                'description' => "Initial Stage: {$lead->stage->label()}, Source: " . ($lead->source->name ?? 'Direct'),
                 'performed_at' => now(),
             ]);
 
@@ -162,7 +177,7 @@ class LeadController extends Controller
                     'title' => ($validated['next_action_type'] ?? 'Follow-up') . ' with ' . $lead->name,
                     'type' => TaskType::FOLLOW_UP,
                     'related_lead_id' => $lead->id,
-                    'user_id' => Auth::id() ?? 1,
+                    'user_id' => Auth::id() ?: 1,
                     'due_at' => $validated['next_action_at'],
                     'priority' => TaskPriority::HIGH,
                     'status' => TaskStatus::PENDING,
@@ -172,7 +187,7 @@ class LeadController extends Controller
         });
 
         return redirect()->route('leads.show', $lead->id)
-            ->with('success', 'Lead created successfully in under 30 seconds!');
+            ->with('success', 'Lead created successfully!');
     }
 
     /**
@@ -182,6 +197,9 @@ class LeadController extends Controller
     {
         $lead->load(['source', 'owner', 'interests', 'activities.user', 'tasks', 'presentations']);
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
+        if ($sources->isEmpty()) {
+            $sources = LeadSource::orderBy('id')->get();
+        }
         $stages = LeadStage::cases();
 
         return view('leads.show', compact('lead', 'sources', 'stages'));
@@ -193,9 +211,14 @@ class LeadController extends Controller
     public function edit(Lead $lead): View
     {
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
+        if ($sources->isEmpty()) {
+            $sources = LeadSource::orderBy('id')->get();
+        }
         $stages = LeadStage::cases();
+        $sblContacts = SblContact::orderBy('sort_order')->orderBy('department')->get();
+        $teamMembers = User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get();
 
-        return view('leads.edit', compact('lead', 'sources', 'stages'));
+        return view('leads.edit', compact('lead', 'sources', 'stages', 'sblContacts', 'teamMembers'));
     }
 
     /**
@@ -203,15 +226,20 @@ class LeadController extends Controller
      */
     public function update(Request $request, Lead $lead): RedirectResponse
     {
+        // Sanitize facebook_url if given without scheme
+        if ($request->filled('facebook_url') && !preg_match('#^https?://#i', $request->input('facebook_url'))) {
+            $request->merge(['facebook_url' => 'https://' . ltrim($request->input('facebook_url'), '/')]);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'mobile' => 'required|string|max:30',
             'whatsapp' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:255',
-            'facebook_url' => 'nullable|url|max:255',
+            'facebook_url' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'profession_or_business' => 'nullable|string|max:255',
-            'lead_source_id' => 'required|exists:lead_sources,id',
+            'lead_source_id' => 'required|integer',
             'lead_source_detail' => 'nullable|string|max:255',
             'interest_types' => 'nullable|array',
             'lead_tag' => 'nullable|string|max:20',
@@ -226,7 +254,7 @@ class LeadController extends Controller
         ]);
 
         $oldStage = $lead->stage;
-        $newStage = LeadStage::from($validated['stage']);
+        $newStage = LeadStage::tryFrom($validated['stage']) ?? $lead->stage;
 
         $lead->fill($validated);
         $lead->stage = $newStage;
