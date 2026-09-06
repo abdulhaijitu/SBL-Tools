@@ -670,15 +670,20 @@ export default {
                     if (db) {
                         try {
                             const existing = await db
-                                .prepare("SELECT * FROM binary_nodes WHERE id = ?")
+                                .prepare(
+                                    "SELECT * FROM binary_nodes WHERE id = ?",
+                                )
                                 .bind(nodeId)
                                 .first();
 
                             if (existing) {
                                 const memberName =
-                                    formData.get("member_name") || existing.member_name || "Unnamed Member";
+                                    formData.get("member_name") ||
+                                    existing.member_name ||
+                                    "Unnamed Member";
                                 const memberCode =
-                                    formData.get("member_code") || existing.member_code;
+                                    formData.get("member_code") ||
+                                    existing.member_code;
                                 const phone = formData.has("phone")
                                     ? formData.get("phone")
                                     : existing.phone;
@@ -691,23 +696,35 @@ export default {
                                     existing.password_plain ||
                                     "sbl123456";
                                 const tpin =
-                                    formData.get("tpin") || existing.tpin || "1234";
+                                    formData.get("tpin") ||
+                                    existing.tpin ||
+                                    "1234";
                                 const packageName =
                                     formData.get("package_name") ||
                                     existing.package_name ||
                                     "National 120k";
                                 const rankName =
-                                    formData.get("rank_name") || existing.rank_name || "Member";
+                                    formData.get("rank_name") ||
+                                    existing.rank_name ||
+                                    "Member";
                                 const sponsorName = formData.has("sponsor_name")
                                     ? formData.get("sponsor_name")
                                     : existing.sponsor_name;
                                 const sponsorId =
-                                    formData.has("sponsor_id") && formData.get("sponsor_id") !== ""
+                                    formData.has("sponsor_id") &&
+                                    formData.get("sponsor_id") !== ""
                                         ? Number(formData.get("sponsor_id"))
                                         : existing.sponsor_id;
                                 const isTarget = formData.has("is_target")
-                                    ? (formData.get("is_target") === "1" || formData.get("is_target") === "on" ? 1 : 0)
-                                    : (formData.has("member_name") ? 0 : (existing.is_target ? 1 : 0));
+                                    ? formData.get("is_target") === "1" ||
+                                      formData.get("is_target") === "on"
+                                        ? 1
+                                        : 0
+                                    : formData.has("member_name")
+                                      ? 0
+                                      : existing.is_target
+                                        ? 1
+                                        : 0;
                                 const targetDate = formData.has("target_date")
                                     ? formData.get("target_date")
                                     : existing.target_date;
@@ -715,8 +732,10 @@ export default {
                                     ? formData.get("target_notes")
                                     : existing.target_notes;
 
-                                let contributions = formData.get("contributions");
-                                let pointValue = Number(existing.point_value) || 0;
+                                let contributions =
+                                    formData.get("contributions");
+                                let pointValue =
+                                    Number(existing.point_value) || 0;
                                 if (contributions) {
                                     let contributionsArr = [];
                                     try {
@@ -725,28 +744,45 @@ export default {
                                                 ? JSON.parse(contributions)
                                                 : contributions;
                                     } catch (e) {}
-                                    if (Array.isArray(contributionsArr) && contributionsArr.length > 0) {
+                                    if (
+                                        Array.isArray(contributionsArr) &&
+                                        contributionsArr.length > 0
+                                    ) {
                                         pointValue = contributionsArr.reduce(
-                                            (sum, c) => sum + (Number(c.amount) || 0),
+                                            (sum, c) =>
+                                                sum + (Number(c.amount) || 0),
                                             0,
                                         );
-                                        contributions = JSON.stringify(contributionsArr);
+                                        contributions =
+                                            JSON.stringify(contributionsArr);
                                     }
                                 } else {
-                                    contributions = existing.contributions || "[]";
+                                    contributions =
+                                        existing.contributions || "[]";
                                 }
 
-                                if (formData.has("point_value") && formData.get("point_value") !== "") {
-                                    pointValue = Number(formData.get("point_value")) || pointValue;
+                                if (
+                                    formData.has("point_value") &&
+                                    formData.get("point_value") !== ""
+                                ) {
+                                    pointValue =
+                                        Number(formData.get("point_value")) ||
+                                        pointValue;
                                 }
 
                                 const userId =
-                                    formData.has("user_id") && formData.get("user_id") !== ""
+                                    formData.has("user_id") &&
+                                    formData.get("user_id") !== ""
                                         ? Number(formData.get("user_id"))
                                         : existing.user_id;
                                 const isActive = formData.has("is_active")
-                                    ? (formData.get("is_active") === "1" || formData.get("is_active") === "true" ? 1 : 0)
-                                    : (existing.is_active !== undefined ? existing.is_active : 1);
+                                    ? formData.get("is_active") === "1" ||
+                                      formData.get("is_active") === "true"
+                                        ? 1
+                                        : 0
+                                    : existing.is_active !== undefined
+                                      ? existing.is_active
+                                      : 1;
 
                                 await db
                                     .prepare(
