@@ -29,25 +29,25 @@ class BinaryTeamTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('binary.index'));
 
         $response->assertOk();
-        $response->assertSee('Binary Team Engine');
-        $response->assertSee('ভিজুয়াল বাইনারি টিম নেটওয়ার্ক');
+        $response->assertSee('Binary Team Tree');
+        $response->assertSee('Md. Abdul Hai');
+        $response->assertSee('Md. Samim');
         $response->assertSee('Tahmina Akter');
-        $response->assertSee('@taminaakter');
-        $response->assertSee('Lubaba Mart');
         $response->assertSee('Khaled Saifulla');
+        $response->assertSee('Md. Zobayer Abdullah');
     }
 
     public function test_admin_can_place_new_member_in_vacant_position(): void
     {
-        $right1 = BinaryNode::where('member_code', '@khaledsaifulla')->first();
-        $this->assertNotNull($right1);
+        $khaled = BinaryNode::where('member_code', '@khaledsaifulla')->first();
+        $this->assertNotNull($khaled);
 
-        // Right-Right position is vacant
+        // Right-Right position under Khaled is vacant
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'member_name' => 'Belal Hossain',
             'phone' => '01799887766',
             'email' => 'belal@sbl.test',
-            'parent_id' => $right1->id,
+            'parent_id' => $khaled->id,
             'position' => 'right',
             'package_name' => 'International 550k',
             'rank_name' => 'Silver Member',
@@ -56,22 +56,22 @@ class BinaryTeamTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('binary_nodes', [
             'member_name' => 'Belal Hossain',
-            'parent_id' => $right1->id,
+            'parent_id' => $khaled->id,
             'position' => 'right',
             'point_value' => 500.00,
         ]);
 
         // Verify volume propagated to parent
-        $freshRight1 = $right1->fresh();
-        $this->assertEquals(1, $freshRight1->right_count);
-        $this->assertEquals(500.00, (float)$freshRight1->right_bv);
+        $freshKhaled = $khaled->fresh();
+        $this->assertEquals(1, $freshKhaled->right_count);
+        $this->assertEquals(500.00, (float)$freshKhaled->right_bv);
     }
 
     public function test_cannot_place_member_in_already_occupied_position(): void
     {
         $root = BinaryNode::whereNull('parent_id')->first();
 
-        // Left of root is already occupied by Lubaba Mart
+        // Left of root is already occupied by Tahmina Akter
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'member_name' => 'Duplicate Placement',
             'parent_id' => $root->id,
@@ -81,6 +81,17 @@ class BinaryTeamTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
+    }
+
+    public function test_viewing_member_tree_makes_them_temporary_root_and_breadcrumbs_work(): void
+    {
+        $tahmina = BinaryNode::where('member_code', '@taminaakter')->first();
+        $this->assertNotNull($tahmina);
+
+        $response = $this->actingAs($this->admin)->get(route('binary.index', ['node_id' => $tahmina->id]));
+        $response->assertOk();
+        $response->assertSee('Tahmina Akter');
+        $response->assertSee('Md. Abdul Hai'); // In breadcrumbs / main root link
     }
 
     public function test_binary_search_redirects_to_focused_member(): void

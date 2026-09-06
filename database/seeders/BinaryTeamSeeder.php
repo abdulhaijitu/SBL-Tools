@@ -17,47 +17,51 @@ class BinaryTeamSeeder extends Seeder
         $service = new BinaryTreeService();
         $admin = User::first();
 
-        // 1. Root Node - Tahmina Akter (By: Md Abdul Hai)
+        // 1. Root Node - Md. Abdul Hai (Sponsor: Md. Samim)
         $root = BinaryNode::create([
             'user_id' => $admin?->id,
+            'member_name' => 'Md. Abdul Hai',
+            'member_code' => 'mdabdulhaijitu1',
+            'phone' => '01711000000',
+            'email' => 'abdulhaijitu@gmail.com',
+            'password_plain' => 'Admin@123',
+            'tpin' => '1234',
+            'package_name' => 'National 120k',
+            'point_value' => 100.00,
+            'contributions' => [
+                ['amount' => 100.00, 'date' => now()->subMonths(4)->toDateString(), 'note' => 'Founder Package 100 BV']
+            ],
+            'rank_name' => 'FME',
+            'sponsor_id' => null,
+            'sponsor_name' => 'Md. Samim',
+            'left_target_count' => 5,
+            'right_target_count' => 5,
+            'joined_at' => now()->subMonths(4),
+        ]);
+
+        // 2. Direct Left - Tahmina Akter (Sponsor: Md. Abdul Hai)
+        $tahmina = $service->placeMember([
             'member_name' => 'Tahmina Akter',
             'member_code' => '@taminaakter',
             'phone' => '01711000001',
             'email' => 'tahmina787162@gmail.com',
             'password_plain' => 'Tahmina@123',
             'tpin' => '5678',
-            'package_name' => 'National 120k',
-            'point_value' => 0.00,
-            'contributions' => [],
-            'rank_name' => 'Member',
-            'sponsor_id' => null, // Root defaults to Md Abdul Hai
-            'left_target_count' => 4,
-            'right_target_count' => 1,
-            'joined_at' => now()->subMonths(3),
-        ]);
-
-        // 2. Level 2 - Left Node: Lubaba Mart (By: Tahmina Akter)
-        $lubaba = $service->placeMember([
-            'member_name' => 'Lubaba Mart',
-            'member_code' => '@tahera_akter_lubaba',
-            'phone' => '01711000002',
-            'email' => 'ucljitu@gmail.com',
-            'password_plain' => 'Lubaba#2026',
-            'tpin' => '2244',
             'parent_id' => $root->id,
             'sponsor_id' => $root->id,
+            'sponsor_name' => 'Md. Abdul Hai',
             'position' => 'left',
             'package_name' => 'National 120k',
             'point_value' => 100.00,
-            'left_target_count' => 2,
+            'left_target_count' => 4,
             'right_target_count' => 1,
             'contributions' => [
-                ['amount' => 100.00, 'date' => now()->subDays(20)->toDateString(), 'note' => 'National Package 100 BV']
+                ['amount' => 100.00, 'date' => now()->subDays(30)->toDateString(), 'note' => 'National Package 100 BV']
             ],
             'rank_name' => 'Member',
         ]);
 
-        // 3. Level 2 - Right Node: Khaled Saifulla (By: Tahmina Akter)
+        // 3. Direct Right - Khaled Saifulla (Sponsor: Md. Abdul Hai)
         $khaled = $service->placeMember([
             'member_name' => 'Khaled Saifulla',
             'member_code' => '@khaledsaifulla',
@@ -67,6 +71,7 @@ class BinaryTeamSeeder extends Seeder
             'tpin' => '7890',
             'parent_id' => $root->id,
             'sponsor_id' => $root->id,
+            'sponsor_name' => 'Md. Abdul Hai',
             'position' => 'right',
             'package_name' => 'National 120k',
             'point_value' => 100.00,
@@ -78,7 +83,7 @@ class BinaryTeamSeeder extends Seeder
             'rank_name' => 'Member',
         ]);
 
-        // 4. Level 3 - Left's Left: Md. Zobayer Abdullah (By: Md Abdul Hai)
+        // 4. Tahmina's Left - Md. Zobayer Abdullah (Sponsor: Tahmina Akter)
         $zobayer = $service->placeMember([
             'member_name' => 'Md. Zobayer Abdullah',
             'member_code' => '@zobayerabdullah',
@@ -86,38 +91,44 @@ class BinaryTeamSeeder extends Seeder
             'email' => 'zobayerabdullah02@gmail.com',
             'password_plain' => 'Zobayer@77',
             'tpin' => '1122',
-            'parent_id' => $lubaba->id,
-            'sponsor_id' => null, // By Md Abdul Hai
+            'parent_id' => $tahmina->id,
+            'sponsor_id' => $tahmina->id,
+            'sponsor_name' => 'Tahmina Akter',
             'position' => 'left',
             'package_name' => 'National 120k',
-            'point_value' => 0.00,
+            'point_value' => 100.00,
             'left_target_count' => 1,
             'right_target_count' => 0,
-            'contributions' => [],
+            'contributions' => [
+                ['amount' => 100.00, 'date' => now()->subDays(12)->toDateString(), 'note' => 'National Package 100 BV']
+            ],
             'rank_name' => 'Member',
         ]);
 
-        // 5. Level 3 - Left's Right: Tamim Tasmim (By: Tahmina Akter)
-        $service->placeMember([
+        // 5. Tahmina's Right - Tamim Tasmim (Sponsor: Tahmina Akter)
+        $tamim = $service->placeMember([
             'member_name' => 'Tamim Tasmim',
             'member_code' => '@tamimtasmim',
             'phone' => '01711000005',
-            'email' => 'tahmina787162@gmail.com',
+            'email' => 'tamimtasmim02@gmail.com',
             'password_plain' => 'Tamim#44',
             'tpin' => '3344',
-            'parent_id' => $lubaba->id,
-            'sponsor_id' => $root->id,
+            'parent_id' => $tahmina->id,
+            'sponsor_id' => $tahmina->id,
+            'sponsor_name' => 'Tahmina Akter',
             'position' => 'right',
             'package_name' => 'National 120k',
-            'point_value' => 0.00,
+            'point_value' => 100.00,
             'left_target_count' => 0,
             'right_target_count' => 0,
-            'contributions' => [],
+            'contributions' => [
+                ['amount' => 100.00, 'date' => now()->subDays(8)->toDateString(), 'note' => 'Starter Pack 100 BV']
+            ],
             'rank_name' => 'Member',
         ]);
 
-        // 6. Level 4 - Left's Left's Left: Md. Ferdaous Sheikh (By: Md Abdul Hai)
-        $service->placeMember([
+        // 6. Zobayer's Left - Md. Ferdaous Sheikh (Sponsor: Md. Zobayer Abdullah)
+        $ferdaous = $service->placeMember([
             'member_name' => 'Md. Ferdaous Sheikh',
             'member_code' => '@ferdaoussheikh',
             'phone' => '01711000006',
@@ -125,7 +136,8 @@ class BinaryTeamSeeder extends Seeder
             'password_plain' => 'Ferdaous#55',
             'tpin' => '9988',
             'parent_id' => $zobayer->id,
-            'sponsor_id' => null, // By Md Abdul Hai
+            'sponsor_id' => $zobayer->id,
+            'sponsor_name' => 'Md. Zobayer Abdullah',
             'position' => 'left',
             'package_name' => 'National 120k',
             'point_value' => 250.00,

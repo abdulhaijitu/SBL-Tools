@@ -45,6 +45,11 @@
     panStartX: 0,
     panStartY: 0,
     hasDragged: false,
+    init() {
+        this.$nextTick(() => {
+            this.fitToScreen();
+        });
+    },
     startPan(e) {
         if (e.button !== 0) return;
         const tag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
@@ -69,10 +74,39 @@
     endPan() {
         this.isPanning = false;
     },
-    resetCanvas() {
+    fitToScreen() {
+        const container = document.querySelector('#tree-viewport-container');
+        const content = document.querySelector('#tree-content-root');
+        if (container && content) {
+            const containerWidth = container.clientWidth;
+            const contentWidth = content.scrollWidth || content.clientWidth;
+            if (contentWidth > 0 && containerWidth > 0 && contentWidth > containerWidth) {
+                const ratio = (containerWidth - 48) / contentWidth;
+                this.zoomLevel = Math.max(0.45, Math.min(1.0, Math.round(ratio * 100) / 100));
+            } else {
+                this.zoomLevel = 1.0;
+            }
+        } else {
+            this.zoomLevel = 0.9;
+        }
+        this.panX = 0;
+        this.panY = 10;
+    },
+    centerRoot() {
+        this.zoomLevel = 1.0;
+        this.panX = 0;
+        this.panY = 10;
+    },
+    resetView() {
         this.zoomLevel = 1.0;
         this.panX = 0;
         this.panY = 0;
+    },
+    zoomIn() {
+        this.zoomLevel = Math.min(1.8, Math.round((this.zoomLevel + 0.15) * 100) / 100);
+    },
+    zoomOut() {
+        this.zoomLevel = Math.max(0.35, Math.round((this.zoomLevel - 0.15) * 100) / 100);
     },
     handleWheel(e) {
         if (e.ctrlKey || e.metaKey) {
@@ -100,15 +134,6 @@
     },
     collapseAll() {
         this.expandedNodeIds = [{{ $treeData['root'] ? $treeData['root']->id : 0 }}];
-    },
-    zoomIn() {
-        this.zoomLevel = Math.min(1.6, Math.round((this.zoomLevel + 0.1) * 10) / 10);
-    },
-    zoomOut() {
-        this.zoomLevel = Math.max(0.4, Math.round((this.zoomLevel - 0.1) * 10) / 10);
-    },
-    resetZoom() {
-        this.zoomLevel = 1.0;
     },
     openPlacementModal(parentId, parentName, parentCode, position) {
         this.selectedParentId = parentId;
@@ -146,7 +171,7 @@
         }
         if (!contribs || contribs.length === 0) {
             contribs = [
-                { amount: node.point_value || 0, date: new Date().toISOString().slice(0, 10), note: node.package_name || 'Initial' }
+                { amount: node.total_investment || node.point_value || 0, date: new Date().toISOString().slice(0, 10), note: node.package_name || 'Initial' }
             ];
         }
 
@@ -203,58 +228,139 @@
     </div>
     @endif
 
-    <!-- Hero Header & Navigation Bar -->
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-orange-950 text-white p-6 md:p-8 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
-                <span>🌲</span> SBL Dual-Team Binary System
-            </div>
-            <h2 class="text-2xl md:text-3xl font-bold tracking-tight">ভিজুয়াল বাইনারি টিম নেটওয়ার্ক</h2>
-            <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                বাম টিম (Left Team) ও ডান টিম (Right Team) পরিচালনা করুন। ট্রির যেকোনো খালি স্থানে এক ক্লিকেই মেম্বার প্লেসমেন্ট করুন এবং লাইভ BV পয়েন্ট ট্র্যাক করুন।
-            </p>
-        </div>
+    <!-- ==================== 1. TEAM PAGE HEADER & SUMMARY BAR ==================== -->
+    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-5 md:p-6 border border-slate-800 text-white shadow-xl space-y-4">
+        <!-- Top Row: Title, Root, Sponsor & View Switcher -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                    <span class="text-orange-400 font-black text-sm uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🌲</span> Binary Team Tree
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                        Rank: {{ $treeData['stats']['rank_name'] ?? 'FME' }}
+                    </span>
+                </div>
 
-        <!-- View Switcher & Fast Navigation Actions -->
-        <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3 flex-shrink-0">
-            <!-- View Mode Switcher -->
-            <div class="inline-flex rounded-xl bg-slate-800/90 p-1 border border-slate-700 shadow-xs">
-                <a href="{{ route('binary.index', ['view' => 'tree', 'node_id' => request('node_id')]) }}" 
-                   class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                    🌲 Tree View
-                </a>
-                <a href="{{ route('binary.index', ['view' => 'table']) }}" 
-                   class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                    📋 Member Directory
-                </a>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400 text-xs font-medium">Root:</span>
+                        <strong class="text-white text-base font-bold">{{ $treeData['stats']['root_name'] ?? 'Md. Abdul Hai' }}</strong>
+                        <span class="text-xs text-slate-400 font-mono">({{ $treeData['stats']['root_code'] ?? 'mdabdulhaijitu1' }})</span>
+                    </div>
+                    <span class="text-slate-600 hidden sm:inline">•</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400 text-xs font-medium">Sponsor/Upline:</span>
+                        <span class="text-orange-300 font-bold text-xs">{{ $treeData['stats']['sponsor_name'] ?? 'Md. Samim' }}</span>
+                    </div>
+                </div>
             </div>
 
-            @if($viewMode !== 'table')
+            <!-- Fast Navigation & View Mode Switcher -->
             <div class="flex flex-wrap items-center gap-2">
+                <!-- View Mode Switcher -->
+                <div class="inline-flex rounded-xl bg-slate-800/90 p-1 border border-slate-700 shadow-xs">
+                    <a href="{{ route('binary.index', ['view' => 'tree', 'node_id' => request('node_id')]) }}" 
+                       class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                        🌲 Tree View
+                    </a>
+                    <a href="{{ route('binary.index', ['view' => 'table']) }}" 
+                       class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                        📋 Member Directory
+                    </a>
+                </div>
+
+                <!-- Back to Main Root (Md. Abdul Hai) -->
                 <a href="{{ route('binary.index') }}" 
-                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1" title="টপ রুট মেম্বারে ফিরুন">
-                    <span>🏠</span> Top
+                   class="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95" 
+                   title="প্রধান রুট (Md. Abdul Hai)-এ ফিরে যান">
+                    <span>🏠</span> Back to Main Root
                 </a>
 
                 @if($treeData['root'] && $treeData['root']->parent_id)
                 <a href="{{ route('binary.index', ['node_id' => $treeData['root']->parent_id]) }}" 
-                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1" title="এক ধাপ আপলাইনে যান">
-                    <span>⬆️</span> Up
-                </a>
-                @endif
-
-                @if($treeData['root'])
-                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'left']) }}" 
-                   class="px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="বাম পাশের শেষ প্রান্তে যান">
-                    <span>◀️</span> Left
-                </a>
-                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'right']) }}" 
-                   class="px-2.5 py-1.5 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="ডান পাশের শেষ প্রান্তে যান">
-                    <span>Right</span> <span>▶️</span>
+                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95" 
+                   title="এক ধাপ আপলাইনে যান">
+                    <span>⬆️</span> Go to Parent
                 </a>
                 @endif
             </div>
-            @endif
+        </div>
+
+        <!-- Breadcrumb Bar if drilled down -->
+        @if(!empty($treeData['breadcrumbs']) && count($treeData['breadcrumbs']) > 1)
+        <div class="flex items-center gap-2 text-xs bg-slate-950/70 px-4 py-2 rounded-xl border border-slate-800 text-slate-300 overflow-x-auto">
+            <span class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Breadcrumb:</span>
+            @foreach($treeData['breadcrumbs'] as $idx => $bc)
+                @if($idx > 0)
+                <span class="text-slate-600 font-bold">›</span>
+                @endif
+                @if($bc['is_current'])
+                <span class="text-amber-300 font-bold whitespace-nowrap">{{ $bc['name'] }}</span>
+                @else
+                <a href="{{ route('binary.index', ['node_id' => $bc['id']]) }}" class="text-slate-300 hover:text-orange-400 transition-colors whitespace-nowrap font-medium">{{ $bc['name'] }}</a>
+                @endif
+            @endforeach
+        </div>
+        @endif
+
+        <!-- Bottom Row: Dynamic Summary Counters -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+            <!-- Left Team -->
+            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-emerald-500/30 space-y-1">
+                <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>👈 Left Team</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                </div>
+                <div class="text-xl font-black text-white">
+                    {{ $treeData['stats']['left_count'] }} <span class="text-xs font-normal text-slate-400">জন</span>
+                </div>
+                <div class="text-xs text-emerald-300 font-semibold truncate">
+                    Vol: <span x-text="$store.currency ? $store.currency.format({{ (float)$treeData['stats']['left_investment_volume'] }}) : '{{ \App\Services\CurrencyService::format((float)$treeData['stats']['left_investment_volume']) }}'">{{ \App\Services\CurrencyService::format((float)$treeData['stats']['left_investment_volume']) }}</span> ({{ number_format($treeData['stats']['left_bv'], 0) }} BV)
+                </div>
+            </div>
+
+            <!-- Right Team -->
+            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-blue-500/30 space-y-1">
+                <div class="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>👉 Right Team</span>
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                </div>
+                <div class="text-xl font-black text-white">
+                    {{ $treeData['stats']['right_count'] }} <span class="text-xs font-normal text-slate-400">জন</span>
+                </div>
+                <div class="text-xs text-blue-300 font-semibold truncate">
+                    Vol: <span x-text="$store.currency ? $store.currency.format({{ (float)$treeData['stats']['right_investment_volume'] }}) : '{{ \App\Services\CurrencyService::format((float)$treeData['stats']['right_investment_volume']) }}'">{{ \App\Services\CurrencyService::format((float)$treeData['stats']['right_investment_volume']) }}</span> ({{ number_format($treeData['stats']['right_bv'], 0) }} BV)
+                </div>
+            </div>
+
+            <!-- Total Team -->
+            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-purple-500/30 space-y-1">
+                <div class="text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>👥 Total Team</span>
+                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                </div>
+                <div class="text-xl font-black text-white">
+                    {{ $treeData['stats']['total_members'] }} <span class="text-xs font-normal text-slate-400">জন</span>
+                </div>
+                <div class="text-xs text-purple-300 font-semibold truncate">
+                    Pairs: <strong>{{ $treeData['stats']['matched_pairs'] }}</strong> ({{ number_format($treeData['stats']['matched_pairs'] * 100, 0) }} BV)
+                </div>
+            </div>
+
+            <!-- Own Investment -->
+            <div class="p-3.5 bg-slate-950/70 rounded-xl border border-amber-500/30 space-y-1">
+                <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>💼 Own Investment</span>
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                </div>
+                <div class="text-xl font-black text-amber-300 truncate">
+                    <span x-text="$store.currency ? $store.currency.format({{ (float)$treeData['stats']['own_investment'] }}) : '{{ \App\Services\CurrencyService::format((float)$treeData['stats']['own_investment']) }}'">{{ \App\Services\CurrencyService::format((float)$treeData['stats']['own_investment']) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 truncate">
+                    Direct qualified volume
+                </div>
+            </div>
         </div>
     </div>
 
@@ -390,7 +496,7 @@
                                             contributions: {{ json_encode($member->contributions ?: [['amount' => (float)$member->point_value, 'date' => now()->toDateString(), 'note' => $member->package_name]]) }},
                                             rank_name: '{{ $member->rank_name }}',
                                             sponsor_id: '{{ $member->sponsor_id }}',
-                                            sponsor_name: '{{ addslashes($member->sponsor_name ?: ($member->sponsor?->member_name ?? "Md Abdul Hai")) }}',
+                                            sponsor_name: '{{ addslashes($member->sponsor_name ?: ($member->sponsor?->member_name ?? ($member->parent_id === null ? "Md. Samim" : "Md. Abdul Hai"))) }}',
                                             left_count: {{ $member->left_count }},
                                             left_target_count: {{ $member->left_target_count ?: $member->left_count }},
                                             right_count: {{ $member->right_count }},
@@ -445,158 +551,96 @@
     </div>
 
     @else
-    <!-- ==================== VISUAL GENEALOGY TREE VIEW ==================== -->
-    <!-- Search & Live Metrics Summary Bar -->
-    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-        
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
-            <!-- Search Form -->
-            <form action="{{ route('binary.search') }}" method="GET" class="w-full sm:w-96 flex items-center gap-2">
-                <div class="relative flex-1">
-                    <input type="text" 
-                           name="search" 
-                           placeholder="মেম্বার কোড বা নাম দিয়ে খুঁজুন (e.g. SBL-1001)..." 
-                           class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
-                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
-                <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors">
-                    Search
-                </button>
-            </form>
-
-            <!-- Current Root Tag & Quick Placement -->
-            <div class="flex items-center gap-2">
-                @if($treeData['root'])
-                <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
-                    <span class="text-slate-400">বর্তমান ফোকাস:</span>
-                    <span class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200">
-                        {{ $treeData['root']->member_name }} ({{ $treeData['root']->member_code }})
-                    </span>
-                </div>
-                @endif
+    <!-- ==================== 2. SEARCH & CONTROLS TOOLBAR ==================== -->
+    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <!-- Search Member Form -->
+        <form action="{{ route('binary.search') }}" method="GET" class="w-full sm:w-96 flex items-center gap-2">
+            <div class="relative flex-1">
+                <input type="text" 
+                       name="search" 
+                       list="tree_search_datalist"
+                       placeholder="মেম্বারের নাম বা কোড দিয়ে সার্চ করুন (e.g. SBL-1001)..." 
+                       class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all font-medium">
+                <datalist id="tree_search_datalist">
+                    @foreach($allNodes as $an)
+                    <option value="{{ $an->member_code }}">{{ $an->member_name }} ({{ $an->member_code }})</option>
+                    @endforeach
+                </datalist>
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
+            <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors shrink-0">
+                Search Member
+            </button>
+        </form>
+
+        <!-- Current View Root Badge & Extreme Navigation -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <div class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                <span class="text-slate-400 text-[11px]">View Root:</span>
+                <span class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200">
+                    {{ $treeData['root'] ? $treeData['root']->member_name : 'No Root' }}
+                </span>
+            </div>
+
+            @if($treeData['root'])
+            <div class="inline-flex items-center gap-1 pl-2 border-l border-slate-200">
+                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'left']) }}" 
+                   class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors" title="Go to Extreme Left">
+                    ◀ Left End
+                </a>
+                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'right']) }}" 
+                   class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-200 transition-colors" title="Go to Extreme Right">
+                    Right End ▶
+                </a>
+            </div>
+            @endif
         </div>
-
-        <!-- 4-Col Performance Cards -->
-        @if($treeData['stats'])
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            
-            <!-- Left Team Metric -->
-            <div class="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1">
-                <div class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>👈 বাম টিম (Left Leg)</span>
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                </div>
-                <div class="text-xl font-extrabold text-slate-900">
-                    {{ $treeData['stats']['left_count'] }} <span class="text-xs font-normal text-slate-500">জন</span>
-                </div>
-                <div class="text-xs text-slate-600 font-medium">
-                    মোট ভলিউম: <strong class="text-emerald-700">@currency($treeData['stats']['left_bv']) ({{ number_format($treeData['stats']['left_bv'], 0) }} BV)</strong>
-                </div>
-                <div class="text-[11px] text-slate-500 pt-1 border-t border-emerald-200/60">
-                    বর্তমান ক্যারি: <strong>@currency($treeData['stats']['carry_left']) ({{ number_format($treeData['stats']['carry_left'], 0) }} BV)</strong>
-                </div>
-            </div>
-
-            <!-- Right Team Metric -->
-            <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-1">
-                <div class="text-[11px] font-bold text-blue-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>👉 ডান টিম (Right Leg)</span>
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                </div>
-                <div class="text-xl font-extrabold text-slate-900">
-                    {{ $treeData['stats']['right_count'] }} <span class="text-xs font-normal text-slate-500">জন</span>
-                </div>
-                <div class="text-xs text-slate-600 font-medium">
-                    মোট ভলিউম: <strong class="text-blue-700">@currency($treeData['stats']['right_bv']) ({{ number_format($treeData['stats']['right_bv'], 0) }} BV)</strong>
-                </div>
-                <div class="text-[11px] text-slate-500 pt-1 border-t border-blue-200/60">
-                    বর্তমান ক্যারি: <strong>@currency($treeData['stats']['carry_right']) ({{ number_format($treeData['stats']['carry_right'], 0) }} BV)</strong>
-                </div>
-            </div>
-
-            <!-- Matched Pairs -->
-            <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-200 space-y-1">
-                <div class="text-[11px] font-bold text-purple-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>⚖️ ম্যাচিং পেয়ার (১:১)</span>
-                    <span class="text-[10px] font-bold px-1.5 py-0.5 bg-purple-200 rounded text-purple-800">100 BV Pair</span>
-                </div>
-                <div class="text-xl font-extrabold text-purple-900">
-                    {{ $treeData['stats']['matched_pairs'] }} <span class="text-xs font-normal text-slate-500">টি পেয়ার</span>
-                </div>
-                <div class="text-xs text-slate-600">
-                    ম্যাচিং পয়েন্ট: <strong>@currency($treeData['stats']['matched_pairs'] * 100) ({{ number_format($treeData['stats']['matched_pairs'] * 100, 0) }} BV)</strong>
-                </div>
-                <div class="text-[11px] text-purple-700 font-semibold pt-1 border-t border-purple-200/60">
-                    সফল ম্যাচিং কমপ্লিট
-                </div>
-            </div>
-
-            <!-- Weaker Leg Balance Guide -->
-            <div class="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
-                <div class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                    🎯 ফোকাস সাইড (দুর্বল লেগ)
-                </div>
-                <div class="text-base font-extrabold text-amber-900 pt-0.5">
-                    @if($treeData['stats']['carry_left'] < $treeData['stats']['carry_right'])
-                        👈 বাম টিম (Left Team)
-                    @elseif($treeData['stats']['carry_right'] < $treeData['stats']['carry_left'])
-                        👉 ডান টিম (Right Team)
-                    @else
-                        ⚖️ দুই সাইডই ব্যালেন্সড
-                    @endif
-                </div>
-                <p class="text-[11px] text-slate-600 leading-tight">
-                    ম্যাক্সিমাম পেয়ার ম্যাচিংয়ের জন্য দুর্বল সাইডে নতুন মেম্বার যুক্ত করুন।
-                </p>
-            </div>
-
-        </div>
-        @endif
-
     </div>
 
-    <!-- ==================== FIGJAM-STYLE INTERACTIVE GENEALOGY TREE CANVAS ==================== -->
+    <!-- ==================== 3. FIGJAM-STYLE INTERACTIVE GENEALOGY TREE CANVAS ==================== -->
     <div class="bg-[#1b2b3a] rounded-2xl border border-slate-700/80 p-4 md:p-6 shadow-2xl relative select-none"
          @wheel="handleWheel($event)">
         
-        <!-- FigJam Canvas Floating Toolbar -->
+        <!-- Canvas Floating Top Toolbar with All 5 Required Controls -->
         <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-700/60 text-white">
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🎨</span> FigJam Tree Canvas
+                    <span>🎨</span> Binary Tree Canvas
                 </span>
                 <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium flex items-center gap-1">
-                    <span>🖱️</span> মাউস দিয়ে ড্র্যাগ ও প্যান করুন
+                    <span>🖱️</span> মাউস ড্র্যাগ করে ক্যানভাস সরান
                 </span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <!-- Expand / Collapse All -->
+            <!-- Viewport & Zoom Controls (Fit to Screen, Center Root, Zoom In/Out, Reset) -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <!-- 1. Fit to Screen -->
                 <button type="button" 
-                        @click="expandAll()"
-                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-                        title="সবগুলো টিমের ব্রাঞ্চ একসাথে খুলুন">
-                    <span>🌲</span> সব ব্রাঞ্চ খুলুন
+                        @click="fitToScreen()"
+                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="সম্পূর্ণ ট্রি স্ক্রিনে ফিট করুন">
+                    <span>🔍</span> Fit to Screen
                 </button>
+
+                <!-- 2. Center Root -->
                 <button type="button" 
-                        @click="collapseAll()"
-                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-                        title="সাব-ব্রাঞ্চগুলো বন্ধ করে শুধু টপ রুট রাখুন">
-                    <span>📁</span> সংকুচিত করুন
+                        @click="centerRoot()"
+                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="রুট মেম্বারকে সেন্টারে নিয়ে আসুন">
+                    <span>🎯</span> Center Root
+                </button>
+
+                <!-- 3. Reset View -->
+                <button type="button" 
+                        @click="resetView()"
+                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="ভিউ রিসেট করুন">
+                    <span>🔄</span> Reset View
                 </button>
 
                 <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
 
-                <!-- Center / Reset Position & Zoom -->
-                <button type="button" 
-                        @click="resetCanvas()"
-                        class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
-                        title="ক্যানভাস পজিশন ও জুম রিসেট করুন">
-                    <span>🎯</span> সেন্টার ভিউ
-                </button>
-
-                <!-- Zoom Controls -->
+                <!-- 4 & 5. Zoom In & Out -->
                 <div class="inline-flex items-center rounded-xl bg-slate-800 p-0.5 border border-slate-700 shadow-sm">
                     <button type="button" 
                             @click="zoomOut()" 
@@ -605,9 +649,9 @@
                         −
                     </button>
                     <button type="button" 
-                            @click="resetZoom()" 
+                            @click="resetView()" 
                             class="px-2.5 py-1 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg text-[11px] font-mono font-bold transition-all"
-                            title="Reset to 100%">
+                            title="Click to reset zoom">
                         <span x-text="Math.round(zoomLevel * 100) + '%'">100%</span>
                     </button>
                     <button type="button" 
@@ -617,18 +661,36 @@
                         +
                     </button>
                 </div>
+
+                <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+                <!-- Expand / Collapse Branches -->
+                <button type="button" 
+                        @click="expandAll()"
+                        class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="সবগুলো ব্রাঞ্চ খুলুন">
+                    <span>🌲</span> Expand
+                </button>
+                <button type="button" 
+                        @click="collapseAll()"
+                        class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1 shadow-sm active:scale-95"
+                        title="সংকুচিত করুন">
+                    <span>📁</span> Collapse
+                </button>
             </div>
         </div>
 
         <!-- Mouse Draggable & Zoomable Viewport -->
-        <div class="overflow-hidden min-h-[660px] relative rounded-xl bg-[#142330]/80 border border-slate-800/80 cursor-grab active:cursor-grabbing select-none"
+        <div id="tree-viewport-container"
+             class="overflow-hidden min-h-[660px] relative rounded-xl bg-[#142330]/80 border border-slate-800/80 cursor-grab active:cursor-grabbing select-none"
              :class="isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'"
              @mousedown="startPan($event)"
              @mousemove="onPan($event)"
              @mouseup="endPan()"
              @mouseleave="endPan()">
             
-            <div :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + '); transform-origin: top center; transition: ' + (isPanning ? 'none' : 'transform 0.12s ease-out') + ';'"
+            <div id="tree-content-root"
+                 :style="'transform: translate(' + panX + 'px, ' + panY + 'px) scale(' + zoomLevel + '); transform-origin: top center; transition: ' + (isPanning ? 'none' : 'transform 0.12s ease-out') + ';'"
                  class="w-full flex justify-center items-start pt-8 pb-20 px-6">
                 
                 @if(empty($treeData['tree']))
@@ -638,7 +700,7 @@
                         <p class="text-xs text-slate-300">দয়া করে ডাটাবেজ সিড করুন অথবা নতুন রুট মেম্বার যুক্ত করুন।</p>
                     </div>
                 @else
-                    <!-- Render Recursive FigJam Branching Tree from Root -->
+                    <!-- Render Recursive FigJam Branching Tree from Current Root -->
                     @include('binary.partials.figjam_node', ['node' => $treeData['tree'], 'depth' => 1])
                 @endif
 
@@ -646,9 +708,9 @@
 
             <!-- Floating Draggable Navigator Hint badge at bottom right -->
             <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-slate-900/85 backdrop-blur-sm border border-slate-700/80 text-[11px] text-slate-300 pointer-events-none flex items-center gap-2 shadow-xl z-30">
-                <span>🖱️ মাউস ড্র্যাগ করে ক্যানভাস সরান</span>
+                <span>🖱️ ড্র্যাগ করে সরান</span>
                 <span class="opacity-40">•</span>
-                <span>Ctrl + স্ক্রোল করে জুম করুন</span>
+                <span>Ctrl + স্ক্রোল করে জুম</span>
             </div>
         </div>
     </div>

@@ -17,22 +17,78 @@ class BinaryTreeService
     }
 
     /**
+     * Get the main team root for this branch (Md. Abdul Hai).
+     */
+    public function getMainTeamRoot(): ?BinaryNode
+    {
+        $namedRoot = BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])
+            ->where(function ($q) {
+                $q->where('member_name', 'like', '%Abdul Hai%')
+                  ->orWhere('member_code', 'like', '%abdulhai%');
+            })
+            ->whereNull('parent_id')
+            ->first();
+
+        if ($namedRoot) {
+            return $namedRoot;
+        }
+
+        return BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])
+            ->whereNull('parent_id')
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Get breadcrumb path from main root to currently viewed node.
+     */
+    public function getBreadcrumbs(BinaryNode $currentNode, ?BinaryNode $mainRoot = null): array
+    {
+        $trail = [];
+        $curr = $currentNode;
+        while ($curr) {
+            $trail[] = [
+                'id' => $curr->id,
+                'name' => $curr->member_name,
+                'code' => $curr->member_code ?: ('SBL-' . $curr->id),
+                'is_current' => $curr->id === $currentNode->id,
+            ];
+
+            if ($mainRoot && $curr->id === $mainRoot->id) {
+                break;
+            }
+
+            if (! $curr->parent_id) {
+                break;
+            }
+
+            $curr = BinaryNode::find($curr->parent_id);
+        }
+
+        return array_reverse($trail);
+    }
+
+    /**
      * Get visual tree data starting from a root node.
      */
     public function getVisualTree(?int $rootId = null, int $maxLevels = 3): array
     {
+        $mainRoot = $this->getMainTeamRoot();
+
         $root = null;
         if ($rootId) {
             $root = BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])->find($rootId);
         }
 
         if (! $root) {
-            $root = BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])->whereNull('parent_id')->orderBy('id')->first();
+            $root = $mainRoot;
         }
 
         if (! $root) {
             return [
                 'root' => null,
+                'main_root' => null,
+                'breadcrumbs' => [],
                 'tree' => null,
                 'all_node_ids' => [],
                 'levels' => [],
@@ -42,6 +98,9 @@ class BinaryTreeService
 
         // Calculate dynamic stats from actual tree descendants
         $rootStats = $this->calculateDynamicStats($root);
+
+        // Build breadcrumb navigation path
+        $breadcrumbs = $this->getBreadcrumbs($root, $mainRoot);
 
         // Build Level data for 3-level crop view
         $levels = [];
@@ -62,7 +121,7 @@ class BinaryTreeService
                         $levelData[] = $this->formatNodeForView($left, $leftStats);
                         $nextLevelNodes[] = $left;
                     } else {
-                        $levelData[] = $this->formatVacantSlot($parent->id, 'left');
+                        $levelData[] = $this->formatVacantSlot($parent->id, 'left', $level);
                         $nextLevelNodes[] = null;
                     }
 
@@ -73,7 +132,7 @@ class BinaryTreeService
                         $levelData[] = $this->formatNodeForView($right, $rightStats);
                         $nextLevelNodes[] = $right;
                     } else {
-                        $levelData[] = $this->formatVacantSlot($parent->id, 'right');
+                        $levelData[] = $this->formatVacantSlot($parent->id, 'right', $level);
                         $nextLevelNodes[] = null;
                     }
                 } else {
@@ -94,15 +153,23 @@ class BinaryTreeService
 
         return [
             'root' => $root,
+            'main_root' => $mainRoot,
+            'breadcrumbs' => $breadcrumbs,
             'tree' => $hierarchyTree,
             'all_node_ids' => $allNodeIds,
             'levels' => $levels,
             'stats' => [
+                'root_name' => $root->member_name,
+                'root_code' => $root->member_code ?: ('SBL-' . $root->id),
+                'sponsor_name' => $root->sponsor_name ?: ($root->sponsor?->member_name ?? ($root->parent_id === null ? 'Md. Samim' : 'Md. Abdul Hai')),
                 'total_members' => $rootStats['total_team_members'],
                 'left_count' => $rootStats['total_left_members'],
                 'right_count' => $rootStats['total_right_members'],
                 'left_bv' => $rootStats['left_bv'],
                 'right_bv' => $rootStats['right_bv'],
+                'left_investment_volume' => $rootStats['left_investment_volume'],
+                'right_investment_volume' => $rootStats['right_investment_volume'],
+                'own_investment' => $rootStats['own_investment'],
                 'carry_left' => $rootStats['carry_left'],
                 'carry_right' => $rootStats['carry_right'],
                 'matched_pairs' => $rootStats['matched_pairs'],
@@ -578,12 +645,19 @@ class BinaryTreeService
         $formatted = $this->formatNodeForView($node, $stats);
         $allNodeIds[] = $node->id;
 
+        $generation = $depth - 1;
+        $generationLabel = $generation === 0 ? 'ROOT' : 'GEN ' . $generation;
+
+        $formatted['depth'] = $depth;
+        $formatted['generation'] = $generation;
+        $formatted['generation_label'] = $generationLabel;
+
         // Left Child
         $left = $this->getDirectLeftChild($node);
         if ($left) {
             $formatted['left'] = $this->buildHierarchyTree($left, $allNodeIds, $depth + 1);
         } else {
-            $formatted['left'] = $this->formatVacantSlot($node->id, 'left');
+            $formatted['left'] = $this->formatVacantSlot($node->id, 'left', $depth + 1);
         }
 
         // Right Child
@@ -591,10 +665,9 @@ class BinaryTreeService
         if ($right) {
             $formatted['right'] = $this->buildHierarchyTree($right, $allNodeIds, $depth + 1);
         } else {
-            $formatted['right'] = $this->formatVacantSlot($node->id, 'right');
+            $formatted['right'] = $this->formatVacantSlot($node->id, 'right', $depth + 1);
         }
 
-        $formatted['depth'] = $depth;
         return $formatted;
     }
 
@@ -630,7 +703,7 @@ class BinaryTreeService
         $stats = $stats ?: $this->calculateDynamicStats($node);
         $node->loadMissing(['sponsor', 'parent', 'investments']);
 
-        $sponsorName = $node->sponsor_name ?: ($node->sponsor?->member_name ?? ($node->parent?->member_name ?? 'Md Abdul Hai'));
+        $sponsorName = $node->sponsor_name ?: ($node->sponsor?->member_name ?? ($node->parent_id === null ? 'Md. Samim' : ($node->parent?->member_name ?? 'Md. Abdul Hai')));
         $code = $node->member_code ?: ('SBL-' . $node->id);
         $username = str_starts_with($code, '@') ? $code : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $code)));
 
@@ -655,7 +728,7 @@ class BinaryTreeService
             'member_code' => $node->member_code,
             'username' => $username,
             'phone' => $node->phone ?: '01700000000',
-            'email' => $node->email ?: 'tahmina787162@gmail.com',
+            'email' => $node->email ?: 'member' . $node->id . '@sbl.test',
             'password_plain' => $node->password_plain ?: 'sbl123456',
             'tpin' => $node->tpin ?: '1234',
             'sponsor_id' => $node->sponsor_id,
@@ -664,6 +737,7 @@ class BinaryTreeService
             'is_active' => (bool)$node->is_active,
             'package_name' => $node->package_name,
             'point_value' => $stats['own_pv'],
+            'own_investment' => $stats['own_investment'],
             'total_investment' => $stats['own_investment'],
             'contributions' => $investmentsList,
             'rank_name' => $stats['rank_info']['rank_name'],
@@ -691,15 +765,19 @@ class BinaryTreeService
     /**
      * Format an empty slot for UI.
      */
-    public function formatVacantSlot(int $parentId, string $position): array
+    public function formatVacantSlot(int $parentId, string $position, int $depth = 2): array
     {
         $parent = BinaryNode::find($parentId);
+        $generation = $depth - 1;
         return [
             'is_vacant' => true,
             'parent_id' => $parentId,
             'parent_name' => $parent ? $parent->member_name : 'Upline',
             'parent_code' => $parent ? $parent->member_code : '',
             'position' => $position,
+            'depth' => $depth,
+            'generation' => $generation,
+            'generation_label' => 'GEN ' . $generation,
         ];
     }
 }
