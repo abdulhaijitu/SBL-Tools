@@ -483,86 +483,42 @@ export default {
                 if (effectiveMethod === "PUT" && nodeId && formData) {
                     if (db) {
                         try {
-                            const memberName = formData.get("member_name");
-                            const memberCode =
-                                formData.get("member_code") || null;
+                            const memberName = formData.get("member_name") || "Unnamed Member";
+                            const memberCode = formData.get("member_code") || null;
                             const phone = formData.get("phone") || null;
                             const email = formData.get("email") || null;
-                            const packageName = formData.get("package_name");
-                            const rankName = formData.get("rank_name") || "NA";
-                            const sponsorId = formData.get("sponsor_id")
-                                ? Number(formData.get("sponsor_id"))
-                                : null;
-                            const pointValue = formData.get("point_value")
-                                ? Number(formData.get("point_value"))
-                                : null;
-                            const leftCount = formData.get("left_count")
-                                ? Number(formData.get("left_count"))
-                                : null;
-                            const rightCount = formData.get("right_count")
-                                ? Number(formData.get("right_count"))
-                                : null;
-                            const leftBv = formData.get("left_bv")
-                                ? Number(formData.get("left_bv"))
-                                : null;
-                            const rightBv = formData.get("right_bv")
-                                ? Number(formData.get("right_bv"))
-                                : null;
-                            const userId = formData.get("user_id")
-                                ? Number(formData.get("user_id"))
-                                : null;
+                            const packageName = formData.get("package_name") || "National 120k";
+                            const rankName = formData.get("rank_name") || "Member";
+                            const sponsorId = formData.get("sponsor_id") && formData.get("sponsor_id") !== "" ? Number(formData.get("sponsor_id")) : null;
+                            const pointValue = formData.get("point_value") !== null && formData.get("point_value") !== "" ? Number(formData.get("point_value")) : 0;
+                            const leftCount = formData.get("left_count") !== null && formData.get("left_count") !== "" ? Number(formData.get("left_count")) : 0;
+                            const rightCount = formData.get("right_count") !== null && formData.get("right_count") !== "" ? Number(formData.get("right_count")) : 0;
+                            const leftBv = formData.get("left_bv") !== null && formData.get("left_bv") !== "" ? Number(formData.get("left_bv")) : 0;
+                            const rightBv = formData.get("right_bv") !== null && formData.get("right_bv") !== "" ? Number(formData.get("right_bv")) : 0;
+                            const userId = formData.get("user_id") && formData.get("user_id") !== "" ? Number(formData.get("user_id")) : null;
                             const isActive = formData.has("is_active") ? 1 : 0;
 
-                            let query =
-                                "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP";
-                            const params = [
-                                memberName,
-                                phone,
-                                email,
-                                packageName,
-                                rankName,
-                                isActive,
-                            ];
-
-                            if (memberCode) {
-                                query += ", member_code = ?";
-                                params.push(memberCode);
-                            }
-                            if (sponsorId !== null) {
-                                query += ", sponsor_id = ?";
-                                params.push(sponsorId);
-                            }
-                            if (pointValue !== null) {
-                                query += ", point_value = ?";
-                                params.push(pointValue);
-                            }
-                            if (leftCount !== null) {
-                                query += ", left_count = ?";
-                                params.push(leftCount);
-                            }
-                            if (rightCount !== null) {
-                                query += ", right_count = ?";
-                                params.push(rightCount);
-                            }
-                            if (leftBv !== null) {
-                                query += ", left_bv = ?";
-                                params.push(leftBv);
-                            }
-                            if (rightBv !== null) {
-                                query += ", right_bv = ?";
-                                params.push(rightBv);
-                            }
-                            if (userId !== null) {
-                                query += ", user_id = ?";
-                                params.push(userId);
-                            }
-
-                            query += " WHERE id = ?";
-                            params.push(nodeId);
-
                             await db
-                                .prepare(query)
-                                .bind(...params)
+                                .prepare(
+                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, sponsor_id = ?, point_value = ?, left_count = ?, right_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                                )
+                                .bind(
+                                    memberName,
+                                    memberCode,
+                                    phone,
+                                    email,
+                                    packageName,
+                                    rankName,
+                                    sponsorId,
+                                    pointValue,
+                                    leftCount,
+                                    rightCount,
+                                    leftBv,
+                                    rightBv,
+                                    userId,
+                                    isActive,
+                                    nodeId
+                                )
                                 .run();
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
@@ -2590,18 +2546,123 @@ export default {
         });
       }
 
-      // Sync Member Directory Table
-      const binaryTableBody = document.querySelector('tbody[data-binary-table-body]');
-      if (binaryTableBody && DATA.nodes && DATA.nodes.length > 0) {
+      if (DATA.nodes && DATA.nodes.length > 0) {
+        const nodeMap = {};
+        DATA.nodes.forEach(function(n) { nodeMap[n.id] = n; });
+
+        // A. Sync Visual Tree Cards on Genealogy Canvas
         DATA.nodes.forEach(function(node) {
-          if (binaryTableBody.querySelector('tr[data-node-id="' + node.id + '"]')) return;
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-node-id', node.id);
-          tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
-          const initLetter = (node.member_name || 'M').charAt(0).toUpperCase();
-          tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">' + initLetter + '</div><div><div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">' + node.member_name + '</div><div class="text-[11px] text-slate-400 font-mono">' + (node.member_code || ('SBL-' + node.id)) + '</div></div></div></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800">' + (node.parent_id ? 'Node #' + node.parent_id : 'Top Root') + '</span><span class="block text-[10px] text-slate-400 uppercase">' + (node.position || 'Root') + '</span></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800 block">' + (node.package_name || 'National 120k') + '</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700">' + (node.rank_name || 'Member') + '</span></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-emerald-700">' + (node.left_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.left_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-blue-700">' + (node.right_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.right_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center font-bold text-orange-600">' + (node.matched_pairs || 0) + '</td><td class="py-3.5 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td><td class="py-3.5 px-4 text-right"><form action="/binary/' + node.id + '" method="POST" onsubmit="return confirm(&quot;Delete member?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></td>';
-          binaryTableBody.prepend(tr);
+          const cardEl = document.querySelector('div[data-node-id="' + node.id + '"]');
+          if (cardEl) {
+            const isContributed = Number(node.point_value) > 0;
+            const pv = Number(node.point_value) || 0;
+            const leftCount = Number(node.left_count) || 0;
+            const rightCount = Number(node.right_count) || 0;
+            const leftBv = Number(node.left_bv) || 0;
+            const rightBv = Number(node.right_bv) || 0;
+            const code = node.member_code || ('SBL-' + node.id);
+            const username = node.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
+            const email = node.email || ('member' + node.id + '@gmail.com');
+            const sponsorName = node.sponsor_id && nodeMap[node.sponsor_id] ? nodeMap[node.sponsor_id].member_name : (node.parent_id && nodeMap[node.parent_id] ? nodeMap[node.parent_id].member_name : 'Md Abdul Hai');
+
+            // 1. Color theme based on contribution
+            if (isContributed) {
+              cardEl.classList.remove('bg-[#c89e4c]', 'border-[#ead599]');
+              cardEl.classList.add('bg-[#367e6c]', 'border-[#6ea99b]');
+            } else {
+              cardEl.classList.remove('bg-[#367e6c]', 'border-[#6ea99b]');
+              cardEl.classList.add('bg-[#c89e4c]', 'border-[#ead599]');
+            }
+
+            // 2. Member Full Name
+            const nameEl = cardEl.querySelector('h3');
+            if (nameEl) nameEl.textContent = node.member_name;
+
+            // 3. Member Username
+            const userEl = cardEl.querySelector('.font-mono');
+            if (userEl) userEl.textContent = username;
+
+            // 4. Rank
+            const rankEl = cardEl.querySelector('div.text-xs:not(.font-mono):not(.pt-0\\.5)');
+            if (rankEl) rankEl.textContent = 'Rank: ' + (node.rank_name || 'NA');
+
+            // 5. Sponsor Name (By)
+            const sponsorEl = cardEl.querySelector('div.pt-0\\.5');
+            if (sponsorEl) sponsorEl.textContent = 'By ' + sponsorName;
+
+            // 6. Left & Right team stats
+            const lStats = cardEl.querySelectorAll('.pr-2 .text-\\[11px\\]');
+            if (lStats.length >= 2) {
+              lStats[0].textContent = 'Team- ' + leftCount + '/' + leftCount;
+              lStats[1].textContent = 'Vol- ' + leftBv + '$';
+            }
+            const rStats = cardEl.querySelectorAll('.pl-2 .text-\\[11px\\]');
+            if (rStats.length >= 2) {
+              rStats[0].textContent = 'Team- ' + rightCount + '/' + rightCount;
+              rStats[1].textContent = 'Vol- ' + rightBv + '$';
+            }
+
+            // 7. Total Contribution
+            const contribEl = cardEl.querySelector('.border-t:last-child');
+            if (contribEl) contribEl.textContent = 'Total Contribution: ' + pv + '$';
+
+            // 8. Rebind edit click with fresh node data
+            const updatedNodeObj = {
+              id: node.id,
+              member_name: node.member_name,
+              member_code: node.member_code,
+              username: username,
+              phone: node.phone || '',
+              email: email,
+              sponsor_id: node.sponsor_id,
+              sponsor_name: sponsorName,
+              user_id: node.user_id,
+              is_active: Boolean(node.is_active),
+              package_name: node.package_name || 'National 120k',
+              point_value: pv,
+              rank_name: node.rank_name || 'NA',
+              position: node.position,
+              left_count: leftCount,
+              right_count: rightCount,
+              left_bv: leftBv,
+              right_bv: rightBv,
+              parent_id: node.parent_id
+            };
+
+            const triggerEdit = function(e) {
+              e.stopPropagation();
+              const container = document.querySelector('[x-data]');
+              if (container && container._x_dataStack) {
+                container._x_dataStack[0].openEditModal(updatedNodeObj);
+              }
+            };
+            const editBtn = cardEl.querySelector('button[title*="এডিট"]');
+            const mainBox = cardEl.querySelector('.cursor-pointer');
+            if (editBtn) editBtn.onclick = triggerEdit;
+            if (mainBox) mainBox.onclick = triggerEdit;
+          }
         });
+
+        // B. Sync Member Directory Table
+        const binaryTableBody = document.querySelector('tbody[data-binary-table-body]');
+        if (binaryTableBody) {
+          DATA.nodes.forEach(function(node) {
+            const existingRow = binaryTableBody.querySelector('tr[data-node-id="' + node.id + '"]');
+            if (existingRow) {
+              const nameDiv = existingRow.querySelector('.font-bold.text-slate-900');
+              if (nameDiv) nameDiv.textContent = node.member_name;
+              const codeDiv = existingRow.querySelector('.font-mono');
+              if (codeDiv) codeDiv.textContent = (node.member_code || ('SBL-' + node.id)) + (node.phone ? (' • ' + node.phone) : '');
+            } else {
+              const tr = document.createElement('tr');
+              tr.setAttribute('data-node-id', node.id);
+              tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
+              const initLetter = (node.member_name || 'M').charAt(0).toUpperCase();
+              tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">' + initLetter + '</div><div><div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">' + escapeHtml(node.member_name) + '</div><div class="text-[11px] text-slate-400 font-mono">' + escapeHtml(node.member_code || ('SBL-' + node.id)) + '</div></div></div></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800">' + (node.parent_id ? 'Node #' + node.parent_id : 'Top Root') + '</span><span class="block text-[10px] text-slate-400 uppercase">' + (node.position || 'Root') + '</span></td><td class="py-3.5 px-4"><span class="font-semibold text-slate-800 block">' + (node.package_name || 'National 120k') + '</span><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700">' + (node.rank_name || 'Member') + '</span></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-emerald-700">' + (node.left_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.left_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center"><span class="font-bold text-blue-700">' + (node.right_count || 0) + '</span><div class="text-[10px] text-slate-400 font-medium">' + (node.right_bv || 0) + ' BV</div></td><td class="py-3.5 px-4 text-center font-bold text-orange-600">' + (node.matched_pairs || 0) + '</td><td class="py-3.5 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td><td class="py-3.5 px-4 text-right"><form action="/binary/' + node.id + '" method="POST" onsubmit="return confirm(&quot;Delete member?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></td>';
+              binaryTableBody.prepend(tr);
+            }
+          });
+        }
       }
     }
 

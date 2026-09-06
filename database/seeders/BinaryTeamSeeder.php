@@ -11,96 +11,94 @@ class BinaryTeamSeeder extends Seeder
 {
     public function run(): void
     {
-        if (BinaryNode::count() > 0) {
-            return;
-        }
+        // Truncate/clean existing nodes to re-seed authentic data
+        BinaryNode::query()->delete();
 
         $service = new BinaryTreeService();
         $admin = User::first();
 
-        // 1. Root Node (SBL Head / Admin)
+        // 1. Root Node - Tahmina Akter (By: Md Abdul Hai)
         $root = BinaryNode::create([
             'user_id' => $admin?->id,
-            'member_name' => 'SBL Founder & Head',
-            'member_code' => 'SBL-1001',
-            'phone' => '01700000000',
-            'email' => 'founder@sbl.com.bd',
-            'package_name' => 'Crown VIP',
-            'point_value' => 500.00,
-            'rank_name' => 'Crown Director',
-            'joined_at' => now()->subMonths(6),
+            'member_name' => 'Tahmina Akter',
+            'member_code' => '@taminaakter',
+            'phone' => '01711000001',
+            'email' => 'tahmina787162@gmail.com',
+            'package_name' => 'National 120k',
+            'point_value' => 0.00,
+            'rank_name' => 'Member',
+            'sponsor_id' => null, // Root defaults to Md Abdul Hai
+            'joined_at' => now()->subMonths(3),
         ]);
 
-        // 2. Level 2 - Left Node (Dhaka Division Hub)
-        $left1 = $service->placeMember([
-            'member_name' => 'Rafiqul Islam (Dhaka Hub)',
-            'member_code' => 'SBL-1002',
-            'phone' => '01711001122',
-            'email' => 'rafiq@sbl.test',
+        // 2. Level 2 - Left Node: Lubaba Mart (By: Tahmina Akter)
+        $lubaba = $service->placeMember([
+            'member_name' => 'Lubaba Mart',
+            'member_code' => '@tahera_akter_lubaba',
+            'phone' => '01711000002',
+            'email' => 'ucljitu@gmail.com',
             'parent_id' => $root->id,
             'sponsor_id' => $root->id,
             'position' => 'left',
             'package_name' => 'National 120k',
-            'point_value' => 100.00,
-            'rank_name' => 'Diamond Leader',
+            'point_value' => 0.00,
+            'rank_name' => 'Member',
         ]);
 
-        // 3. Level 2 - Right Node (Chittagong Division Hub)
-        $right1 = $service->placeMember([
-            'member_name' => 'Kamal Hossain (CTG Hub)',
-            'member_code' => 'SBL-1003',
-            'phone' => '01811002233',
-            'email' => 'kamal@sbl.test',
+        // 3. Level 2 - Right Node: Khaled Saifulla (By: Tahmina Akter)
+        $khaled = $service->placeMember([
+            'member_name' => 'Khaled Saifulla',
+            'member_code' => '@khaledsaifulla',
+            'phone' => '01711000003',
+            'email' => 'md.khaledsaiful605211@gmail.com',
             'parent_id' => $root->id,
             'sponsor_id' => $root->id,
             'position' => 'right',
-            'package_name' => 'International 550k',
-            'point_value' => 500.00,
-            'rank_name' => 'Platinum Leader',
-        ]);
-
-        // 4. Level 3 - Left's Left (Mirpur Dropshipper)
-        $service->placeMember([
-            'member_name' => 'Tanvir Ahmed (Mirpur)',
-            'member_code' => 'SBL-1004',
-            'phone' => '01611003344',
-            'email' => 'tanvir@sbl.test',
-            'parent_id' => $left1->id,
-            'sponsor_id' => $left1->id,
-            'position' => 'left',
             'package_name' => 'National 120k',
             'point_value' => 100.00,
-            'rank_name' => 'Gold Member',
+            'rank_name' => 'Member',
         ]);
 
-        // 5. Level 3 - Left's Right (Uttara Merchant)
+        // 4. Level 3 - Left's Left: Md. Zobayer Abdullah (By: Md Abdul Hai)
+        $zobayer = $service->placeMember([
+            'member_name' => 'Md. Zobayer Abdullah',
+            'member_code' => '@zobayerabdullah',
+            'phone' => '01711000004',
+            'email' => 'zobayerabdullah02@gmail.com',
+            'parent_id' => $lubaba->id,
+            'sponsor_id' => null, // By Md Abdul Hai
+            'position' => 'left',
+            'package_name' => 'National 120k',
+            'point_value' => 0.00,
+            'rank_name' => 'Member',
+        ]);
+
+        // 5. Level 3 - Left's Right: Tamim Tasmim (By: Tahmina Akter)
         $service->placeMember([
-            'member_name' => 'Farhana Akter (Uttara)',
-            'member_code' => 'SBL-1005',
-            'phone' => '01911004455',
-            'email' => 'farhana@sbl.test',
-            'parent_id' => $left1->id,
-            'sponsor_id' => $left1->id,
+            'member_name' => 'Tamim Tasmim',
+            'member_code' => '@tamimtasmim',
+            'phone' => '01711000005',
+            'email' => 'tahmina787162@gmail.com',
+            'parent_id' => $lubaba->id,
+            'sponsor_id' => $root->id,
             'position' => 'right',
-            'package_name' => 'International 550k',
-            'point_value' => 500.00,
-            'rank_name' => 'Gold Member',
+            'package_name' => 'National 120k',
+            'point_value' => 0.00,
+            'rank_name' => 'Member',
         ]);
 
-        // 6. Level 3 - Right's Left (Agrabad Investor)
+        // 6. Level 4 - Left's Left's Left: Md. Ferdaous Sheikh (By: Md Abdul Hai)
         $service->placeMember([
-            'member_name' => 'Nazmul Huda (Agrabad)',
-            'member_code' => 'SBL-1006',
-            'phone' => '01511005566',
-            'email' => 'nazmul@sbl.test',
-            'parent_id' => $right1->id,
-            'sponsor_id' => $right1->id,
+            'member_name' => 'Md. Ferdaous Sheikh',
+            'member_code' => '@ferdaoussheikh',
+            'phone' => '01711000006',
+            'email' => 'sheikhferdous475@gmail.com',
+            'parent_id' => $zobayer->id,
+            'sponsor_id' => null, // By Md Abdul Hai
             'position' => 'left',
             'package_name' => 'National 120k',
-            'point_value' => 100.00,
-            'rank_name' => 'Silver Member',
+            'point_value' => 250.00,
+            'rank_name' => 'Member',
         ]);
-
-        // Note: Right's Right ($right1->right) is left VACANT on purpose so user can visually place a member!
     }
 }

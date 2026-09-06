@@ -31,15 +31,15 @@ class BinaryTeamTest extends TestCase
         $response->assertOk();
         $response->assertSee('Binary Team Engine');
         $response->assertSee('ভিজুয়াল বাইনারি টিম নেটওয়ার্ক');
-        $response->assertSee('SBL Founder & Head');
-        $response->assertSee('SBL-1001');
-        $response->assertSee('Rafiqul Islam (Dhaka Hub)');
-        $response->assertSee('Kamal Hossain (CTG Hub)');
+        $response->assertSee('Tahmina Akter');
+        $response->assertSee('@taminaakter');
+        $response->assertSee('Lubaba Mart');
+        $response->assertSee('Khaled Saifulla');
     }
 
     public function test_admin_can_place_new_member_in_vacant_position(): void
     {
-        $right1 = BinaryNode::where('member_code', 'SBL-1003')->first();
+        $right1 = BinaryNode::where('member_code', '@khaledsaifulla')->first();
         $this->assertNotNull($right1);
 
         // Right-Right position is vacant
@@ -71,7 +71,7 @@ class BinaryTeamTest extends TestCase
     {
         $root = BinaryNode::whereNull('parent_id')->first();
 
-        // Left of root is already occupied by SBL-1002
+        // Left of root is already occupied by Lubaba Mart
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'member_name' => 'Duplicate Placement',
             'parent_id' => $root->id,
@@ -85,9 +85,9 @@ class BinaryTeamTest extends TestCase
 
     public function test_binary_search_redirects_to_focused_member(): void
     {
-        $target = BinaryNode::where('member_code', 'SBL-1004')->first();
+        $target = BinaryNode::where('member_code', '@zobayerabdullah')->first();
 
-        $response = $this->actingAs($this->admin)->get(route('binary.search', ['search' => 'SBL-1004']));
+        $response = $this->actingAs($this->admin)->get(route('binary.search', ['search' => '@zobayerabdullah']));
 
         $response->assertRedirect(route('binary.index', ['node_id' => $target->id]));
     }

@@ -55,9 +55,16 @@ class BinaryTeamController extends Controller
      */
     public function update(Request $request, BinaryNode $node): RedirectResponse
     {
+        if ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
+            $request->merge(['sponsor_id' => null]);
+        }
+        if ($request->input('user_id') === '' || $request->input('user_id') === '0') {
+            $request->merge(['user_id' => null]);
+        }
+
         $validated = $request->validate([
             'member_name' => 'required|string|max:150',
-            'member_code' => 'nullable|string|max:50',
+            'member_code' => ['nullable', 'string', 'max:50', \Illuminate\Validation\Rule::unique('binary_nodes', 'member_code')->ignore($node->id)],
             'phone' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:150',
             'package_name' => 'nullable|string|max:100',

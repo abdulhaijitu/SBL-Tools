@@ -57,6 +57,12 @@
             user_id: node.user_id || ''
         };
         this.editModalOpen = true;
+        this.$nextTick(() => {
+            const form = document.querySelector('#edit-member-form');
+            if (form && node.id) {
+                form.action = '/binary/' + node.id;
+            }
+        });
     }
 }">
 
@@ -646,7 +652,7 @@
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
             </div>
 
-            <form :action="'{{ url('/binary') }}/' + editNode.id" method="POST" class="space-y-4">
+            <form id="edit-member-form" :action="'{{ url('/binary') }}/' + editNode.id" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
 
