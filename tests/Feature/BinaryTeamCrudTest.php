@@ -24,6 +24,7 @@ class BinaryTeamCrudTest extends TestCase
         ]);
 
         $this->root = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'SBL Founder',
             'member_code' => 'SBL-ROOT',
             'package_name' => 'International 550k',
@@ -47,7 +48,7 @@ class BinaryTeamCrudTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('SBL Founder');
         $response->assertSee('Tree View');
-        $response->assertSee('Member Directory');
+        $response->assertSee('Directory');
     }
 
     public function test_authenticated_user_can_view_binary_table_directory(): void
@@ -60,11 +61,12 @@ class BinaryTeamCrudTest extends TestCase
         $response->assertSee('SBL-ROOT');
     }
 
-    public function test_admin_can_place_new_member_create(): void
+    public function test_admin_can_place_new_member_in_slot(): void
     {
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'member_name' => 'Kamal Hossain',
             'member_code' => 'SBL-1002',
             'phone' => '01711223344',
@@ -76,7 +78,8 @@ class BinaryTeamCrudTest extends TestCase
         $this->assertDatabaseHas('binary_nodes', [
             'member_name' => 'Kamal Hossain',
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
         ]);
 
         $this->root->refresh();
@@ -87,10 +90,12 @@ class BinaryTeamCrudTest extends TestCase
     public function test_admin_can_update_team_member(): void
     {
         $member = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'Old Member Name',
             'member_code' => 'SBL-1003',
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
             'phone' => '01700000000',
@@ -118,10 +123,10 @@ class BinaryTeamCrudTest extends TestCase
 
     public function test_admin_can_delete_leaf_member_with_upline_rollback(): void
     {
-        // Place member using controller / service so upline counts are tracked
         $this->actingAs($this->admin)->post(route('binary.store'), [
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'member_name' => 'Leaf Member',
             'member_code' => 'SBL-1005',
             'package_name' => 'National 120k',
@@ -149,29 +154,30 @@ class BinaryTeamCrudTest extends TestCase
         $this->assertEquals(0.00, (float)$this->root->left_bv);
     }
 
-    public function test_cannot_delete_member_with_active_downlines(): void
+    public function test_cannot_delete_member_with_active_downlines_without_cascade(): void
     {
-        // Create left child
         $child = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'Parent Child',
             'member_code' => 'SBL-2001',
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
         ]);
 
-        // Create grandchild
         BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'Grand Child',
             'member_code' => 'SBL-2002',
             'parent_id' => $child->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
         ]);
 
-        // Try deleting parent child without cascade
         $response = $this->actingAs($this->admin)->delete(route('binary.destroy', $child->id));
 
         $response->assertSessionHas('error');
@@ -182,27 +188,28 @@ class BinaryTeamCrudTest extends TestCase
 
     public function test_admin_can_cascade_delete_member_with_active_downlines(): void
     {
-        // Create child
         $child = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'Parent Child',
             'member_code' => 'SBL-3001',
             'parent_id' => $this->root->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
         ]);
 
-        // Create grandchild
         $grandchild = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
             'member_name' => 'Grand Child',
             'member_code' => 'SBL-3002',
             'parent_id' => $child->id,
-            'position' => 'left',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
         ]);
 
-        // Delete with cascade
         $response = $this->actingAs($this->admin)->delete(route('binary.destroy', $child->id), [
             'cascade' => '1',
         ]);

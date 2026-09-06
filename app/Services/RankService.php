@@ -18,42 +18,48 @@ class RankService
     ];
 
     /**
-     * Evaluate rank and formatting dynamically based on qualified left/right team counts.
-     * Note: Rank never modifies tree structure or limits tree growth.
+     * Evaluate rank and formatting dynamically based on direct counts and total network counts.
      */
-    public function evaluateRank(int $qualifiedLeft, int $qualifiedRight, float $leftVolume = 0.0, float $rightVolume = 0.0): array
-    {
+    public function evaluateRank(
+        int $directLeft = 0,
+        int $directRight = 0,
+        int $totalLeftNetwork = 0,
+        int $totalRightNetwork = 0,
+        float $leftVolume = 0.0,
+        float $rightVolume = 0.0
+    ): array {
+        $isFmeQualified = ($directLeft >= 5 && $directRight >= 5);
+
         $currentRankCode = 'Member';
         $currentRankName = 'Member';
-        $nextRankCode = 'FME';
-        $nextRankLeftTarget = 5;
-        $nextRankRightTarget = 5;
 
-        foreach (self::RANKS as $code => $config) {
-            if ($code === 'Member') {
-                continue;
-            }
+        if ($isFmeQualified) {
+            $currentRankCode = 'FME';
+            $currentRankName = 'Field Marketing Executive';
 
-            if ($qualifiedLeft >= $config['left'] && $qualifiedRight >= $config['right']) {
-                $currentRankCode = $code;
-                $currentRankName = $config['name'];
-                break;
+            // Check higher ranks based on total downline network
+            foreach (['ETD', 'GME', 'BME', 'PME', 'SME'] as $code) {
+                $config = self::RANKS[$code];
+                if ($totalLeftNetwork >= $config['left'] && $totalRightNetwork >= $config['right']) {
+                    $currentRankCode = $code;
+                    $currentRankName = $config['name'];
+                    break;
+                }
             }
         }
 
-        // Determine targets for display
-        $isFmeQualified = ($qualifiedLeft >= 5 && $qualifiedRight >= 5);
-
-        // Format team count display: "3/5" before FME, "5", "6", "17", "100+" after FME
-        $leftDisplay = $qualifiedLeft < 5 ? "{$qualifiedLeft}/5" : "{$qualifiedLeft}";
-        $rightDisplay = $qualifiedRight < 5 ? "{$qualifiedRight}/5" : "{$qualifiedRight}";
+        // Format direct team count display: "3/5" or "5/5"
+        $leftDisplay = "{$directLeft}/5";
+        $rightDisplay = "{$directRight}/5";
 
         return [
             'rank_code' => $currentRankCode,
             'rank_name' => $currentRankName,
             'is_fme' => $isFmeQualified,
-            'left_count' => $qualifiedLeft,
-            'right_count' => $qualifiedRight,
+            'direct_left' => $directLeft,
+            'direct_right' => $directRight,
+            'total_left_network' => $totalLeftNetwork,
+            'total_right_network' => $totalRightNetwork,
             'left_display' => $leftDisplay,
             'right_display' => $rightDisplay,
             'left_target' => 5,

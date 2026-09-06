@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class BinaryNode extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'tree_owner_id',
         'user_id',
         'member_name',
         'member_code',
@@ -23,7 +23,9 @@ class BinaryNode extends Model
         'parent_id',
         'sponsor_id',
         'sponsor_name',
-        'position',
+        'branch',        // 'LEFT' or 'RIGHT'
+        'slot_number',   // 1 to 5
+        'position',      // legacy fallback
         'package_name',
         'point_value',
         'contributions',
@@ -39,10 +41,14 @@ class BinaryNode extends Model
         'rank_name',
         'avatar',
         'is_active',
+        'is_target',
+        'target_date',
+        'target_notes',
         'joined_at',
     ];
 
     protected $casts = [
+        'slot_number' => 'integer',
         'point_value' => 'decimal:2',
         'contributions' => 'array',
         'left_bv' => 'decimal:2',
@@ -55,8 +61,20 @@ class BinaryNode extends Model
         'right_target_count' => 'integer',
         'matched_pairs' => 'integer',
         'is_active' => 'boolean',
+        'is_target' => 'boolean',
+        'target_date' => 'date',
         'joined_at' => 'datetime',
     ];
+
+    public function treeOwner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tree_owner_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function parent(): BelongsTo
     {
@@ -68,14 +86,22 @@ class BinaryNode extends Model
         return $this->hasMany(BinaryNode::class, 'parent_id');
     }
 
-    public function leftChild(): HasOne
+    public function leftChildren(): HasMany
     {
-        return $this->hasOne(BinaryNode::class, 'parent_id')->where('position', 'left');
+        return $this->hasMany(BinaryNode::class, 'parent_id')
+            ->where(function ($q) {
+                $q->where('branch', 'LEFT')->orWhere('position', 'left');
+            })
+            ->orderBy('slot_number');
     }
 
-    public function rightChild(): HasOne
+    public function rightChildren(): HasMany
     {
-        return $this->hasOne(BinaryNode::class, 'parent_id')->where('position', 'right');
+        return $this->hasMany(BinaryNode::class, 'parent_id')
+            ->where(function ($q) {
+                $q->where('branch', 'RIGHT')->orWhere('position', 'right');
+            })
+            ->orderBy('slot_number');
     }
 
     public function sponsor(): BelongsTo
@@ -86,11 +112,6 @@ class BinaryNode extends Model
     public function sponsoredMembers(): HasMany
     {
         return $this->hasMany(BinaryNode::class, 'sponsor_id');
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     public function investments(): HasMany
@@ -114,9 +135,19 @@ class BinaryNode extends Model
         return (float)$this->investments()->where('status', 'active')->sum('point_value');
     }
 
+    public function getSlotLabelAttribute(): string
+    {
+        if (! $this->parent_id) {
+            return 'ROOT';
+        }
+        $b = strtoupper($this->branch ?: ($this->position === 'left' ? 'LEFT' : 'RIGHT'));
+        $s = $this->slot_number ?: 1;
+        return "{$b}-{$s}";
+    }
+
     public function getWeakerLegAttribute(): string
     {
-        return $this->carry_left <= $this->carry_right ? 'left' : 'right';
+        return $this->carry_left <= $this->carry_right ? 'LEFT' : 'RIGHT';
     }
 
     public function getTotalTeamCountAttribute(): int

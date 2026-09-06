@@ -11,10 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('binary_nodes', function (Blueprint $table) {
-            // Ensure unique placement slot: maximum 1 direct left and 1 direct right child per parent
-            $table->unique(['parent_id', 'position'], 'unique_parent_placement_slot');
-        });
+        // No-op superseded by 10-slot (5L + 5R) placement architecture
     }
 
     /**
@@ -22,8 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('binary_nodes', function (Blueprint $table) {
-            $table->dropUnique('unique_parent_placement_slot');
-        });
+        // No-op
     }
 };
