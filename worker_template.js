@@ -108,7 +108,7 @@ export default {
                         if (jsonBody && jsonBody.currency) {
                             curr = jsonBody.currency.toUpperCase();
                         }
-                    } catch(e) {}
+                    } catch (e) {}
                 } else {
                     const parts = path.split("/");
                     if (parts[2]) curr = parts[2].toUpperCase();
@@ -116,28 +116,31 @@ export default {
                 if (curr !== "USD" && curr !== "BDT") curr = "USD";
 
                 const cookieHeader = `sbl_currency=${curr}; Path=/; Max-Age=31536000; SameSite=Lax`;
-                if (contentType.includes("json") || request.headers.get("accept")?.includes("json")) {
+                if (
+                    contentType.includes("json") ||
+                    request.headers.get("accept")?.includes("json")
+                ) {
                     return new Response(
                         JSON.stringify({
                             success: true,
                             currency: curr,
                             symbol: curr === "BDT" ? "৳" : "$",
-                            rate: curr === "BDT" ? 120 : 1
+                            rate: curr === "BDT" ? 120 : 1,
                         }),
                         {
                             headers: {
                                 "Content-Type": "application/json",
-                                "Set-Cookie": cookieHeader
-                            }
-                        }
+                                "Set-Cookie": cookieHeader,
+                            },
+                        },
                     );
                 }
                 return new Response(null, {
                     status: 302,
                     headers: {
-                        "Location": request.headers.get("Referer") || "/",
-                        "Set-Cookie": cookieHeader
-                    }
+                        Location: request.headers.get("Referer") || "/",
+                        "Set-Cookie": cookieHeader,
+                    },
                 });
             }
 

@@ -85,8 +85,13 @@ class BinaryTreeService
             $currentLevelNodes = $nextLevelNodes;
         }
 
+        $allNodeIds = [];
+        $hierarchyTree = $this->buildHierarchyTree($root, $allNodeIds, 1);
+
         return [
             'root' => $root,
+            'tree' => $hierarchyTree,
+            'all_node_ids' => $allNodeIds,
             'levels' => $levels,
             'stats' => [
                 'total_members' => $root->total_team_count + 1,
@@ -100,6 +105,42 @@ class BinaryTreeService
                 'weaker_leg' => $root->weaker_leg,
             ],
         ];
+    }
+
+    /**
+     * Recursively build full hierarchy tree structure for FigJam-style multi-level tree.
+     */
+    public function buildHierarchyTree(BinaryNode $node, array &$allNodeIds = [], int $depth = 1): array
+    {
+        $formatted = $this->formatNodeForView($node);
+        $allNodeIds[] = $node->id;
+
+        // Left Child
+        $left = BinaryNode::with(['user', 'sponsor', 'parent'])
+            ->where('parent_id', $node->id)
+            ->where('position', 'left')
+            ->first();
+
+        if ($left) {
+            $formatted['left'] = $this->buildHierarchyTree($left, $allNodeIds, $depth + 1);
+        } else {
+            $formatted['left'] = $this->formatVacantSlot($node->id, 'left');
+        }
+
+        // Right Child
+        $right = BinaryNode::with(['user', 'sponsor', 'parent'])
+            ->where('parent_id', $node->id)
+            ->where('position', 'right')
+            ->first();
+
+        if ($right) {
+            $formatted['right'] = $this->buildHierarchyTree($right, $allNodeIds, $depth + 1);
+        } else {
+            $formatted['right'] = $this->formatVacantSlot($node->id, 'right');
+        }
+
+        $formatted['depth'] = $depth;
+        return $formatted;
     }
 
     /**

@@ -37,6 +37,34 @@
     selectedPosition: 'left',
     memberMode: 'new', // 'new' or 'existing'
     selectedUserId: '',
+    expandedNodeIds: {{ json_encode($treeData['all_node_ids'] ?? []) }},
+    zoomLevel: 1.0,
+    isExpanded(id) {
+        return this.expandedNodeIds.includes(Number(id));
+    },
+    toggleExpanded(id) {
+        id = Number(id);
+        if (this.expandedNodeIds.includes(id)) {
+            this.expandedNodeIds = this.expandedNodeIds.filter(i => i !== id);
+        } else {
+            this.expandedNodeIds.push(id);
+        }
+    },
+    expandAll() {
+        this.expandedNodeIds = {{ json_encode($treeData['all_node_ids'] ?? []) }};
+    },
+    collapseAll() {
+        this.expandedNodeIds = [{{ $treeData['root'] ? $treeData['root']->id : 0 }}];
+    },
+    zoomIn() {
+        this.zoomLevel = Math.min(1.6, Math.round((this.zoomLevel + 0.1) * 10) / 10);
+    },
+    zoomOut() {
+        this.zoomLevel = Math.max(0.4, Math.round((this.zoomLevel - 0.1) * 10) / 10);
+    },
+    resetZoom() {
+        this.zoomLevel = 1.0;
+    },
     openPlacementModal(parentId, parentName, parentCode, position) {
         this.selectedParentId = parentId;
         this.selectedParentName = parentName;
@@ -481,77 +509,78 @@
 
     </div>
 
-    <!-- Interactive Visual Genealogy Tree Canvas -->
-    <div class="bg-[#203648] rounded-2xl border border-slate-700/80 p-6 md:p-10 shadow-xl overflow-x-auto min-h-[650px]">
-        <div class="min-w-[850px] mx-auto flex flex-col items-center">
-            
-            @if(empty($treeData['levels']))
-                <div class="text-center py-20 text-white">
-                    <div class="text-5xl mb-3">🌲</div>
-                    <h3 class="text-lg font-bold">কোনো টিম ডাটা নেই</h3>
-                    <p class="text-xs text-slate-300">দয়া করে ডাটাবেজ সিড করুন অথবা নতুন রুট মেম্বার যুক্ত করুন।</p>
+    <!-- ==================== FIGJAM-STYLE INTERACTIVE GENEALOGY TREE CANVAS ==================== -->
+    <div class="bg-[#1b2b3a] rounded-2xl border border-slate-700/80 p-4 md:p-6 shadow-2xl relative">
+        
+        <!-- FigJam Canvas Floating Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-700/60 text-white">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎨</span> FigJam Tree Canvas
+                </span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium">
+                    প্রতিটি মেম্বার থেকে আনলিমিটেড ব্রাঞ্চিং
+                </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Expand / Collapse All -->
+                <button type="button" 
+                        @click="expandAll()"
+                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        title="সবগুলো টিমের ব্রাঞ্চ একসাথে খুলুন">
+                    <span>🌲</span> সব ব্রাঞ্চ খুলুন
+                </button>
+                <button type="button" 
+                        @click="collapseAll()"
+                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-600 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+                        title="সাব-ব্রাঞ্চগুলো বন্ধ করে শুধু টপ রুট রাখুন">
+                    <span>📁</span> সংকুচিত করুন
+                </button>
+
+                <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+
+                <!-- Zoom Controls -->
+                <div class="inline-flex items-center rounded-xl bg-slate-800 p-0.5 border border-slate-700 shadow-sm">
+                    <button type="button" 
+                            @click="zoomOut()" 
+                            class="px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-bold transition-all"
+                            title="Zoom Out">
+                        −
+                    </button>
+                    <button type="button" 
+                            @click="resetZoom()" 
+                            class="px-2.5 py-1 text-slate-200 hover:text-white hover:bg-slate-700 rounded-lg text-[11px] font-mono font-bold transition-all"
+                            title="Reset to 100%">
+                        <span x-text="Math.round(zoomLevel * 100) + '%'">100%</span>
+                    </button>
+                    <button type="button" 
+                            @click="zoomIn()" 
+                            class="px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg text-xs font-bold transition-all"
+                            title="Zoom In">
+                        +
+                    </button>
                 </div>
-            @else
+            </div>
+        </div>
 
-                <!-- LEVEL 1: Root Node Container with Attached Downward Stem -->
-                <div class="flex flex-col items-center w-full">
-                    @if(isset($treeData['levels'][1][0]))
-                        @php $node = $treeData['levels'][1][0]; @endphp
-                        @include('binary.partials.node_card', ['node' => $node, 'level' => 1])
+        <!-- Canvas Scrollable Viewport -->
+        <div class="overflow-auto min-h-[650px] p-4 md:p-8 flex justify-center items-start">
+            <div :style="'transform: scale(' + zoomLevel + '); transform-origin: top center; transition: transform 0.15s ease-out;'"
+                 class="inline-flex flex-col items-center">
+                
+                @if(empty($treeData['tree']))
+                    <div class="text-center py-20 text-white">
+                        <div class="text-5xl mb-3">🌲</div>
+                        <h3 class="text-lg font-bold">কোনো টিম ডাটা নেই</h3>
+                        <p class="text-xs text-slate-300">দয়া করে ডাটাবেজ সিড করুন অথবা নতুন রুট মেম্বার যুক্ত করুন।</p>
+                    </div>
+                @else
+                    <!-- Render Recursive FigJam Branching Tree from Root -->
+                    @include('binary.partials.figjam_node', ['node' => $treeData['tree'], 'depth' => 1])
+                @endif
 
-                        @if(!empty($treeData['levels'][2]))
-                        <!-- Seamless Connector: Level 1 to Level 2 -->
-                        <div class="w-full flex flex-col items-center">
-                            <!-- Vertical stem touching parent bottom -->
-                            <div class="w-[2px] h-8 bg-white/75"></div>
-                            <!-- Horizontal branch spanning between centers of Left and Right Level 2 children -->
-                            <div class="w-[480px] md:w-[520px] h-[2px] bg-white/75 rounded-full"></div>
-                            <!-- Two vertical stems touching child tops -->
-                            <div class="w-[480px] md:w-[520px] flex justify-between">
-                                <div class="w-[2px] h-8 bg-white/75"></div>
-                                <div class="w-[2px] h-8 bg-white/75"></div>
-                            </div>
-                        </div>
-                        @endif
-                    @endif
-                </div>
-
-                <!-- LEVEL 2: 2 Nodes (Left and Right) with Attached Connectors to Level 3 -->
-                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[840px] justify-items-center">
-                    @foreach($treeData['levels'][2] as $index => $node)
-                        <div class="flex flex-col items-center w-full">
-                            @if($node)
-                                @include('binary.partials.node_card', ['node' => $node, 'level' => 2])
-
-                                @if(!$node['is_vacant'] && !empty($treeData['levels'][3]))
-                                <!-- Seamless Connector: Level 2 to Level 3 (under this parent) -->
-                                <div class="w-full flex flex-col items-center">
-                                    <div class="w-[2px] h-8 bg-white/75"></div>
-                                    <div class="w-[260px] md:w-[280px] h-[2px] bg-white/75 rounded-full"></div>
-                                    <div class="w-[260px] md:w-[280px] flex justify-between">
-                                        <div class="w-[2px] h-8 bg-white/75"></div>
-                                        <div class="w-[2px] h-8 bg-white/75"></div>
-                                    </div>
-                                </div>
-                                @endif
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-
-                <!-- LEVEL 3: 4 Nodes (LL, LR, RL, RR) -->
-                <div class="grid grid-cols-4 gap-3 md:gap-4 w-full max-w-[1160px] justify-items-center">
-                    @foreach($treeData['levels'][3] as $index => $node)
-                        <div class="flex justify-center w-full">
-                            @if($node)
-                                @include('binary.partials.node_card', ['node' => $node, 'level' => 3])
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-
-            @endif
-
+            </div>
         </div>
     </div>
     @endif

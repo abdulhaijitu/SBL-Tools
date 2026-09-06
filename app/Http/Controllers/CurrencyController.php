@@ -15,7 +15,7 @@ class CurrencyController extends Controller
     public function switch(Request $request): RedirectResponse|JsonResponse
     {
         $currency = strtoupper($request->input('currency', $request->route('code', CurrencyService::USD)));
-        
+
         $activeCurrency = CurrencyService::setCurrency($currency);
         $cookie = cookie('sbl_currency', $activeCurrency, 60 * 24 * 365); // 1 year
 
