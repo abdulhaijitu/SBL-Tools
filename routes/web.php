@@ -57,6 +57,12 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/ecosystem/{ecosystemLink}', [\App\Http\Controllers\EcosystemController::class, 'update'])->name('ecosystem.update');
     Route::delete('/ecosystem/{ecosystemLink}', [\App\Http\Controllers\EcosystemController::class, 'destroy'])->name('ecosystem.destroy');
 
+    // SBL Official Contacts & WhatsApp Helpline CRUD
+    Route::get('/contacts', [\App\Http\Controllers\SblContactController::class, 'index'])->name('contacts.index');
+    Route::post('/contacts', [\App\Http\Controllers\SblContactController::class, 'store'])->name('contacts.store');
+    Route::put('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'update'])->name('contacts.update');
+    Route::delete('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'destroy'])->name('contacts.destroy');
+
     // Team & User Management CRUD
     Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
     Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
