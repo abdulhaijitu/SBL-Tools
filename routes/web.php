@@ -65,6 +65,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'update'])->name('contacts.update');
     Route::delete('/contacts/{contact}', [\App\Http\Controllers\SblContactController::class, 'destroy'])->name('contacts.destroy');
 
+    // SBL Binary Team Tree & Placement Engine
     // SBL Team Explorer & 10-Slot Placement Engine
     Route::get('/team', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('team.index');
     Route::get('/team/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->name('team.show');

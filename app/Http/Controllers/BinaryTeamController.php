@@ -99,6 +99,7 @@ class BinaryTeamController extends Controller
             $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
         }
 
+        // Support position or branch
         $branch = $request->input('branch') ?: $request->input('position');
         $branch = strtoupper((string)$branch);
         $request->merge(['branch' => $branch]);

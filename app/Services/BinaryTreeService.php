@@ -337,6 +337,8 @@ class BinaryTreeService
         $rootStats = $this->calculateDynamicStats($root);
         $breadcrumbs = $this->getBreadcrumbs($root, $mainRoot);
 
+        $allNodeIds = [];
+        $hierarchyTree = $this->buildTenSlotHierarchyTree($root, $allNodeIds, 1, $maxDepth);
         // Build direct 5 LEFT slots (strictly non-recursive for Team Explorer)
         $directLeftChildren = $this->getDirectChildrenByBranch($root, 'LEFT');
         $leftSlots = [];
@@ -382,6 +384,8 @@ class BinaryTreeService
             'parent_node' => $parentNode,
             'is_main_root' => ($mainRoot && (int)$root->id === (int)$mainRoot->id),
             'breadcrumbs' => $breadcrumbs,
+            'tree' => $hierarchyTree,
+            'all_node_ids' => $allNodeIds,
             'left_slots' => $leftSlots,
             'right_slots' => $rightSlots,
             'tree' => $formattedRoot,
