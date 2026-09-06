@@ -14,12 +14,17 @@
         member_code: '',
         phone: '',
         email: '',
+        password_plain: 'sbl123456',
+        tpin: '1234',
         package_name: 'National 120k',
         point_value: 100,
-        rank_name: 'NA',
+        contributions: [],
+        rank_name: 'Member',
         sponsor_id: '',
         left_count: 0,
+        left_target_count: 0,
         right_count: 0,
+        right_target_count: 0,
         left_bv: 0,
         right_bv: 0,
         is_active: true,
@@ -38,19 +43,56 @@
         this.selectedPosition = position;
         this.placementModalOpen = true;
     },
+    addContributionRow() {
+        if (!this.editNode.contributions) this.editNode.contributions = [];
+        this.editNode.contributions.push({
+            amount: 100,
+            date: new Date().toISOString().slice(0, 10),
+            note: 'Contribution'
+        });
+        this.recalcTotalContribution();
+    },
+    removeContributionRow(index) {
+        this.editNode.contributions.splice(index, 1);
+        this.recalcTotalContribution();
+    },
+    recalcTotalContribution() {
+        let sum = 0;
+        if (this.editNode.contributions && this.editNode.contributions.length > 0) {
+            this.editNode.contributions.forEach(c => {
+                sum += parseFloat(c.amount || 0);
+            });
+            this.editNode.point_value = sum;
+        }
+    },
     openEditModal(node) {
+        let contribs = [];
+        if (node.contributions) {
+            contribs = typeof node.contributions === 'string' ? JSON.parse(node.contributions) : node.contributions;
+        }
+        if (!contribs || contribs.length === 0) {
+            contribs = [
+                { amount: node.point_value || 0, date: new Date().toISOString().slice(0, 10), note: node.package_name || 'Initial' }
+            ];
+        }
+
         this.editNode = {
             id: node.id,
             member_name: node.member_name || '',
             member_code: node.member_code || '',
             phone: node.phone || '',
             email: node.email || '',
+            password_plain: node.password_plain || 'sbl123456',
+            tpin: node.tpin || '1234',
             package_name: node.package_name || 'National 120k',
             point_value: node.point_value !== undefined ? node.point_value : 100,
-            rank_name: node.rank_name || 'NA',
+            contributions: contribs,
+            rank_name: node.rank_name || 'Member',
             sponsor_id: node.sponsor_id || '',
             left_count: node.left_count !== undefined ? node.left_count : 0,
+            left_target_count: node.left_target_count !== undefined ? node.left_target_count : (node.left_count || 0),
             right_count: node.right_count !== undefined ? node.right_count : 0,
+            right_target_count: node.right_target_count !== undefined ? node.right_target_count : (node.right_count || 0),
             left_bv: node.left_bv !== undefined ? node.left_bv : 0,
             right_bv: node.right_bv !== undefined ? node.right_bv : 0,
             is_active: node.is_active !== undefined ? Boolean(node.is_active) : true,
@@ -427,7 +469,7 @@
 
     <!-- Interactive Visual Genealogy Tree Canvas -->
     <div class="bg-[#203648] rounded-2xl border border-slate-700/80 p-6 md:p-10 shadow-xl overflow-x-auto min-h-[650px]">
-        <div class="min-w-[850px] mx-auto flex flex-col items-center space-y-10">
+        <div class="min-w-[850px] mx-auto flex flex-col items-center">
             
             @if(empty($treeData['levels']))
                 <div class="text-center py-20 text-white">
@@ -437,62 +479,56 @@
                 </div>
             @else
 
-                <!-- LEVEL 1: Root Node -->
-                <div class="flex justify-center w-full">
+                <!-- LEVEL 1: Root Node Container with Attached Downward Stem -->
+                <div class="flex flex-col items-center w-full">
                     @if(isset($treeData['levels'][1][0]))
                         @php $node = $treeData['levels'][1][0]; @endphp
                         @include('binary.partials.node_card', ['node' => $node, 'level' => 1])
+
+                        @if(!empty($treeData['levels'][2]))
+                        <!-- Seamless Connector: Level 1 to Level 2 -->
+                        <div class="w-full flex flex-col items-center">
+                            <!-- Vertical stem touching parent bottom -->
+                            <div class="w-[2px] h-8 bg-white/75"></div>
+                            <!-- Horizontal branch spanning between centers of Left and Right Level 2 children -->
+                            <div class="w-[480px] md:w-[520px] h-[2px] bg-white/75 rounded-full"></div>
+                            <!-- Two vertical stems touching child tops -->
+                            <div class="w-[480px] md:w-[520px] flex justify-between">
+                                <div class="w-[2px] h-8 bg-white/75"></div>
+                                <div class="w-[2px] h-8 bg-white/75"></div>
+                            </div>
+                        </div>
+                        @endif
                     @endif
                 </div>
 
-                <!-- Connector Line Level 1 to Level 2 -->
-                <div class="w-full max-w-[540px] flex flex-col items-center -my-6">
-                    <div class="w-[2px] h-7 bg-white/70"></div>
-                    <div class="w-full h-[2px] bg-white/70 rounded-full"></div>
-                    <div class="w-full flex justify-between">
-                        <div class="w-[2px] h-7 bg-white/70"></div>
-                        <div class="w-[2px] h-7 bg-white/70"></div>
-                    </div>
-                </div>
-
-                <!-- LEVEL 2: 2 Nodes (Left and Right) -->
-                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[800px]">
+                <!-- LEVEL 2: 2 Nodes (Left and Right) with Attached Connectors to Level 3 -->
+                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[840px] justify-items-center">
                     @foreach($treeData['levels'][2] as $index => $node)
-                        <div class="flex justify-center">
+                        <div class="flex flex-col items-center w-full">
                             @if($node)
                                 @include('binary.partials.node_card', ['node' => $node, 'level' => 2])
+
+                                @if(!$node['is_vacant'] && !empty($treeData['levels'][3]))
+                                <!-- Seamless Connector: Level 2 to Level 3 (under this parent) -->
+                                <div class="w-full flex flex-col items-center">
+                                    <div class="w-[2px] h-8 bg-white/75"></div>
+                                    <div class="w-[260px] md:w-[280px] h-[2px] bg-white/75 rounded-full"></div>
+                                    <div class="w-[260px] md:w-[280px] flex justify-between">
+                                        <div class="w-[2px] h-8 bg-white/75"></div>
+                                        <div class="w-[2px] h-8 bg-white/75"></div>
+                                    </div>
+                                </div>
+                                @endif
                             @endif
                         </div>
                     @endforeach
                 </div>
 
-                <!-- Connector Line Level 2 to Level 3 -->
-                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[800px] -my-6">
-                    <!-- Left Parent Connectors -->
-                    <div class="flex flex-col items-center">
-                        <div class="w-[2px] h-6 bg-white/70"></div>
-                        <div class="w-full max-w-[240px] h-[2px] bg-white/70 rounded-full"></div>
-                        <div class="w-full max-w-[240px] flex justify-between">
-                            <div class="w-[2px] h-6 bg-white/70"></div>
-                            <div class="w-[2px] h-6 bg-white/70"></div>
-                        </div>
-                    </div>
-
-                    <!-- Right Parent Connectors -->
-                    <div class="flex flex-col items-center">
-                        <div class="w-[2px] h-6 bg-white/70"></div>
-                        <div class="w-full max-w-[240px] h-[2px] bg-white/70 rounded-full"></div>
-                        <div class="w-full max-w-[240px] flex justify-between">
-                            <div class="w-[2px] h-6 bg-white/70"></div>
-                            <div class="w-[2px] h-6 bg-white/70"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- LEVEL 3: 4 Nodes (LL, LR, RL, RR) -->
-                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-[1100px]">
+                <div class="grid grid-cols-4 gap-3 md:gap-4 w-full max-w-[1160px] justify-items-center">
                     @foreach($treeData['levels'][3] as $index => $node)
-                        <div class="flex justify-center">
+                        <div class="flex justify-center w-full">
                             @if($node)
                                 @include('binary.partials.node_card', ['node' => $node, 'level' => 3])
                             @endif
@@ -590,6 +626,17 @@
                             <input type="email" name="email" placeholder="member@example.com" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                         </div>
                     </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">লগইন পাসওয়ার্ড</label>
+                            <input type="text" name="password_plain" value="sbl123456" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">TPIN (ট্রানজেকশন পিন)</label>
+                            <input type="text" name="tpin" value="1234" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Package & Point Value (BV) -->
@@ -655,6 +702,7 @@
             <form id="edit-member-form" :action="'{{ url('/binary') }}/' + editNode.id" method="POST" class="space-y-4">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="contributions" :value="JSON.stringify(editNode.contributions)">
 
                 <!-- Member Name & Username -->
                 <div class="grid grid-cols-2 gap-3">
@@ -680,6 +728,18 @@
                     </div>
                 </div>
 
+                <!-- Password & TPIN -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পাসওয়ার্ড (Password)</label>
+                        <input type="text" name="password_plain" x-model="editNode.password_plain" placeholder="Password" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">TPIN (পিন কোড)</label>
+                        <input type="text" name="tpin" x-model="editNode.tpin" placeholder="1234" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                    </div>
+                </div>
+
                 <!-- Sponsor (By) & Rank -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -694,55 +754,89 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Rank)</label>
-                        <input type="text" name="rank_name" x-model="editNode.rank_name" placeholder="NA / Member / Silver" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="rank_name" x-model="editNode.rank_name" placeholder="Member / Silver" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                 </div>
 
-                <!-- Package & Total Contribution -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">প্যাকেজ <span class="text-rose-500">*</span></label>
-                        <select name="package_name" x-model="editNode.package_name" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-semibold">
-                            @foreach($packages as $pkg)
-                            <option value="{{ $pkg['name'] }}">{{ $pkg['name'] }}</option>
-                            @endforeach
-                        </select>
+                <!-- Package & Multiple Contributions Manager -->
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">কন্ট্রিবিউশন হিস্ট্রি (Contributions)</span>
+                            <p class="text-[10px] text-slate-500">একাধিক কন্ট্রিবিউশন/টপ-আপ যোগ করুন।</p>
+                        </div>
+                        <button type="button" @click="addContributionRow()" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors">
+                            <span>+ Add</span>
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Total Contribution ($/BV)</label>
-                        <input type="number" step="1" min="0" name="point_value" x-model="editNode.point_value" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-bold text-emerald-700">
+
+                    <!-- Dynamic Contributions List -->
+                    <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <template x-for="(c, idx) in editNode.contributions" :key="idx">
+                            <div class="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 text-xs shadow-2xs">
+                                <div class="w-24">
+                                    <label class="text-[9px] text-slate-400 block">Amount ($)</label>
+                                    <input type="number" step="1" min="0" x-model="c.amount" @input="recalcTotalContribution()" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-bold text-emerald-700">
+                                </div>
+                                <div class="w-28">
+                                    <label class="text-[9px] text-slate-400 block">Date</label>
+                                    <input type="date" x-model="c.date" class="w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-[11px]">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[9px] text-slate-400 block">Note / Package</label>
+                                    <input type="text" x-model="c.note" placeholder="Top-up Note" class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs">
+                                </div>
+                                <button type="button" @click="removeContributionRow(idx)" class="text-rose-500 hover:text-rose-700 text-sm font-bold pt-3 px-1" title="Remove row">&times;</button>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+                        <span class="font-bold text-slate-700">Total Contribution ($/BV):</span>
+                        <div class="flex items-center gap-2">
+                            <input type="number" step="1" min="0" name="point_value" x-model="editNode.point_value" class="w-24 px-2 py-1 text-xs bg-white border border-slate-300 rounded font-extrabold text-emerald-700 text-right">
+                            <span class="font-extrabold text-emerald-800">$</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Team & Volume Counters (Left & Right) -->
+                <!-- Team & Volume Counters (Left & Right) with Configurable X/Y Targets -->
                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-2.5">
-                    <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">বাইনারি টিম ও ভলিউম কাউন্টার</span>
+                    <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">বাইনারি টিম ও ভলিউম কাউন্টার (কনফিগারেবল)</span>
                     
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1.5 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200/60">
-                            <span class="text-[10px] font-bold text-emerald-800 uppercase block">👈 Left Team</span>
-                            <div class="grid grid-cols-2 gap-1.5">
+                            <span class="text-[10px] font-bold text-emerald-800 uppercase block">👈 Left Team (Active / Target)</span>
+                            <div class="grid grid-cols-3 gap-1">
                                 <div>
-                                    <label class="text-[9px] text-slate-500 block font-medium">Team Count</label>
-                                    <input type="number" min="0" name="left_count" x-model="editNode.left_count" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-emerald-700">
+                                    <label class="text-[8px] text-slate-500 block font-medium">Active (X)</label>
+                                    <input type="number" min="0" name="left_count" x-model="editNode.left_count" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-emerald-700">
                                 </div>
                                 <div>
-                                    <label class="text-[9px] text-slate-500 block font-medium">Vol ($)</label>
-                                    <input type="number" min="0" step="1" name="left_bv" x-model="editNode.left_bv" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-emerald-700">
+                                    <label class="text-[8px] text-slate-500 block font-medium">Target (Y)</label>
+                                    <input type="number" min="0" name="left_target_count" x-model="editNode.left_target_count" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-emerald-700">
+                                </div>
+                                <div>
+                                    <label class="text-[8px] text-slate-500 block font-medium">Vol ($)</label>
+                                    <input type="number" min="0" step="1" name="left_bv" x-model="editNode.left_bv" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-emerald-700">
                                 </div>
                             </div>
                         </div>
 
                         <div class="space-y-1.5 p-2 bg-blue-50/50 rounded-lg border border-blue-200/60">
-                            <span class="text-[10px] font-bold text-blue-800 uppercase block">👉 Right Team</span>
-                            <div class="grid grid-cols-2 gap-1.5">
+                            <span class="text-[10px] font-bold text-blue-800 uppercase block">👉 Right Team (Active / Target)</span>
+                            <div class="grid grid-cols-3 gap-1">
                                 <div>
-                                    <label class="text-[9px] text-slate-500 block font-medium">Team Count</label>
-                                    <input type="number" min="0" name="right_count" x-model="editNode.right_count" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-blue-700">
+                                    <label class="text-[8px] text-slate-500 block font-medium">Active (X)</label>
+                                    <input type="number" min="0" name="right_count" x-model="editNode.right_count" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-blue-700">
                                 </div>
                                 <div>
-                                    <label class="text-[9px] text-slate-500 block font-medium">Vol ($)</label>
-                                    <input type="number" min="0" step="1" name="right_bv" x-model="editNode.right_bv" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-blue-700">
+                                    <label class="text-[8px] text-slate-500 block font-medium">Target (Y)</label>
+                                    <input type="number" min="0" name="right_target_count" x-model="editNode.right_target_count" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-blue-700">
+                                </div>
+                                <div>
+                                    <label class="text-[8px] text-slate-500 block font-medium">Vol ($)</label>
+                                    <input type="number" min="0" step="1" name="right_bv" x-model="editNode.right_bv" class="w-full px-1.5 py-1 text-xs bg-white border border-slate-200 rounded font-bold text-blue-700">
                                 </div>
                             </div>
                         </div>

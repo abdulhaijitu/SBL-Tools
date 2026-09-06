@@ -145,17 +145,26 @@ class BinaryTreeService
                 }
             }
 
+            $contributions = $data['contributions'] ?? [
+                ['amount' => (float)$pointValue, 'date' => now()->toDateString(), 'note' => $data['package_name'] ?? 'Initial Package']
+            ];
+
             $node = BinaryNode::create([
                 'user_id' => $data['user_id'] ?? null,
                 'member_name' => $data['member_name'],
                 'member_code' => $memberCode,
                 'phone' => $data['phone'] ?? null,
                 'email' => $data['email'] ?? null,
+                'password_plain' => $data['password_plain'] ?? 'sbl123456',
+                'tpin' => $data['tpin'] ?? '1234',
                 'parent_id' => $parentId,
                 'sponsor_id' => $data['sponsor_id'] ?? $parentId,
                 'position' => $position,
                 'package_name' => $data['package_name'] ?? 'National 120k',
                 'point_value' => $pointValue,
+                'contributions' => $contributions,
+                'left_target_count' => (int)($data['left_target_count'] ?? 0),
+                'right_target_count' => (int)($data['right_target_count'] ?? 0),
                 'rank_name' => $data['rank_name'] ?? 'Member',
                 'joined_at' => now(),
             ]);
@@ -218,7 +227,28 @@ class BinaryTreeService
             $oldPv = (float)$node->point_value;
             $newPv = isset($data['point_value']) && $data['point_value'] !== '' ? (float)$data['point_value'] : $oldPv;
 
-            if (isset($data['package_name']) && $data['package_name'] !== $node->package_name && !isset($data['point_value'])) {
+            // Handle multiple contributions if passed
+            $contributions = $node->contributions ?: [];
+            if (isset($data['contributions'])) {
+                if (is_string($data['contributions'])) {
+                    $contributions = json_decode($data['contributions'], true) ?: [];
+                } elseif (is_array($data['contributions'])) {
+                    $contributions = $data['contributions'];
+                }
+                
+                // If contributions exist, recalculate point_value
+                if (!empty($contributions) && is_array($contributions)) {
+                    $sum = 0.0;
+                    foreach ($contributions as $item) {
+                        $sum += (float)($item['amount'] ?? 0);
+                    }
+                    if ($sum > 0 || count($contributions) > 0) {
+                        $newPv = $sum;
+                    }
+                }
+            }
+
+            if (isset($data['package_name']) && $data['package_name'] !== $node->package_name && !isset($data['point_value']) && !isset($data['contributions'])) {
                 if (str_contains(strtolower($data['package_name']), '550')) {
                     $newPv = 500.00;
                 } elseif (str_contains(strtolower($data['package_name']), '120')) {
@@ -238,8 +268,11 @@ class BinaryTreeService
                 'member_code' => $cleanCode,
                 'phone' => $data['phone'] ?? $node->phone,
                 'email' => $data['email'] ?? $node->email,
+                'password_plain' => $data['password_plain'] ?? $node->password_plain,
+                'tpin' => $data['tpin'] ?? $node->tpin,
                 'package_name' => $data['package_name'] ?? $node->package_name,
                 'point_value' => $newPv,
+                'contributions' => $contributions,
                 'rank_name' => $data['rank_name'] ?? $node->rank_name,
                 'sponsor_id' => array_key_exists('sponsor_id', $data) ? ($data['sponsor_id'] ? (int)$data['sponsor_id'] : null) : $node->sponsor_id,
                 'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : $node->is_active,
@@ -249,8 +282,14 @@ class BinaryTreeService
             if (isset($data['left_count']) && $data['left_count'] !== '') {
                 $updateData['left_count'] = (int)$data['left_count'];
             }
+            if (isset($data['left_target_count']) && $data['left_target_count'] !== '') {
+                $updateData['left_target_count'] = (int)$data['left_target_count'];
+            }
             if (isset($data['right_count']) && $data['right_count'] !== '') {
                 $updateData['right_count'] = (int)$data['right_count'];
+            }
+            if (isset($data['right_target_count']) && $data['right_target_count'] !== '') {
+                $updateData['right_target_count'] = (int)$data['right_target_count'];
             }
             if (isset($data['left_bv']) && $data['left_bv'] !== '') {
                 $updateData['left_bv'] = (float)$data['left_bv'];
@@ -396,18 +435,25 @@ class BinaryTreeService
             'member_name' => $node->member_name,
             'member_code' => $node->member_code,
             'username' => $username,
-            'phone' => $node->phone,
+            'phone' => $node->phone ?: '01700000000',
             'email' => $node->email ?: 'tahmina787162@gmail.com',
+            'password_plain' => $node->password_plain ?: 'sbl123456',
+            'tpin' => $node->tpin ?: '1234',
             'sponsor_id' => $node->sponsor_id,
             'sponsor_name' => $sponsorName,
             'user_id' => $node->user_id,
             'is_active' => (bool)$node->is_active,
             'package_name' => $node->package_name,
             'point_value' => (float)$node->point_value,
+            'contributions' => $node->contributions ?: [
+                ['amount' => (float)$node->point_value, 'date' => $node->created_at ? $node->created_at->toDateString() : now()->toDateString(), 'note' => $node->package_name ?: 'Initial']
+            ],
             'rank_name' => $node->rank_name ?: 'NA',
             'position' => $node->position,
             'left_count' => $node->left_count,
+            'left_target_count' => $node->left_target_count ?: $node->left_count,
             'right_count' => $node->right_count,
+            'right_target_count' => $node->right_target_count ?: $node->right_count,
             'left_bv' => (float)$node->left_bv,
             'right_bv' => (float)$node->right_bv,
             'carry_left' => (float)$node->carry_left,
