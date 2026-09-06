@@ -164,19 +164,25 @@
                 <span class="opacity-75">Sponsor:</span> <span class="font-bold text-white/95">{{ $sponsorName }}</span>
             </div>
 
-            <!-- 6. Password & TPIN Row -->
-            <div class="text-[9px] {{ $subTextColor }} flex items-center justify-center gap-1.5 py-0.5 bg-black/20 rounded-md px-1 mt-0.5">
+            <!-- 6. SBL Ecosystem Portal Login Password & TPIN Row -->
+            <div class="text-[9px] {{ $subTextColor }} flex items-center justify-center gap-1.5 py-0.5 bg-black/20 rounded-md px-1 mt-0.5" title="SBL Ecosystem Login Credentials">
                 <div class="flex items-center gap-0.5">
-                    <span class="opacity-80">Pass:</span>
+                    <span class="opacity-80 font-semibold" title="SBL Ecosystem পোর্টাল লগইন পাসওয়ার্ড (অ্যাপ পাসওয়ার্ড থেকে আলাদা)">SBL Pass:</span>
                     <span class="font-mono font-bold" x-text="showPass ? '{{ $password }}' : '••••••'">••••••</span>
-                    <button type="button" @click.stop="showPass = !showPass" class="opacity-80 hover:opacity-100">
+                    <button type="button" @click.stop="showPass = !showPass" class="opacity-80 hover:opacity-100" :title="showPass ? 'Hide Password' : 'Show Password'">
                         <span x-text="showPass ? '🙈' : '👁️'">👁️</span>
+                    </button>
+                    <button type="button" @click.stop="navigator.clipboard.writeText('{{ $password }}'); alert('SBL Ecosystem Password copied: {{ $password }}');" title="Copy SBL Ecosystem Password">
+                        <svg class="w-3 h-3 opacity-75 hover:opacity-100 inline cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     </button>
                 </div>
                 <span class="opacity-40">|</span>
                 <div class="flex items-center gap-0.5">
-                    <span class="opacity-80">TPIN:</span>
+                    <span class="opacity-80 font-semibold" title="SBL ট্রানজেকশন TPIN">TPIN:</span>
                     <span class="font-mono font-bold">{{ $tpin }}</span>
+                    <button type="button" @click.stop="navigator.clipboard.writeText('{{ $tpin }}'); alert('SBL TPIN copied: {{ $tpin }}');" title="Copy TPIN">
+                        <svg class="w-3 h-3 opacity-75 hover:opacity-100 inline cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
                 </div>
             </div>
         </div>

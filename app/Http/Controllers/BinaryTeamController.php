@@ -127,7 +127,7 @@ class BinaryTeamController extends Controller
             $branchText = $validated['branch'] === 'LEFT' ? 'বাম টিমে (Left)' : 'ডান টিমে (Right)';
             $slotText = "{$branchText} স্লট-{$validated['slot_number']}";
 
-            $msg = $node->is_target 
+            $msg = $node->is_target
                 ? "পরিকল্পিত টার্গেট মেম্বার '{$node->member_name}' সফলভাবে {$parent->member_name}-এর {$slotText}-এ সংরক্ষিত হয়েছে।"
                 : "মেম্বার '{$node->member_name}' ({$node->member_code}) সফলভাবে {$parent->member_name}-এর {$slotText}-এ যুক্ত করা হয়েছে।";
 

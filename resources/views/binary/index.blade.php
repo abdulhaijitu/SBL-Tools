@@ -835,15 +835,19 @@
                     </div>
                 </div>
 
-                <!-- Password & TPIN -->
-                <div class="grid grid-cols-2 gap-3">
+                <!-- SBL Ecosystem Login Password & TPIN -->
+                <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">লগইন পাসওয়ার্ড</label>
-                        <input type="text" name="password_plain" value="sbl123456" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
+                            <span>SBL Ecosystem পাসওয়ার্ড</span>
+                        </label>
+                        <input type="text" name="password_plain" value="sbl123456" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="SBL Ecosystem Pass">
+                        <span class="text-[10px] text-slate-500 font-medium">অফিসিয়াল SBL পোর্টাল লগইন পাসওয়ার্ড (অ্যাপ পাসওয়ার্ড থেকে আলাদা)</span>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">TPIN (সিক্রেট পিন)</label>
-                        <input type="text" name="tpin" value="1234" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <label class="block text-xs font-bold text-slate-800 mb-1">SBL TPIN (সিক্রেট পিন)</label>
+                        <input type="text" name="tpin" value="1234" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="1234">
+                        <span class="text-[10px] text-slate-500 font-medium">SBL অ্যাকাউন্ট ট্রানজেকশন পিন</span>
                     </div>
                 </div>
 
@@ -925,15 +929,17 @@
                     </div>
                 </div>
 
-                <!-- Password & TPIN -->
-                <div class="grid grid-cols-2 gap-3">
+                <!-- SBL Ecosystem Login Password & TPIN -->
+                <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">পাসওয়ার্ড</label>
-                        <input type="text" name="password_plain" x-model="editNode.password_plain" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <label class="block text-xs font-bold text-slate-800 mb-1">SBL Ecosystem পাসওয়ার্ড</label>
+                        <input type="text" name="password_plain" x-model="editNode.password_plain" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <span class="text-[10px] text-slate-500 font-medium">SBL পোর্টাল লগইন পাসওয়ার্ড</span>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">TPIN</label>
-                        <input type="text" name="tpin" x-model="editNode.tpin" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <label class="block text-xs font-bold text-slate-800 mb-1">SBL TPIN</label>
+                        <input type="text" name="tpin" x-model="editNode.tpin" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <span class="text-[10px] text-slate-500 font-medium">ট্রানজেকশন পিন</span>
                     </div>
                 </div>
 
