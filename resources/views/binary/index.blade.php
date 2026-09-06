@@ -169,7 +169,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
                     @forelse($members as $member)
-                    <tr class="hover:bg-slate-50/60 transition-colors">
+                    <tr data-node-id="{{ $member->id }}" class="hover:bg-slate-50/60 transition-colors">
                         <!-- Member Profile -->
                         <td class="py-3.5 px-4">
                             <div class="flex items-center gap-3">

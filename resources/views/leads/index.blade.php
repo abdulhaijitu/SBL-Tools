@@ -95,7 +95,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($leads as $lead)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr data-lead-id="{{ $lead->id }}" class="hover:bg-slate-50/70 transition-colors">
                             <!-- Lead Info -->
                             <td class="py-3.5 px-4">
                                 <div class="flex items-center gap-3">
@@ -229,7 +229,7 @@
         <!-- Mobile Card Stack (Visible on mobile/tablets < md) -->
         <div class="block md:hidden divide-y divide-slate-100">
             @forelse ($leads as $lead)
-                <div class="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
+                <div data-lead-id="{{ $lead->id }}" class="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
                     <!-- Top Row: Avatar, Name & Stage Badge -->
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-3">

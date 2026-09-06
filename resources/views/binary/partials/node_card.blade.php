@@ -23,7 +23,7 @@
 
 @else
     <!-- OCCUPIED MEMBER NODE CARD -->
-    <div class="w-48 md:w-56 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-orange-300 transition-all p-3.5 flex flex-col justify-between group">
+    <div data-node-id="{{ $node['id'] }}" class="w-48 md:w-56 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-orange-300 transition-all p-3.5 flex flex-col justify-between group">
         
         <div>
             <!-- Top Rank & Position Pill -->
