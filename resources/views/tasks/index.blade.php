@@ -216,6 +216,7 @@
                             <option value="">None (General Task)</option>
                             @foreach ($leads as $lead)
                                 <option value="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }})</option>
+                                <option value="{{ $lead->id }}" data-lead-id="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }})</option>
                             @endforeach
                         </select>
                     </div>

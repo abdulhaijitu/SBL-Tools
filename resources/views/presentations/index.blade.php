@@ -23,6 +23,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @forelse ($presentations as $pres)
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between">
+            <div data-presentation-id="{{ $pres->id }}" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between gap-2 mb-2">
                         <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
@@ -72,6 +73,7 @@
             </div>
         @empty
             <div class="col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs">
+            <div class="col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs empty-presentations-notice">
                 No presentations recorded yet. Click "Record Presentation" above to log a session.
             </div>
         @endforelse
@@ -101,6 +103,7 @@
                     <select name="lead_id" required class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 bg-white">
                         @foreach ($leads as $lead)
                             <option value="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }}) - {{ $lead->stage->label() }}</option>
+                            <option value="{{ $lead->id }}" data-lead-id="{{ $lead->id }}">{{ $lead->name }} ({{ $lead->mobile }}) - {{ $lead->stage->label() }}</option>
                         @endforeach
                     </select>
                 </div>

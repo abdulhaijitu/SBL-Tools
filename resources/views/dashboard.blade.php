@@ -118,6 +118,7 @@
                     <div class="divide-y divide-slate-100">
                         @foreach ($overdueFollowups as $lead)
                             <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                            <div data-lead-id="{{ $lead->id }}" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
                                 <div class="flex items-start gap-3">
                                     <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0">
                                         {{ substr($lead->name, 0, 1) }}
@@ -169,6 +170,7 @@
                     <div class="divide-y divide-slate-100">
                         @foreach ($todayTasks as $task)
                             <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                            <div data-task-id="{{ $task->id }}" class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider {{ $task->priority->badgeClasses() }}">
                                         {{ $task->priority->value }}
@@ -223,6 +225,7 @@
                     <div class="space-y-2.5">
                         @foreach ($hotLeads as $lead)
                             <a href="{{ route('leads.show', $lead->id) }}" class="block p-3 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all">
+                            <a data-lead-id="{{ $lead->id }}" href="{{ route('leads.show', $lead->id) }}" class="block p-3 rounded-xl border border-slate-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-slate-900 truncate">{{ $lead->name }}</span>
                                     <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-orange-600 text-white">
@@ -254,6 +257,7 @@
                     <div class="space-y-2">
                         @foreach ($staleLeads as $lead)
                             <div class="flex items-center justify-between p-2.5 bg-white border border-purple-100 rounded-xl text-xs">
+                            <div data-lead-id="{{ $lead->id }}" class="flex items-center justify-between p-2.5 bg-white border border-purple-100 rounded-xl text-xs">
                                 <div>
                                     <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-purple-700">
                                         {{ $lead->name }}

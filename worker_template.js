@@ -185,6 +185,37 @@ export default {
           }
           return Response.redirect(new URL("/leads/" + leadId, request.url), 302);
         }
+
+        if (parts[3] === "activities" && effectiveMethod === "POST" && leadId && formData) {
+          if (db) {
+            try {
+              const actType = formData.get("type") || "Call";
+              const title = formData.get("title") || (actType + " Interaction");
+              const description = formData.get("description") || null;
+              const nextActionType = formData.get("next_action_type") || null;
+              const nextActionAt = formData.get("next_action_at") || null;
+
+              await db.prepare(
+                "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                "VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+              ).bind(leadId, actType, title, description).run();
+
+              await db.prepare(
+                "UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+              ).bind(nextActionType, nextActionAt, leadId).run();
+
+              if (nextActionAt) {
+                await db.prepare(
+                  "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                  "VALUES (?, ?, ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ).bind((nextActionType || "Follow-up") + ": " + title, nextActionType || "Follow-up", nextActionAt, description, leadId).run();
+              }
+            } catch (e) {
+              console.error("D1 Lead activities error:", e);
+            }
+          }
+          return Response.redirect(new URL("/leads/" + leadId, request.url), 302);
+        }
       }
 
       // 4b. Binary Tree Handlers
@@ -413,10 +444,17 @@ export default {
               "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
               "VALUES (?, ?, ?, ?, ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             ).bind(title, type, dueAt, priority, notes, leadId).run();
+
+            if (leadId) {
+              await db.prepare("UPDATE leads SET next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(type, dueAt, leadId).run();
+            }
           } catch (e) {
             console.error("D1 Tasks create error:", e);
           }
         }
+        const ref = request.headers.get("referer") || "";
+        const m = ref.match(/\/leads\/(\d+)/);
+        if (m) return Response.redirect(new URL("/leads/" + m[1], request.url), 302);
         return Response.redirect(new URL("/tasks", request.url), 302);
       }
 
@@ -426,7 +464,29 @@ export default {
         if (parts[3] === "complete" && effectiveMethod === "POST" && taskId) {
           if (db) {
             try {
-              await db.prepare("UPDATE tasks SET status = 'Completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(taskId).run();
+              const outcome = formData ? (formData.get("outcome") || "Completed") : "Completed";
+              const nextAction = formData ? formData.get("next_action") : null;
+              const nextActionAt = formData ? formData.get("next_action_at") : null;
+
+              await db.prepare("UPDATE tasks SET status = 'Completed', outcome = ?, next_action = ?, next_action_at = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(outcome, nextAction, nextActionAt, taskId).run();
+
+              const taskRec = await db.prepare("SELECT * FROM tasks WHERE id = ?").bind(taskId).first();
+              if (taskRec && taskRec.related_lead_id) {
+                const leadId = taskRec.related_lead_id;
+                await db.prepare("UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(nextAction || null, nextActionAt || null, leadId).run();
+
+                if (nextActionAt) {
+                  await db.prepare(
+                    "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                    "VALUES (?, 'Follow-up', ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                  ).bind((nextAction || "Follow-up"), nextActionAt, "Generated from outcome: " + outcome, leadId).run();
+                }
+
+                await db.prepare(
+                  "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                  "VALUES (?, 1, 'task_completed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ).bind(leadId, "Task Completed: " + (taskRec.title || "Follow-up"), "Outcome: " + outcome + (nextAction ? " | Next: " + nextAction : "")).run();
+              }
             } catch (e) {
               console.error("D1 Tasks complete error:", e);
             }
@@ -509,23 +569,56 @@ export default {
           try {
             const leadId = Number(formData.get("lead_id")) || null;
             const type = formData.get("type") || "1-on-1 In-person";
-            const outcome = formData.get("outcome") || "Interested";
+            const dateTime = formData.get("date_time") || formData.get("presentation_at") || new Date().toISOString();
+            const topic = formData.get("topic") || null;
+            const questions = formData.get("questions") || null;
+            const objections = formData.get("objections") || null;
+            const outcome = formData.get("outcome") || null;
+            const nextFollowUpAt = formData.get("next_follow_up_at") || null;
             const notes = formData.get("notes") || null;
-            const presAt = formData.get("presentation_at") || new Date().toISOString();
 
             await db.prepare(
-              "INSERT INTO presentations (lead_id, user_id, type, presentation_at, outcome, notes, created_at, updated_at) " +
-              "VALUES (?, 1, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(leadId, type, presAt, outcome, notes).run();
+              "INSERT INTO presentations (lead_id, user_id, date_time, type, topic, questions, objections, outcome, next_follow_up_at, notes, created_at, updated_at) " +
+              "VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ).bind(leadId, dateTime, type, topic, questions, objections, outcome, nextFollowUpAt, notes).run();
 
             if (leadId) {
-              await db.prepare("UPDATE leads SET stage = 'presentation', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(leadId).run();
+              await db.prepare("UPDATE leads SET stage = 'presentation', last_contact_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(leadId).run();
+              await db.prepare(
+                "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                "VALUES (?, 1, 'presentation', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+              ).bind(leadId, "Presentation Conducted: " + type, topic || notes || "Presentation session recorded").run();
+
+              if (nextFollowUpAt) {
+                await db.prepare(
+                  "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                  "VALUES (?, 'Follow-up', ?, 'High', 'Follow up on presentation session', ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ).bind("Follow-up: Presentation discussion", nextFollowUpAt, leadId).run();
+              }
             }
           } catch (e) {
-            console.error("D1 Presentation error:", e);
+            console.error("D1 Presentation create error:", e);
           }
         }
+        const ref = request.headers.get("referer") || "";
+        const m = ref.match(/\/leads\/(\d+)/);
+        if (m) return Response.redirect(new URL("/leads/" + m[1], request.url), 302);
         return Response.redirect(new URL("/presentations", request.url), 302);
+      }
+
+      if (path.startsWith("/presentations/")) {
+        const parts = path.split("/");
+        const presId = parseInt(parts[2], 10);
+        if (effectiveMethod === "DELETE" && presId) {
+          if (db) {
+            try {
+              await db.prepare("DELETE FROM presentations WHERE id = ?").bind(presId).run();
+            } catch (e) {
+              console.error("D1 Presentation delete error:", e);
+            }
+          }
+          return Response.redirect(new URL("/presentations?deleted_pres=" + presId, request.url), 302);
+        }
       }
 
       // 4h. Content Calendar Handlers
@@ -600,19 +693,22 @@ export default {
     let liveEcosystem = [];
     let liveUsers = [];
     let deletedUserIds = [];
+    let livePresentations = [];
+    let deletedPresIds = [];
     let sourcesMap = { 1: "Direct Inbound", 2: "Facebook Page", 3: "LinkedIn Outreach", 4: "Referral / Team", 5: "Website / Landing Page", 6: "Seminar / Workshop", 7: "Investor Network", 8: "Cold Calling" };
 
     if (db) {
       try {
-        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes] = await Promise.all([
+        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes, presRes] = await Promise.all([
           db.prepare("SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY id DESC").all(),
           db.prepare("SELECT id FROM leads WHERE deleted_at IS NOT NULL").all(),
           db.prepare("SELECT * FROM binary_nodes ORDER BY id ASC").all(),
           db.prepare("SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id DESC").all(),
-          db.prepare("SELECT * FROM tasks ORDER BY id DESC").all(),
+          db.prepare("SELECT t.*, l.name as lead_name, l.mobile as lead_mobile FROM tasks t LEFT JOIN leads l ON t.related_lead_id = l.id ORDER BY t.due_at ASC, t.id DESC").all(),
           db.prepare("SELECT * FROM ecosystem_links ORDER BY sort_order ASC, id DESC").all(),
           db.prepare("SELECT id, name FROM lead_sources").all(),
-          db.prepare("SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC").all()
+          db.prepare("SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC").all(),
+          db.prepare("SELECT p.*, l.name as lead_name, l.mobile as lead_mobile, l.stage as lead_stage, u.name as user_name FROM presentations p LEFT JOIN leads l ON p.lead_id = l.id LEFT JOIN users u ON p.user_id = u.id ORDER BY p.date_time DESC").all()
         ]);
 
         if (leadsRes?.results) liveLeads = leadsRes.results;
@@ -622,6 +718,7 @@ export default {
         if (tasksRes?.results) liveTasks = tasksRes.results;
         if (ecoRes?.results) liveEcosystem = ecoRes.results;
         if (usersRes?.results) liveUsers = usersRes.results;
+        if (presRes?.results) livePresentations = presRes.results;
 
         if (sourcesRes?.results) {
           for (const s of sourcesRes.results) {
@@ -749,20 +846,124 @@ export default {
         ecosystem: liveEcosystem,
         users: liveUsers,
         deletedUsers: deletedUserIds,
-        sources: sourcesMap
+        sources: sourcesMap,
+        presentations: livePresentations,
+        deletedPresentations: deletedPresIds
       };
 
       const syncScript = `
 <script id="sbl-live-d1-sync">
 (function() {
   const DATA = ${JSON.stringify(syncDataPayload)};
-  
+
+  function syncEntityDropdowns() {
+    if (!DATA) return;
+
+    // A. Sync Lead Selects (<select name="lead_id">)
+    document.querySelectorAll('select[name="lead_id"]').forEach(function(select) {
+      if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
+        DATA.deletedLeads.forEach(function(delId) {
+          const opt = select.querySelector('option[value="' + delId + '"]');
+          if (opt) opt.remove();
+        });
+      }
+      if (DATA.leads && DATA.leads.length > 0) {
+        DATA.leads.forEach(function(lead) {
+          let opt = select.querySelector('option[value="' + lead.id + '"]');
+          const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
+          const text = lead.name + ' (' + lead.mobile + ') - ' + stageLabel;
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = lead.id;
+            opt.setAttribute('data-lead-id', lead.id);
+            opt.textContent = text;
+            select.appendChild(opt);
+          } else {
+            opt.textContent = text;
+          }
+        });
+      }
+    });
+
+    // B. Sync Related Lead Selects (<select name="related_lead_id">)
+    document.querySelectorAll('select[name="related_lead_id"]').forEach(function(select) {
+      if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
+        DATA.deletedLeads.forEach(function(delId) {
+          const opt = select.querySelector('option[value="' + delId + '"]');
+          if (opt) opt.remove();
+        });
+      }
+      if (DATA.leads && DATA.leads.length > 0) {
+        DATA.leads.forEach(function(lead) {
+          let opt = select.querySelector('option[value="' + lead.id + '"]');
+          const text = lead.name + ' (' + lead.mobile + ')';
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = lead.id;
+            opt.setAttribute('data-lead-id', lead.id);
+            opt.textContent = text;
+            select.appendChild(opt);
+          } else {
+            opt.textContent = text;
+          }
+        });
+      }
+    });
+
+    // C. Sync User Selects (<select name="user_id">)
+    document.querySelectorAll('select[name="user_id"]').forEach(function(select) {
+      if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
+        DATA.deletedUsers.forEach(function(delId) {
+          const opt = select.querySelector('option[value="' + delId + '"]');
+          if (opt) opt.remove();
+        });
+      }
+      if (DATA.users && DATA.users.length > 0) {
+        DATA.users.forEach(function(user) {
+          let opt = select.querySelector('option[value="' + user.id + '"]');
+          const text = user.name + (user.email ? ' (' + user.email + ')' : '');
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = user.id;
+            opt.setAttribute('data-user-id', user.id);
+            opt.textContent = text;
+            select.appendChild(opt);
+          }
+        });
+      }
+    });
+
+    // D. Sync Sponsor Selects (<select name="sponsor_id">)
+    document.querySelectorAll('select[name="sponsor_id"]').forEach(function(select) {
+      if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
+        DATA.deletedNodes.forEach(function(delId) {
+          const opt = select.querySelector('option[value="' + delId + '"]');
+          if (opt) opt.remove();
+        });
+      }
+      if (DATA.nodes && DATA.nodes.length > 0) {
+        DATA.nodes.forEach(function(node) {
+          let opt = select.querySelector('option[value="' + node.id + '"]');
+          const text = node.member_name + ' (' + (node.member_code || ('SBL-' + node.id)) + ')';
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = node.id;
+            opt.setAttribute('data-node-id', node.id);
+            opt.textContent = text;
+            select.appendChild(opt);
+          }
+        });
+      }
+    });
+  }
+
   function runSync() {
     const curPath = window.location.pathname;
 
-    // ==========================================
+    // Run Universal Dropdowns Sync
+    syncEntityDropdowns();
+
     // 1. LEADS SYNC - ONLY on /leads!
-    // ==========================================
     if (curPath === '/leads' || curPath.startsWith('/leads?')) {
       if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
         DATA.deletedLeads.forEach(function(id) {
@@ -772,7 +973,7 @@ export default {
 
       if (DATA.leads && DATA.leads.length > 0) {
         const tableBody = document.querySelector('tbody.divide-y');
-        const mobileStack = document.querySelector('.block.md\\\\:hidden.divide-y, div.divide-y.block.md\\\\:hidden');
+        const mobileStack = document.querySelector('div.divide-y[class*="md:hidden"]');
 
         DATA.leads.slice().reverse().forEach(function(lead) {
           const existingRow = document.querySelector('tr[data-lead-id="' + lead.id + '"]');
@@ -788,148 +989,35 @@ export default {
           const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
           const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
 
-          // Desktop Table Row
           if (tableBody) {
             const tr = document.createElement('tr');
             tr.setAttribute('data-lead-id', lead.id);
             tr.className = 'hover:bg-slate-50/70 transition-colors bg-orange-50/20';
-            tr.innerHTML = \`
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                    \${initialLetter}
-                  </div>
-                  <div>
-                    <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                      \${lead.name}
-                    </a>
-                    <div class="text-[11px] text-slate-400">
-                      \${lead.location || 'No location'} \${lead.profession_or_business ? '• ' + lead.profession_or_business : ''}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td class="py-3.5 px-4">
-                <div class="font-medium text-slate-800">\${lead.mobile}</div>
-                <div class="flex items-center gap-2 mt-1">
-                  <a href="tel:\${lead.mobile}" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a>
-                  <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a>
-                </div>
-              </td>
-              <td class="py-3.5 px-4">
-                <span class="font-medium text-slate-800 block">\${sourceName}</span>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
-                </div>
-              </td>
-              <td class="py-3.5 px-4">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                  \${stageLabel}
-                </span>
-              </td>
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-xs text-orange-600">\${lead.score || 25}</span>
-                  <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">\${lead.temperature || 'warm'}</span>
-                </div>
-              </td>
-              <td class="py-3.5 px-4">
-                \${lead.next_action_at ? '<div class="text-xs font-medium text-slate-700">' + (lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + lead.next_action_at + '</span></div>' : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>'}
-              </td>
-              <td class="py-3.5 px-4 text-right">
-                <div class="flex items-center justify-end gap-1.5">
-                  <a href="/leads/\${lead.id}" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a>
-                  <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a>
-                  <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button>
-                  </form>
-                </div>
-              </td>
-            \`;
+            tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + lead.name + '</a><div class="text-[11px] text-slate-400">' + (lead.location || 'No location') + (lead.profession_or_business ? ' • ' + lead.profession_or_business : '') + '</div></div></div></td><td class="py-3.5 px-4"><div class="font-medium text-slate-800">' + lead.mobile + '</div><div class="flex items-center gap-2 mt-1"><a href="tel:' + lead.mobile + '" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a></div></td><td class="py-3.5 px-4"><span class="font-medium text-slate-800 block">' + sourceName + '</span><div class="flex flex-wrap gap-1 mt-1">' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('') + '</div></td><td class="py-3.5 px-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></td><td class="py-3.5 px-4"><div class="flex items-center gap-1.5"><span class="font-bold text-xs text-orange-600">' + (lead.score || 25) + '</span><span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">' + (lead.temperature || 'warm') + '</span></div></td><td class="py-3.5 px-4">' + (lead.next_action_at ? ('<div class="text-xs font-medium text-slate-700">' + (lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + lead.next_action_at + '</span></div>') : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>') + '</td><td class="py-3.5 px-4 text-right"><div class="flex items-center justify-end gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button></form></div></td>';
             tableBody.prepend(tr);
           }
 
-          // Mobile Card Stack
           if (mobileStack) {
             const card = document.createElement('div');
             card.setAttribute('data-lead-id', lead.id);
             card.className = 'p-4 space-y-3 hover:bg-slate-50/50 transition-colors bg-orange-50/20';
-            card.innerHTML = \`
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
-                    \${initialLetter}
-                  </div>
-                  <div>
-                    <a href="/leads/\${lead.id}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                      \${lead.name}
-                    </a>
-                    <div class="text-xs text-slate-500">\${lead.mobile}</div>
-                  </div>
-                </div>
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-                  \${stageLabel}
-                </span>
-              </div>
-              <div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1">
-                <span>\${sourceName}</span>
-                \${interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('')}
-              </div>
-              <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                <div class="flex items-center gap-2">
-                  <a href="tel:\${lead.mobile}" class="text-emerald-600 font-semibold">📞 Call</a>
-                  <a href="https://wa.me/\${cleanWhatsapp}" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <a href="/leads/\${lead.id}" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a>
-                  <a href="/leads/\${lead.id}/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a>
-                  <form action="/leads/\${lead.id}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button>
-                  </form>
-                </div>
-              </div>
-            \`;
+            card.innerHTML = '<div class="flex items-start justify-between gap-2"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + lead.name + '</a><div class="text-xs text-slate-500">' + lead.mobile + '</div></div></div><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></div><div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1"><span>' + sourceName + '</span>' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('') + '</div><div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><div class="flex items-center gap-2"><a href="tel:' + lead.mobile + '" class="text-emerald-600 font-semibold">📞 Call</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a></div><div class="flex items-center gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button></form></div></div>';
             mobileStack.prepend(card);
           }
 
-          // Kanban Board Card
           const kanbanCol = document.querySelector('.kanban-cards-container[data-stage="' + (lead.stage || 'new') + '"]');
           if (kanbanCol && !document.querySelector('.kanban-card[data-lead-id="' + lead.id + '"]')) {
             const kCard = document.createElement('div');
             kCard.setAttribute('data-lead-id', lead.id);
             kCard.className = 'bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing kanban-card bg-orange-50/20';
-            kCard.innerHTML = \`
-              <div class="flex items-start justify-between gap-2">
-                <a href="/leads/\${lead.id}" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">
-                  \${lead.name}
-                </a>
-                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">
-                  \${lead.temperature || 'warm'}
-                </span>
-              </div>
-              <div class="text-xs text-slate-600 mt-1 flex items-center justify-between">
-                <span>\${lead.mobile}</span>
-                <span class="text-[11px] text-slate-400">\${sourceName}</span>
-              </div>
-              <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span class="font-bold text-orange-600">\${lead.score || 25} pts</span>
-                <div class="flex items-center gap-1">
-                  <a href="/leads/\${lead.id}" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a>
-                  <a href="/leads/\${lead.id}/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a>
-                </div>
-              </div>
-            \`;
+            kCard.innerHTML = '<div class="flex items-start justify-between gap-2"><a href="/leads/' + lead.id + '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">' + lead.name + '</a><span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">' + (lead.temperature || 'warm') + '</span></div><div class="text-xs text-slate-600 mt-1 flex items-center justify-between"><span>' + lead.mobile + '</span><span class="text-[11px] text-slate-400">' + sourceName + '</span></div><div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs"><span class="font-bold text-orange-600">' + (lead.score || 25) + ' pts</span><div class="flex items-center gap-1"><a href="/leads/' + lead.id + '" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a><a href="/leads/' + lead.id + '/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a></div></div>';
             kanbanCol.prepend(kCard);
           }
         });
       }
     }
 
-    // ==========================================
     // 2. TEAM & USERS SYNC - ONLY on /users!
-    // ==========================================
     if (curPath === '/users' || curPath.startsWith('/users?')) {
       if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
         DATA.deletedUsers.forEach(function(id) {
@@ -939,7 +1027,7 @@ export default {
 
       if (DATA.users && DATA.users.length > 0) {
         const userTableBody = document.querySelector('tbody.divide-y');
-        const userMobileContainer = document.querySelector('.md\\\\:hidden.space-y-3, div.space-y-3.md\\\\:hidden');
+        const userMobileContainer = document.querySelector('div.space-y-3[class*="md:hidden"]');
 
         DATA.users.forEach(function(user) {
           if (document.querySelector('[data-user-id="' + user.id + '"]')) return;
@@ -951,51 +1039,7 @@ export default {
             const tr = document.createElement('tr');
             tr.setAttribute('data-user-id', user.id);
             tr.className = 'hover:bg-slate-50/60 transition-colors bg-orange-50/20';
-            tr.innerHTML = \`
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">
-                    \${initialLetter}
-                  </div>
-                  <div>
-                    <div class="font-semibold text-slate-900 flex items-center gap-2">
-                      <span>\${user.name}</span>
-                    </div>
-                    <div class="text-xs text-slate-400">\${user.email}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="py-3 px-4">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-200">
-                  \${roleLabel}
-                </span>
-              </td>
-              <td class="py-3 px-4">
-                <span class="text-slate-700 font-medium">\${user.designation || 'Staff Member'}</span>
-              </td>
-              <td class="py-3 px-4 text-xs">
-                \${user.phone ? '<span>📞 ' + user.phone + '</span>' : '<span class="text-slate-400 italic">No phone set</span>'}
-              </td>
-              <td class="py-3 px-4 text-center">
-                <div class="inline-flex items-center gap-2 text-xs">
-                  <span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span>
-                  <span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span>
-                </div>
-              </td>
-              <td class="py-3 px-4 text-center">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Active
-                </span>
-              </td>
-              <td class="py-3 px-4 text-right space-x-2">
-                <form action="/users/\${user.id}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete member \${user.name}?');">
-                  <input type="hidden" name="_method" value="DELETE">
-                  <button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">
-                    Delete
-                  </button>
-                </form>
-              </td>
-            \`;
+            tr.innerHTML = '<td class="py-3 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">' + initialLetter + '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' + user.name + '</span></div><div class="text-xs text-slate-400">' + user.email + '</div></div></div></td><td class="py-3 px-4"><span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-800 border-purple-200">' + roleLabel + '</span></td><td class="py-3 px-4"><span class="text-slate-700 font-medium">' + (user.designation || 'Staff Member') + '</span></td><td class="py-3 px-4 text-xs">' + (user.phone ? ('<span>📞 ' + user.phone + '</span>') : '<span class="text-slate-400 italic">No phone set</span>') + '</td><td class="py-3 px-4 text-center"><div class="inline-flex items-center gap-2 text-xs"><span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span></div></td><td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span></td><td class="py-3 px-4 text-right space-x-2"><form action="/users/' + user.id + '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure you want to delete member?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
             userTableBody.appendChild(tr);
           }
 
@@ -1003,43 +1047,14 @@ export default {
             const mCard = document.createElement('div');
             mCard.setAttribute('data-user-id', user.id);
             mCard.className = 'bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3 bg-orange-50/20';
-            mCard.innerHTML = \`
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700">
-                    \${initialLetter}
-                  </div>
-                  <div>
-                    <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                      <span>\${user.name}</span>
-                    </div>
-                    <div class="text-xs text-slate-500">\${user.designation || 'Staff Member'}</div>
-                    <div class="text-[11px] text-slate-400">\${user.email}</div>
-                  </div>
-                </div>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-800">
-                  \${roleLabel}
-                </span>
-              </div>
-              <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                <div>\${user.phone ? '📞 ' + user.phone : 'Active'}</div>
-                <div>
-                  <form action="/users/\${user.id}" method="POST" onsubmit="return confirm('Delete?');" class="inline">
-                    <input type="hidden" name="_method" value="DELETE">
-                    <button type="submit" class="text-rose-600 font-semibold text-xs">Delete</button>
-                  </form>
-                </div>
-              </div>
-            \`;
+            mCard.innerHTML = '<div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700">' + initialLetter + '</div><div><div class="font-bold text-slate-900 text-sm flex items-center gap-1.5"><span>' + user.name + '</span></div><div class="text-xs text-slate-500">' + (user.designation || 'Staff Member') + '</div><div class="text-[11px] text-slate-400">' + user.email + '</div></div></div><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-800">' + roleLabel + '</span></div><div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600"><div>' + (user.phone ? ('📞 ' + user.phone) : 'Active') + '</div><div><form action="/users/' + user.id + '" method="POST" onsubmit="return confirm(&quot;Delete?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-rose-600 font-semibold text-xs">Delete</button></form></div></div>';
             userMobileContainer.appendChild(mCard);
           }
         });
       }
     }
 
-    // ==========================================
     // 3. BINARY TREE SYNC - ONLY on /binary!
-    // ==========================================
     if (curPath === '/binary' || curPath.startsWith('/binary?')) {
       if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
         DATA.deletedNodes.forEach(function(id) {
@@ -1048,49 +1063,84 @@ export default {
       }
     }
 
-    // ==========================================
     // 4. CONTACTS SYNC - ONLY on /contacts!
-    // ==========================================
     if (curPath === '/contacts' || curPath.startsWith('/contacts?')) {
       if (DATA.contacts && DATA.contacts.length > 0) {
-        const contactsGrid = document.querySelector('.grid.grid-cols-1.md\\\\:grid-cols-2.lg\\\\:grid-cols-3');
+        const contactsGrid = document.querySelector('div[class*="grid-cols-1"][class*="lg:grid-cols-3"]');
         if (contactsGrid) {
           DATA.contacts.forEach(function(contact) {
             if (document.querySelector('[data-contact-id="' + contact.id + '"]')) return;
             const card = document.createElement('div');
             card.setAttribute('data-contact-id', contact.id);
             card.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-emerald-300 transition-all group';
-            card.innerHTML = \`
-              <div class="space-y-4">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-2xl flex-shrink-0">
-                      \${contact.icon || '📞'}
-                    </div>
-                    <div>
-                      <h3 class="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">\${contact.department}</h3>
-                      \${contact.contact_person ? '<div class="text-xs font-medium text-slate-500 mt-0.5">' + contact.contact_person + '</div>' : ''}
-                    </div>
-                  </div>
-                  \${contact.badge ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">' + contact.badge + '</span>' : ''}
-                </div>
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
-                  <div class="flex items-center justify-between">
-                    <span class="text-slate-500 font-medium">ফোন:</span>
-                    <span class="font-bold text-slate-900">\${contact.phone}</span>
-                  </div>
-                  \${contact.whatsapp ? '<div class="flex items-center justify-between pt-1.5 border-t border-slate-200/60"><span class="text-emerald-600 font-bold">WhatsApp:</span><span class="font-bold text-slate-900">' + contact.whatsapp + '</span></div>' : ''}
-                </div>
-              </div>
-              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <a href="tel:\${contact.phone}" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700">📞 Call</a>
-                <form action="/contacts/\${contact.id}" method="POST" onsubmit="return confirm('ডিলিট করতে চান?');" class="inline">
-                  <input type="hidden" name="_method" value="DELETE">
-                  <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button>
-                </form>
-              </div>
-            \`;
+            card.innerHTML = '<div class="space-y-4"><div class="flex items-start justify-between gap-3"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-2xl flex-shrink-0">' + (contact.icon || '📞') + '</div><div><h3 class="font-bold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">' + contact.department + '</h3>' + (contact.contact_person ? ('<div class="text-xs font-medium text-slate-500 mt-0.5">' + contact.contact_person + '</div>') : '') + '</div></div>' + (contact.badge ? ('<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">' + contact.badge + '</span>') : '') + '</div><div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs"><div class="flex items-center justify-between"><span class="text-slate-500 font-medium">ফোন:</span><span class="font-bold text-slate-900">' + contact.phone + '</span></div>' + (contact.whatsapp ? ('<div class="flex items-center justify-between pt-1.5 border-t border-slate-200/60"><span class="text-emerald-600 font-bold">WhatsApp:</span><span class="font-bold text-slate-900">' + contact.whatsapp + '</span></div>') : '') + '</div></div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><a href="tel:' + contact.phone + '" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700">📞 Call</a><form action="/contacts/' + contact.id + '" method="POST" onsubmit="return confirm(&quot;ডিলিট করতে চান?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">Delete</button></form></div>';
             contactsGrid.prepend(card);
+          });
+        }
+      }
+    }
+
+    // 5. PRESENTATIONS SYNC - ONLY on /presentations!
+    if (curPath === '/presentations' || curPath.startsWith('/presentations?')) {
+      if (DATA.deletedPresentations && DATA.deletedPresentations.length > 0) {
+        DATA.deletedPresentations.forEach(function(id) {
+          document.querySelectorAll('[data-presentation-id="' + id + '"]').forEach(function(el) { el.remove(); });
+        });
+      }
+      if (DATA.presentations && DATA.presentations.length > 0) {
+        const presGrid = document.querySelector('div[class*="grid-cols-1"][class*="lg:grid-cols-3"]');
+        const emptyNotice = document.querySelector('.empty-presentations-notice, .col-span-full');
+        if (emptyNotice) {
+          emptyNotice.remove();
+        }
+        if (presGrid) {
+          DATA.presentations.slice().reverse().forEach(function(pres) {
+            if (document.querySelector('[data-presentation-id="' + pres.id + '"]')) return;
+            const card = document.createElement('div');
+            card.setAttribute('data-presentation-id', pres.id);
+            card.className = 'bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between bg-orange-50/10';
+
+            let outcomeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">Pending</span>';
+            if (pres.outcome) {
+              outcomeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">' + pres.outcome + '</span>';
+            }
+
+            let leadBox = '';
+            if (pres.lead_id && (pres.lead_name || pres.lead_mobile)) {
+              leadBox = '<div class="text-xs text-slate-600 mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100"><span class="text-slate-400 block text-[10px] uppercase font-semibold">Lead:</span><a href="/leads/' + pres.lead_id + '" class="font-bold text-orange-600 hover:underline">' + (pres.lead_name || 'Lead #' + pres.lead_id) + '</a>' + (pres.lead_mobile ? ('<span class="text-slate-500 text-[11px] block">📞 ' + pres.lead_mobile + '</span>') : '') + '</div>';
+            }
+
+            let qaBox = '';
+            if (pres.questions || pres.objections) {
+              qaBox = '<div class="mt-3 space-y-1 text-xs text-slate-600">' + (pres.questions ? ('<div><strong class="text-slate-800">Q:</strong> ' + pres.questions + '</div>') : '') + (pres.objections ? ('<div><strong class="text-rose-700">Objection:</strong> ' + pres.objections + '</div>') : '') + '</div>';
+            }
+
+            const dtStr = pres.date_time ? new Date(pres.date_time).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
+
+            card.innerHTML = '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">' + (pres.type || '1-on-1') + '</span>' + outcomeBadge + '</div><h4 class="font-bold text-sm text-slate-900 mb-1">' + (pres.topic || 'SBL Ecosystem Presentation') + '</h4>' + leadBox + qaBox + '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>' + dtStr + '</span><span>By ' + (pres.user_name || 'Admin') + '</span></div>';
+            presGrid.prepend(card);
+          });
+        }
+      }
+    }
+
+    // 6. TASKS SYNC - ONLY on /tasks!
+    if (curPath === '/tasks' || curPath.startsWith('/tasks?')) {
+      if (DATA.tasks && DATA.tasks.length > 0) {
+        const tasksContainer = document.querySelector('div.divide-y[class*="rounded-2xl"]');
+        if (tasksContainer) {
+          DATA.tasks.forEach(function(task) {
+            let row = document.querySelector('[data-task-id="' + task.id + '"]');
+            if (!row) {
+              row = document.createElement('div');
+              row.setAttribute('data-task-id', task.id);
+              row.className = 'p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors bg-orange-50/10';
+              const dtStr = task.due_at ? new Date(task.due_at).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Scheduled';
+              const isCompleted = task.status === 'Completed';
+
+              row.innerHTML = '<div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 flex-shrink-0 mt-0.5">' + (task.priority || 'Medium') + '</span><div><div class="text-sm font-bold text-slate-900 flex items-center gap-2"><span>' + task.title + '</span><span class="px-2 py-0.5 rounded text-[10px] font-medium border ' + (isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200') + '">' + (task.status || 'Pending') + '</span></div><div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3"><span class="font-medium text-slate-700">' + (task.type || 'Follow-up') + '</span>' + (task.related_lead_id ? ('<span>•</span><a href="/leads/' + task.related_lead_id + '" class="text-orange-600 font-semibold hover:underline">Lead: ' + (task.lead_name || '#' + task.related_lead_id) + '</a>') : '') + '<span>•</span><span>Due: ' + dtStr + '</span></div>' + (task.notes ? ('<p class="text-xs text-slate-600 mt-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100 inline-block">' + task.notes + '</p>') : '') + (task.outcome ? ('<div class="mt-2 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-flex items-center gap-1.5"><span>✓ Outcome:</span><span class="font-medium">' + task.outcome + '</span></div>') : '') + '</div></div>';
+              tasksContainer.prepend(row);
+            }
           });
         }
       }
@@ -1102,6 +1152,11 @@ export default {
   } else {
     runSync();
   }
+
+  // Re-sync dropdowns whenever user clicks to open any modal
+  document.addEventListener('click', function() {
+    setTimeout(syncEntityDropdowns, 50);
+  });
 })();
 </script>
 `;

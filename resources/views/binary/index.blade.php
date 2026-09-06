@@ -549,6 +549,7 @@
                             <option value="">-- ইউজার বেছে নিন --</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
+                            <option value="{{ $user->id }}" data-user-id="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -590,6 +591,7 @@
                         <select name="sponsor_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
                             @foreach($allNodes as $n)
                             <option value="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
+                            <option value="{{ $n->id }}" data-node-id="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -688,6 +690,7 @@
                             <option value="">-- কোনো ইউজার নয় --</option>
                             @foreach($users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            <option value="{{ $user->id }}" data-user-id="{{ $user->id }}">{{ $user->name }}</option>
                             @endforeach
                         </select>
                     </div>
