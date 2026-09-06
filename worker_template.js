@@ -2094,7 +2094,7 @@ export default {
             html = PAGES.ecosystem;
         } else if (path === "/contacts") {
             html = PAGES.contacts;
-        } else if (path === "/binary" || path.startsWith("/binary")) {
+        } else if (path === "/binary" || path.startsWith("/binary") || path === "/team" || path.startsWith("/team")) {
             const viewMode = url.searchParams.get("view");
             html =
                 viewMode === "table"
@@ -2715,8 +2715,8 @@ export default {
       }
     }
 
-    // 5. BINARY TREE & DIRECTORY SYNC - ONLY on /binary!
-    if (curPath === '/binary' || curPath.startsWith('/binary?')) {
+    // 5. BINARY TREE & DIRECTORY SYNC - ON /binary & /team!
+    if (curPath === '/binary' || curPath.startsWith('/binary?') || curPath.startsWith('/binary/') || curPath === '/team' || curPath.startsWith('/team?') || curPath.startsWith('/team/')) {
       if (DATA.deletedNodes && DATA.deletedNodes.length > 0) {
         DATA.deletedNodes.forEach(function(id) {
           document.querySelectorAll('[data-node-id="' + id + '"]').forEach(function(el) { el.remove(); });
