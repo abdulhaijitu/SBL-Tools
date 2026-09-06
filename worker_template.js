@@ -484,25 +484,60 @@ export default {
                     if (db) {
                         try {
                             const memberName = formData.get("member_name");
+                            const memberCode = formData.get("member_code") || null;
                             const phone = formData.get("phone") || null;
                             const email = formData.get("email") || null;
                             const packageName = formData.get("package_name");
-                            const rankName = formData.get("rank_name");
+                            const rankName = formData.get("rank_name") || "NA";
+                            const sponsorId = formData.get("sponsor_id") ? Number(formData.get("sponsor_id")) : null;
+                            const pointValue = formData.get("point_value") ? Number(formData.get("point_value")) : null;
+                            const leftCount = formData.get("left_count") ? Number(formData.get("left_count")) : null;
+                            const rightCount = formData.get("right_count") ? Number(formData.get("right_count")) : null;
+                            const leftBv = formData.get("left_bv") ? Number(formData.get("left_bv")) : null;
+                            const rightBv = formData.get("right_bv") ? Number(formData.get("right_bv")) : null;
+                            const userId = formData.get("user_id") ? Number(formData.get("user_id")) : null;
                             const isActive = formData.has("is_active") ? 1 : 0;
-                            await db
-                                .prepare(
-                                    "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(
-                                    memberName,
-                                    phone,
-                                    email,
-                                    packageName,
-                                    rankName,
-                                    isActive,
-                                    nodeId,
-                                )
-                                .run();
+
+                            let query = "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP";
+                            const params = [memberName, phone, email, packageName, rankName, isActive];
+
+                            if (memberCode) {
+                                query += ", member_code = ?";
+                                params.push(memberCode);
+                            }
+                            if (sponsorId !== null) {
+                                query += ", sponsor_id = ?";
+                                params.push(sponsorId);
+                            }
+                            if (pointValue !== null) {
+                                query += ", point_value = ?";
+                                params.push(pointValue);
+                            }
+                            if (leftCount !== null) {
+                                query += ", left_count = ?";
+                                params.push(leftCount);
+                            }
+                            if (rightCount !== null) {
+                                query += ", right_count = ?";
+                                params.push(rightCount);
+                            }
+                            if (leftBv !== null) {
+                                query += ", left_bv = ?";
+                                params.push(leftBv);
+                            }
+                            if (rightBv !== null) {
+                                query += ", right_bv = ?";
+                                params.push(rightBv);
+                            }
+                            if (userId !== null) {
+                                query += ", user_id = ?";
+                                params.push(userId);
+                            }
+
+                            query += " WHERE id = ?";
+                            params.push(nodeId);
+
+                            await db.prepare(query).bind(...params).run();
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
                         }
@@ -1193,7 +1228,8 @@ export default {
                 if (db) {
                     try {
                         const title = formData.get("title") || "New Post";
-                        const platform = formData.get("platform") || "Facebook Profile";
+                        const platform =
+                            formData.get("platform") || "Facebook Profile";
                         const status = formData.get("status") || "Planned";
                         const scheduledAt =
                             formData.get("scheduled_at") ||
@@ -1201,11 +1237,21 @@ export default {
                         const topic = formData.get("topic") || null;
                         const caption = formData.get("caption") || null;
                         const cta = formData.get("cta") || null;
-                        const reach = formData.get("reach") ? Number(formData.get("reach")) : null;
-                        const engagement = formData.get("engagement") ? Number(formData.get("engagement")) : null;
-                        const inboxCount = formData.get("inbox_count") ? Number(formData.get("inbox_count")) : null;
-                        const leadsGenerated = formData.get("leads_generated") ? Number(formData.get("leads_generated")) : null;
-                        const conversions = formData.get("conversions") ? Number(formData.get("conversions")) : null;
+                        const reach = formData.get("reach")
+                            ? Number(formData.get("reach"))
+                            : null;
+                        const engagement = formData.get("engagement")
+                            ? Number(formData.get("engagement"))
+                            : null;
+                        const inboxCount = formData.get("inbox_count")
+                            ? Number(formData.get("inbox_count"))
+                            : null;
+                        const leadsGenerated = formData.get("leads_generated")
+                            ? Number(formData.get("leads_generated"))
+                            : null;
+                        const conversions = formData.get("conversions")
+                            ? Number(formData.get("conversions"))
+                            : null;
                         const notes = formData.get("notes") || null;
 
                         await db
@@ -1267,7 +1313,8 @@ export default {
                     if (db) {
                         try {
                             const title = formData.get("title") || "Post";
-                            const platform = formData.get("platform") || "Facebook Profile";
+                            const platform =
+                                formData.get("platform") || "Facebook Profile";
                             const status = formData.get("status") || "Planned";
                             const scheduledAt =
                                 formData.get("scheduled_at") ||
@@ -1275,11 +1322,23 @@ export default {
                             const topic = formData.get("topic") || null;
                             const caption = formData.get("caption") || null;
                             const cta = formData.get("cta") || null;
-                            const reach = formData.get("reach") ? Number(formData.get("reach")) : null;
-                            const engagement = formData.get("engagement") ? Number(formData.get("engagement")) : null;
-                            const inboxCount = formData.get("inbox_count") ? Number(formData.get("inbox_count")) : null;
-                            const leadsGenerated = formData.get("leads_generated") ? Number(formData.get("leads_generated")) : null;
-                            const conversions = formData.get("conversions") ? Number(formData.get("conversions")) : null;
+                            const reach = formData.get("reach")
+                                ? Number(formData.get("reach"))
+                                : null;
+                            const engagement = formData.get("engagement")
+                                ? Number(formData.get("engagement"))
+                                : null;
+                            const inboxCount = formData.get("inbox_count")
+                                ? Number(formData.get("inbox_count"))
+                                : null;
+                            const leadsGenerated = formData.get(
+                                "leads_generated",
+                            )
+                                ? Number(formData.get("leads_generated"))
+                                : null;
+                            const conversions = formData.get("conversions")
+                                ? Number(formData.get("conversions"))
+                                : null;
                             const notes = formData.get("notes") || null;
 
                             await db
@@ -1304,7 +1363,10 @@ export default {
                                 )
                                 .run();
                         } catch (e) {
-                            console.error("D1 Content Calendar update error:", e);
+                            console.error(
+                                "D1 Content Calendar update error:",
+                                e,
+                            );
                         }
                     }
                     return Response.redirect(

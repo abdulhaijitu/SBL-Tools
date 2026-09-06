@@ -57,10 +57,17 @@ class BinaryTeamController extends Controller
     {
         $validated = $request->validate([
             'member_name' => 'required|string|max:150',
+            'member_code' => 'nullable|string|max:50',
             'phone' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:150',
-            'package_name' => 'required|string|max:100',
+            'package_name' => 'nullable|string|max:100',
+            'point_value' => 'nullable|numeric|min:0',
             'rank_name' => 'nullable|string|max:50',
+            'sponsor_id' => 'nullable|exists:binary_nodes,id',
+            'left_count' => 'nullable|integer|min:0',
+            'right_count' => 'nullable|integer|min:0',
+            'left_bv' => 'nullable|numeric|min:0',
+            'right_bv' => 'nullable|numeric|min:0',
             'is_active' => 'nullable|boolean',
             'user_id' => 'nullable|exists:users,id',
         ]);

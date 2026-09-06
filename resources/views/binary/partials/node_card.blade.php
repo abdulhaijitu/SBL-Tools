@@ -1,114 +1,136 @@
 @if($node['is_vacant'])
     <!-- VACANT SLOT CARD (+ ADD MEMBER) -->
-    <div class="w-48 md:w-56 p-4 rounded-2xl border-2 border-dashed {{ $node['position'] === 'left' ? 'border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50 hover:border-emerald-400' : 'border-blue-300 bg-blue-50/40 hover:bg-blue-50 hover:border-blue-400' }} transition-all flex flex-col items-center justify-center text-center space-y-2.5 group shadow-xs">
-        
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {{ $node['position'] === 'left' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800' }}">
-            {{ $node['position'] === 'left' ? '👈 বাম টিম (Left)' : '👉 ডান টিম (Right)' }}
+    <div class="w-56 md:w-60 p-4 rounded-xl border-2 border-dashed border-white/30 bg-white/5 hover:bg-white/10 transition-all flex flex-col items-center justify-center text-center space-y-2.5 text-white shadow-md group">
+        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/15 text-slate-100 border border-white/20">
+            {{ $node['position'] === 'left' ? '👈 Left Slot' : '👉 Right Slot' }}
         </span>
 
-        <div class="w-10 h-10 rounded-full {{ $node['position'] === 'left' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700' }} flex items-center justify-center text-lg font-bold group-hover:scale-110 transition-transform">
+        <div class="w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
             +
         </div>
 
-        <div class="text-xs font-bold text-slate-700">
+        <div class="text-xs font-bold text-slate-200">
             খালি পজিশন
         </div>
 
         <button type="button" 
                 @click="openPlacementModal({{ $node['parent_id'] }}, '{{ addslashes($node['parent_name']) }}', '{{ $node['parent_code'] }}', '{{ $node['position'] }}')"
-                class="w-full py-1.5 px-2 rounded-xl {{ $node['position'] === 'left' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700' }} text-white text-[11px] font-bold shadow-xs transition-colors">
+                class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition-all active:scale-95">
             + মেম্বার যোগ করুন
         </button>
     </div>
 
 @else
+    @php
+        $isContributed = (float)$node['point_value'] > 0;
+        $cardBg = $isContributed ? 'bg-[#367e6c] border-[#6ea99b]' : 'bg-[#c89e4c] border-[#ead599]';
+        $subTextColor = $isContributed ? 'text-emerald-100/90' : 'text-amber-100/90';
+        $dividerColor = 'bg-[#1e3243]';
+        $code = $node['member_code'] ?: ('SBL-' . $node['id']);
+        $username = $node['username'] ?? (str_starts_with($code, '@') ? $code : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $code))));
+        $sponsorName = $node['sponsor_name'] ?? 'Md Abdul Hai';
+        $userEmail = $node['email'] ?: 'member' . $node['id'] . '@gmail.com';
+    @endphp
+
     <!-- OCCUPIED MEMBER NODE CARD -->
-    <div data-node-id="{{ $node['id'] }}" class="w-48 md:w-56 bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-orange-300 transition-all p-3.5 flex flex-col justify-between group">
+    <div data-node-id="{{ $node['id'] }}" 
+         class="w-56 md:w-60 rounded-xl border {{ $cardBg }} shadow-lg p-3.5 flex flex-col justify-between text-center text-white select-none relative group transition-all duration-200 hover:shadow-2xl hover:scale-[1.015]">
         
-        <div>
-            <!-- Top Rank & Position Pill -->
-            <div class="flex items-center justify-between gap-1 mb-2">
-                <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200 truncate max-w-[120px]">
-                    {{ $node['rank_name'] }}
-                </span>
-
-                @if($node['position'])
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded {{ $node['position'] === 'left' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700' }}">
-                    {{ $node['position'] === 'left' ? 'L' : 'R' }}
-                </span>
-                @else
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">ROOT</span>
-                @endif
-            </div>
-
-            <!-- Avatar & Member Info -->
-            <div class="flex items-center gap-2.5 mb-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs flex-shrink-0">
-                    {{ substr($node['member_name'], 0, 1) }}
-                </div>
-                <div class="truncate">
-                    <h4 class="text-xs font-bold text-slate-900 truncate group-hover:text-orange-600 transition-colors" title="{{ $node['member_name'] }}">
-                        {{ $node['member_name'] }}
-                    </h4>
-                    <div class="text-[10px] font-semibold text-slate-400 tracking-wide font-mono">
-                        {{ $node['member_code'] }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Package & Point Badge -->
-            <div class="mb-2.5 flex items-center justify-between text-[10px] bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                <span class="text-slate-600 font-medium truncate max-w-[100px]">{{ $node['package_name'] }}</span>
-                <span class="font-bold text-orange-600">{{ (int)$node['point_value'] }} BV</span>
-            </div>
-
-            <!-- Left vs Right Counters -->
-            <div class="grid grid-cols-2 gap-1 text-[10px] text-center font-medium bg-slate-50/80 p-1.5 rounded-lg border border-slate-100 mb-2">
-                <div class="text-emerald-700 border-r border-slate-200/60 pr-1">
-                    <div class="text-[9px] text-slate-400 uppercase font-bold">Left</div>
-                    <div class="font-extrabold">{{ $node['left_count'] }} <span class="font-normal text-[9px]">({{ (int)$node['left_bv'] }})</span></div>
-                </div>
-                <div class="text-blue-700 pl-1">
-                    <div class="text-[9px] text-slate-400 uppercase font-bold">Right</div>
-                    <div class="font-extrabold">{{ $node['right_count'] }} <span class="font-normal text-[9px]">({{ (int)$node['right_bv'] }})</span></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Row: Downline Drill-down + Edit/Delete Actions -->
-        <div class="border-t border-slate-100 pt-1.5 flex items-center justify-between gap-1">
+        <!-- Floating Action Overlay (Edit, Drill-down, Delete) -->
+        <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+            <button type="button" 
+                    @click.stop="openEditModal({{ json_encode($node) }})"
+                    class="p-1 rounded-md bg-black/50 hover:bg-black/80 text-white text-xs backdrop-blur-xs transition-colors shadow-xs" 
+                    title="মেম্বার এডিট করুন">
+                ✏️
+            </button>
             <a href="{{ route('binary.index', ['node_id' => $node['id']]) }}" 
-               class="text-[11px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="এই মেম্বারকে কেন্দ্র করে ট্রি দেখুন">
-                <span>ডাউনলাইন</span>
-                <span class="text-xs">⬇️</span>
+               class="p-1 rounded-md bg-black/50 hover:bg-black/80 text-white text-xs backdrop-blur-xs transition-colors shadow-xs" 
+               title="ডাউনলাইন ট্রি দেখুন">
+                ⬇️
             </a>
-
-            <div class="flex items-center gap-1">
-                <button type="button" 
-                        @click="openEditModal({{ json_encode($node) }})"
-                        class="text-slate-400 hover:text-orange-600 p-1 rounded hover:bg-orange-50 transition-colors" 
-                        title="মেম্বার এডিট করুন">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            @if(! $node['has_children'])
+            <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $node['member_name'] }}) রিমুভ করতে চান?');" class="inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="p-1 rounded-md bg-rose-600/80 hover:bg-rose-700 text-white text-xs backdrop-blur-xs transition-colors shadow-xs" title="মেম্বার মুছুন">
+                    🗑️
                 </button>
+            </form>
+            @endif
+        </div>
 
-                @if(! $node['has_children'])
-                <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $node['member_name'] }}) রিমুভ করতে চান? এর ফলে আপলাইন পয়েন্ট রোলব্যাক হবে।');" class="inline">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors" title="মেম্বার রিমুভ করুন">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </form>
-                @else
-                <button type="button" 
-                        onclick="alert('এই মেম্বারের ডাউনলাইনে সক্রিয় টিম রয়েছে। ট্রি অখণ্ড রাখতে ডাউনলাইন থাকা অবস্থায় সরাসরি মুছে ফেলা যাবে না।')"
-                        class="text-slate-300 hover:text-slate-400 p-1 rounded transition-colors cursor-not-allowed" 
-                        title="ডাউনলাইন থাকায় ডিলিট সম্ভব নয়">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-                @endif
+        <!-- Main Info Box (Clickable to Edit) -->
+        <div class="space-y-0.5 cursor-pointer text-center" @click="openEditModal({{ json_encode($node) }})">
+            <!-- Full Name -->
+            <h3 class="font-bold text-base md:text-lg text-white leading-tight tracking-tight drop-shadow-xs">
+                {{ $node['member_name'] }}
+            </h3>
+
+            <!-- Username -->
+            <div class="text-xs {{ $subTextColor }} font-medium font-mono">
+                {{ $username }}
+            </div>
+
+            <!-- Rank -->
+            <div class="text-xs {{ $subTextColor }} font-normal">
+                Rank: {{ $node['rank_name'] ?: 'NA' }}
+            </div>
+
+            <!-- Email with Copy Icon -->
+            <div class="text-[11px] {{ $subTextColor }} flex items-center justify-center gap-1 hover:text-white transition-colors"
+                 @click.stop="navigator.clipboard.writeText('{{ $userEmail }}'); alert('Email copied: {{ $userEmail }}');"
+                 title="Click to copy email">
+                <span>({{ $userEmail }}</span>
+                <svg class="w-3.5 h-3.5 inline-block opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                <span>)</span>
+            </div>
+
+            <!-- Sponsor / By -->
+            <div class="text-xs {{ $subTextColor }} font-medium pt-0.5">
+                By {{ $sponsorName }}
             </div>
         </div>
 
+        <!-- Binary Legs Stats (L vs R) with dark vertical divider -->
+        <div class="mt-2.5 pt-2 border-t border-white/20 grid grid-cols-2 text-xs relative font-medium">
+            <!-- Dark vertical divider line -->
+            <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] {{ $dividerColor }} rounded-full"></div>
+
+            <!-- Left Leg -->
+            <div class="pr-2 space-y-0.5 text-center">
+                <div class="font-bold flex items-center justify-center gap-1">
+                    <span>L</span>
+                    <button type="button" 
+                            @click.stop="navigator.clipboard.writeText(window.location.origin + '/binary?ref={{ $node['id'] }}&pos=left'); alert('Left placement link copied!');" 
+                            class="hover:text-amber-200 transition-colors"
+                            title="Copy Left Placement Link">
+                        <svg class="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                </div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['left_count'] }}/{{ $node['left_count'] }}</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- {{ (int)$node['left_bv'] }}$</div>
+            </div>
+
+            <!-- Right Leg -->
+            <div class="pl-2 space-y-0.5 text-center">
+                <div class="font-bold flex items-center justify-center gap-1">
+                    <span>R</span>
+                    <button type="button" 
+                            @click.stop="navigator.clipboard.writeText(window.location.origin + '/binary?ref={{ $node['id'] }}&pos=right'); alert('Right placement link copied!');" 
+                            class="hover:text-amber-200 transition-colors"
+                            title="Copy Right Placement Link">
+                        <svg class="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                </div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['right_count'] }}/{{ $node['right_count'] }}</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- {{ (int)$node['right_bv'] }}$</div>
+            </div>
+        </div>
+
+        <!-- Bottom Total Contribution Row -->
+        <div class="mt-2 pt-1.5 border-t border-white/20 text-xs font-semibold text-white/95">
+            Total Contribution: {{ (int)$node['point_value'] }}$
+        </div>
     </div>
 @endif

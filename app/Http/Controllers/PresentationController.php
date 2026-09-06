@@ -112,4 +112,3 @@ class PresentationController extends Controller
         return back()->with('success', 'Presentation session removed.');
     }
 }
-

@@ -216,9 +216,9 @@ class BinaryTreeService
     {
         return DB::transaction(function () use ($node, $data) {
             $oldPv = (float)$node->point_value;
-            $newPv = $oldPv;
+            $newPv = isset($data['point_value']) && $data['point_value'] !== '' ? (float)$data['point_value'] : $oldPv;
 
-            if (isset($data['package_name']) && $data['package_name'] !== $node->package_name) {
+            if (isset($data['package_name']) && $data['package_name'] !== $node->package_name && !isset($data['point_value'])) {
                 if (str_contains(strtolower($data['package_name']), '550')) {
                     $newPv = 500.00;
                 } elseif (str_contains(strtolower($data['package_name']), '120')) {
@@ -227,20 +227,39 @@ class BinaryTreeService
                     $newPv = 25.00;
                 }
             }
-            if (isset($data['point_value'])) {
-                $newPv = (float)$data['point_value'];
+
+            $cleanCode = $node->member_code;
+            if (!empty($data['member_code'])) {
+                $cleanCode = trim($data['member_code']);
             }
 
-            $node->update([
+            $updateData = [
                 'member_name' => $data['member_name'] ?? $node->member_name,
+                'member_code' => $cleanCode,
                 'phone' => $data['phone'] ?? $node->phone,
                 'email' => $data['email'] ?? $node->email,
                 'package_name' => $data['package_name'] ?? $node->package_name,
                 'point_value' => $newPv,
                 'rank_name' => $data['rank_name'] ?? $node->rank_name,
+                'sponsor_id' => array_key_exists('sponsor_id', $data) ? ($data['sponsor_id'] ? (int)$data['sponsor_id'] : null) : $node->sponsor_id,
                 'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : $node->is_active,
-                'user_id' => array_key_exists('user_id', $data) ? $data['user_id'] : $node->user_id,
-            ]);
+                'user_id' => array_key_exists('user_id', $data) ? ($data['user_id'] ? (int)$data['user_id'] : null) : $node->user_id,
+            ];
+
+            if (isset($data['left_count']) && $data['left_count'] !== '') {
+                $updateData['left_count'] = (int)$data['left_count'];
+            }
+            if (isset($data['right_count']) && $data['right_count'] !== '') {
+                $updateData['right_count'] = (int)$data['right_count'];
+            }
+            if (isset($data['left_bv']) && $data['left_bv'] !== '') {
+                $updateData['left_bv'] = (float)$data['left_bv'];
+            }
+            if (isset($data['right_bv']) && $data['right_bv'] !== '') {
+                $updateData['right_bv'] = (float)$data['right_bv'];
+            }
+
+            $node->update($updateData);
 
             // If PV changed, propagate difference upline
             $pvDiff = $newPv - $oldPv;
@@ -302,7 +321,7 @@ class BinaryTreeService
     }
 
     /**
-     * Adjust upline BV when member package/PV is modified.
+     * Propagate difference in point value up the tree when node package/PV changes.
      */
     protected function propagatePvDifference(BinaryNode $node, float $pvDiff): void
     {
@@ -324,15 +343,14 @@ class BinaryTreeService
                 $parent->carry_right = max(0, $parent->carry_right + $pvDiff);
             }
 
-            if ($pvDiff > 0) {
-                $pairUnit = 100.00;
-                $possiblePairs = (int)floor(min($parent->carry_left, $parent->carry_right) / $pairUnit);
-                if ($possiblePairs > 0) {
-                    $parent->matched_pairs += $possiblePairs;
-                    $deduction = $possiblePairs * $pairUnit;
-                    $parent->carry_left = max(0, $parent->carry_left - $deduction);
-                    $parent->carry_right = max(0, $parent->carry_right - $deduction);
-                }
+            // Recheck pair matching
+            $pairUnit = 100.00;
+            $possiblePairs = (int)floor(min($parent->carry_left, $parent->carry_right) / $pairUnit);
+            if ($possiblePairs > 0) {
+                $parent->matched_pairs += $possiblePairs;
+                $deduction = $possiblePairs * $pairUnit;
+                $parent->carry_left = max(0, $parent->carry_left - $deduction);
+                $parent->carry_right = max(0, $parent->carry_right - $deduction);
             }
 
             $parent->save();
@@ -366,18 +384,27 @@ class BinaryTreeService
 
     protected function formatNodeForView(BinaryNode $node): array
     {
+        $node->loadMissing(['sponsor', 'parent']);
+        $sponsorName = $node->sponsor?->member_name ?? ($node->parent?->member_name ?? 'Md Abdul Hai');
+
+        $code = $node->member_code ?: ('SBL-' . $node->id);
+        $username = str_starts_with($code, '@') ? $code : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $code)));
+
         return [
             'is_vacant' => false,
             'id' => $node->id,
             'member_name' => $node->member_name,
             'member_code' => $node->member_code,
+            'username' => $username,
             'phone' => $node->phone,
-            'email' => $node->email,
+            'email' => $node->email ?: 'tahmina787162@gmail.com',
+            'sponsor_id' => $node->sponsor_id,
+            'sponsor_name' => $sponsorName,
             'user_id' => $node->user_id,
             'is_active' => (bool)$node->is_active,
             'package_name' => $node->package_name,
             'point_value' => (float)$node->point_value,
-            'rank_name' => $node->rank_name,
+            'rank_name' => $node->rank_name ?: 'NA',
             'position' => $node->position,
             'left_count' => $node->left_count,
             'right_count' => $node->right_count,

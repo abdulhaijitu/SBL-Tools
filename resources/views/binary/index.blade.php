@@ -14,8 +14,14 @@
         member_code: '',
         phone: '',
         email: '',
-        package_name: '',
-        rank_name: '',
+        package_name: 'National 120k',
+        point_value: 100,
+        rank_name: 'NA',
+        sponsor_id: '',
+        left_count: 0,
+        right_count: 0,
+        left_bv: 0,
+        right_bv: 0,
         is_active: true,
         user_id: ''
     },
@@ -40,7 +46,13 @@
             phone: node.phone || '',
             email: node.email || '',
             package_name: node.package_name || 'National 120k',
-            rank_name: node.rank_name || 'Member',
+            point_value: node.point_value !== undefined ? node.point_value : 100,
+            rank_name: node.rank_name || 'NA',
+            sponsor_id: node.sponsor_id || '',
+            left_count: node.left_count !== undefined ? node.left_count : 0,
+            right_count: node.right_count !== undefined ? node.right_count : 0,
+            left_bv: node.left_bv !== undefined ? node.left_bv : 0,
+            right_bv: node.right_bv !== undefined ? node.right_bv : 0,
             is_active: node.is_active !== undefined ? Boolean(node.is_active) : true,
             user_id: node.user_id || ''
         };
@@ -408,14 +420,14 @@
     </div>
 
     <!-- Interactive Visual Genealogy Tree Canvas -->
-    <div class="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-6 md:p-10 shadow-xs overflow-x-auto min-h-[600px]">
-        <div class="min-w-[768px] mx-auto flex flex-col items-center space-y-8">
+    <div class="bg-[#203648] rounded-2xl border border-slate-700/80 p-6 md:p-10 shadow-xl overflow-x-auto min-h-[650px]">
+        <div class="min-w-[850px] mx-auto flex flex-col items-center space-y-10">
             
             @if(empty($treeData['levels']))
-                <div class="text-center py-16">
-                    <div class="text-4xl mb-2">🌲</div>
-                    <h3 class="text-lg font-bold text-slate-800">কোনো টিম ডাটা নেই</h3>
-                    <p class="text-xs text-slate-500">দয়া করে ডাটাবেজ সিড করুন অথবা নতুন রুট মেম্বার যুক্ত করুন।</p>
+                <div class="text-center py-20 text-white">
+                    <div class="text-5xl mb-3">🌲</div>
+                    <h3 class="text-lg font-bold">কোনো টিম ডাটা নেই</h3>
+                    <p class="text-xs text-slate-300">দয়া করে ডাটাবেজ সিড করুন অথবা নতুন রুট মেম্বার যুক্ত করুন।</p>
                 </div>
             @else
 
@@ -428,17 +440,17 @@
                 </div>
 
                 <!-- Connector Line Level 1 to Level 2 -->
-                <div class="w-full max-w-[480px] flex flex-col items-center -my-4">
-                    <div class="w-0.5 h-6 bg-slate-300"></div>
-                    <div class="w-full h-0.5 bg-slate-300"></div>
+                <div class="w-full max-w-[540px] flex flex-col items-center -my-6">
+                    <div class="w-[2px] h-7 bg-white/70"></div>
+                    <div class="w-full h-[2px] bg-white/70 rounded-full"></div>
                     <div class="w-full flex justify-between">
-                        <div class="w-0.5 h-6 bg-slate-300"></div>
-                        <div class="w-0.5 h-6 bg-slate-300"></div>
+                        <div class="w-[2px] h-7 bg-white/70"></div>
+                        <div class="w-[2px] h-7 bg-white/70"></div>
                     </div>
                 </div>
 
                 <!-- LEVEL 2: 2 Nodes (Left and Right) -->
-                <div class="grid grid-cols-2 gap-8 md:gap-16 w-full max-w-[750px]">
+                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[800px]">
                     @foreach($treeData['levels'][2] as $index => $node)
                         <div class="flex justify-center">
                             @if($node)
@@ -449,30 +461,30 @@
                 </div>
 
                 <!-- Connector Line Level 2 to Level 3 -->
-                <div class="grid grid-cols-2 gap-8 md:gap-16 w-full max-w-[750px] -my-4">
+                <div class="grid grid-cols-2 gap-12 md:gap-20 w-full max-w-[800px] -my-6">
                     <!-- Left Parent Connectors -->
                     <div class="flex flex-col items-center">
-                        <div class="w-0.5 h-5 bg-slate-300"></div>
-                        <div class="w-full max-w-[200px] h-0.5 bg-slate-300"></div>
-                        <div class="w-full max-w-[200px] flex justify-between">
-                            <div class="w-0.5 h-5 bg-slate-300"></div>
-                            <div class="w-0.5 h-5 bg-slate-300"></div>
+                        <div class="w-[2px] h-6 bg-white/70"></div>
+                        <div class="w-full max-w-[240px] h-[2px] bg-white/70 rounded-full"></div>
+                        <div class="w-full max-w-[240px] flex justify-between">
+                            <div class="w-[2px] h-6 bg-white/70"></div>
+                            <div class="w-[2px] h-6 bg-white/70"></div>
                         </div>
                     </div>
 
                     <!-- Right Parent Connectors -->
                     <div class="flex flex-col items-center">
-                        <div class="w-0.5 h-5 bg-slate-300"></div>
-                        <div class="w-full max-w-[200px] h-0.5 bg-slate-300"></div>
-                        <div class="w-full max-w-[200px] flex justify-between">
-                            <div class="w-0.5 h-5 bg-slate-300"></div>
-                            <div class="w-0.5 h-5 bg-slate-300"></div>
+                        <div class="w-[2px] h-6 bg-white/70"></div>
+                        <div class="w-full max-w-[240px] h-[2px] bg-white/70 rounded-full"></div>
+                        <div class="w-full max-w-[240px] flex justify-between">
+                            <div class="w-[2px] h-6 bg-white/70"></div>
+                            <div class="w-[2px] h-6 bg-white/70"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- LEVEL 3: 4 Nodes (LL, LR, RL, RR) -->
-                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-[950px]">
+                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-[1100px]">
                     @foreach($treeData['levels'][3] as $index => $node)
                         <div class="flex justify-center">
                             @if($node)
@@ -622,10 +634,10 @@
     <!-- ==================== 2. EDIT MEMBER MODAL ==================== -->
     <div x-show="editModalOpen" 
          x-transition.opacity
-         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
          x-cloak>
         <div @click.outside="editModalOpen = false" 
-             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5 my-8">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -638,30 +650,49 @@
                 @csrf
                 @method('PUT')
 
-                <!-- Member Code (Readonly) -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মেম্বার আইডি কোড</label>
-                    <input type="text" :value="editNode.member_code" readonly class="w-full px-3.5 py-2 text-sm bg-slate-100 border border-slate-200 rounded-xl font-mono text-slate-600 cursor-not-allowed">
-                </div>
-
-                <!-- Name -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মেম্বারের পূর্ণ নাম <span class="text-rose-500">*</span></label>
-                    <input type="text" name="member_name" x-model="editNode.member_name" required class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                </div>
-
+                <!-- Member Name & Username -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মোবাইল নম্বর</label>
-                        <input type="text" name="phone" x-model="editNode.phone" placeholder="017xxxxxxxx" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পূর্ণ নাম <span class="text-rose-500">*</span></label>
+                        <input type="text" name="member_name" x-model="editNode.member_name" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-semibold">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইমেইল</label>
-                        <input type="email" name="email" x-model="editNode.email" placeholder="member@example.com" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইউজারনেম / কোড</label>
+                        <input type="text" name="member_code" x-model="editNode.member_code" placeholder="@username" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono">
                     </div>
                 </div>
 
-                <!-- Package & Rank -->
+                <!-- Email & Phone -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইমেইল</label>
+                        <input type="email" name="email" x-model="editNode.email" placeholder="tahmina@example.com" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মোবাইল নম্বর</label>
+                        <input type="text" name="phone" x-model="editNode.phone" placeholder="017xxxxxxxx" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Sponsor (By) & Rank -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">স্পন্সর (By)</label>
+                        <select name="sponsor_id" x-model="editNode.sponsor_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
+                            <option value="">-- কোনো স্পন্সর নয় --</option>
+                            @foreach($allNodes as $n)
+                            <option value="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
+                            <option value="{{ $n->id }}" data-node-id="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Rank)</label>
+                        <input type="text" name="rank_name" x-model="editNode.rank_name" placeholder="NA / Member / Silver" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <!-- Package & Total Contribution -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">প্যাকেজ <span class="text-rose-500">*</span></label>
@@ -672,13 +703,43 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Rank)</label>
-                        <select name="rank_name" x-model="editNode.rank_name" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
-                            <option value="Member">Member</option>
-                            <option value="Silver Member">Silver Member</option>
-                            <option value="Gold Member">Gold Member</option>
-                            <option value="Platinum Leader">Platinum Leader</option>
-                        </select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Total Contribution ($/BV)</label>
+                        <input type="number" step="1" min="0" name="point_value" x-model="editNode.point_value" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-bold text-emerald-700">
+                    </div>
+                </div>
+
+                <!-- Team & Volume Counters (Left & Right) -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-2.5">
+                    <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">বাইনারি টিম ও ভলিউম কাউন্টার</span>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5 p-2 bg-emerald-50/50 rounded-lg border border-emerald-200/60">
+                            <span class="text-[10px] font-bold text-emerald-800 uppercase block">👈 Left Team</span>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block font-medium">Team Count</label>
+                                    <input type="number" min="0" name="left_count" x-model="editNode.left_count" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-emerald-700">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block font-medium">Vol ($)</label>
+                                    <input type="number" min="0" step="1" name="left_bv" x-model="editNode.left_bv" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-emerald-700">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5 p-2 bg-blue-50/50 rounded-lg border border-blue-200/60">
+                            <span class="text-[10px] font-bold text-blue-800 uppercase block">👉 Right Team</span>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block font-medium">Team Count</label>
+                                    <input type="number" min="0" name="right_count" x-model="editNode.right_count" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-blue-700">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] text-slate-500 block font-medium">Vol ($)</label>
+                                    <input type="number" min="0" step="1" name="right_bv" x-model="editNode.right_bv" class="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-lg font-bold text-blue-700">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

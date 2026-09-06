@@ -124,4 +124,3 @@ class ContentCalendarController extends Controller
         return back()->with('success', 'Content item removed successfully.');
     }
 }
-

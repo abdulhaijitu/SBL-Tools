@@ -342,5 +342,3 @@ class SblGrowthManagerTest extends TestCase
         $response->assertSee('Live ROI & Commission Calculator', false);
     }
 }
-
-
