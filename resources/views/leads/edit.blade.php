@@ -102,10 +102,11 @@
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Interests</label>
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $availableInterests = ['Product', 'E-commerce', 'Dropshipping', 'Affiliate', 'Network', 'Investment', 'Partnership'];
+                        $availableInterests = ['Invest', 'Affiliate and Networking'];
                         $currentInterests = $lead->interest_types ?? [];
+                        $allInterests = array_unique(array_merge($availableInterests, $currentInterests));
                     @endphp
-                    @foreach ($availableInterests as $interest)
+                    @foreach ($allInterests as $interest)
                         <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium cursor-pointer hover:bg-orange-50/50 transition-colors has-checked:bg-orange-600 has-checked:text-white has-checked:border-orange-600">
                             <input type="checkbox" name="interest_types[]" value="{{ $interest }}" {{ in_array($interest, $currentInterests) ? 'checked' : '' }} class="hidden">
                             <span>{{ $interest }}</span>

@@ -17,7 +17,7 @@
             </a>
         </div>
 
-        <form action="{{ route('leads.store') }}" method="POST" class="space-y-5" x-data="{ quickTag: '' }">
+        <form action="{{ route('leads.store') }}" method="POST" class="space-y-5">
             @csrf
 
             <!-- Primary Contact Info -->
@@ -115,7 +115,7 @@
                 </label>
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $availableInterests = ['Product', 'E-commerce', 'Dropshipping', 'Affiliate', 'Network', 'Investment', 'Partnership'];
+                        $availableInterests = ['Invest', 'Affiliate and Networking'];
                     @endphp
                     @foreach ($availableInterests as $interest)
                         <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium cursor-pointer hover:bg-orange-50/50 transition-colors has-checked:bg-orange-600 has-checked:text-white has-checked:border-orange-600 active:scale-95">
@@ -123,41 +123,6 @@
                             <span>{{ $interest }}</span>
                         </label>
                     @endforeach
-                </div>
-            </div>
-
-            <!-- Quick Tag Selector (P1, E1, A1, I1, B1) -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1.5">
-                    Quick Tag (Section 5)
-                </label>
-                <div class="flex flex-wrap items-center gap-2">
-                    <input type="hidden" name="lead_tag" :value="quickTag">
-                    <button type="button" @click="quickTag = quickTag === 'P1' ? '' : 'P1'" 
-                            :class="quickTag === 'P1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
-                        P1: Product
-                    </button>
-                    <button type="button" @click="quickTag = quickTag === 'E1' ? '' : 'E1'" 
-                            :class="quickTag === 'E1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
-                        E1: E-commerce
-                    </button>
-                    <button type="button" @click="quickTag = quickTag === 'A1' ? '' : 'A1'" 
-                            :class="quickTag === 'A1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
-                        A1: Affiliate/Network
-                    </button>
-                    <button type="button" @click="quickTag = quickTag === 'I1' ? '' : 'I1'" 
-                            :class="quickTag === 'I1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
-                        I1: Investment
-                    </button>
-                    <button type="button" @click="quickTag = quickTag === 'B1' ? '' : 'B1'" 
-                            :class="quickTag === 'B1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
-                        B1: Partnership
-                    </button>
                 </div>
             </div>
 

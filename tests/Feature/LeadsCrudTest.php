@@ -63,6 +63,10 @@ class LeadsCrudTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('leads.create'));
         $response->assertStatus(200);
         $response->assertSee('Add New Lead');
+        $response->assertSee('Invest');
+        $response->assertSee('Affiliate and Networking');
+        $response->assertDontSee('Quick Tag (Section 5)');
+        $response->assertDontSee('P1: Product');
     }
 
     public function test_user_can_store_new_lead(): void
