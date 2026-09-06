@@ -56,10 +56,19 @@
                 ⬇️
             </a>
             @if(! $node['has_children'])
-            <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $node['member_name'] }}) রিমুভ করতে চান?');" class="inline">
+            <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $node['member_name'] }}) রিমুভ করতে চান?');" class="inline" @click.stop>
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="p-1 rounded-md bg-rose-600/80 hover:bg-rose-700 text-white text-xs backdrop-blur-xs transition-colors shadow-xs" title="মেম্বার মুছুন">
+                    🗑️
+                </button>
+            </form>
+            @else
+            <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('এই মেম্বারের ({{ $node['member_name'] }}) ডাউনলাইনে টিম মেম্বার রয়েছে। আপনি কি এই মেম্বারসহ তার পুরো ডাউনলাইন মুছে ফেলতে চান?');" class="inline" @click.stop>
+                @csrf
+                @method('DELETE')
+                <input type="hidden" name="cascade" value="1">
+                <button type="submit" class="p-1 rounded-md bg-rose-600/80 hover:bg-rose-700 text-white text-xs backdrop-blur-xs transition-colors shadow-xs" title="মেম্বার ও ডাউনলাইন মুছুন">
                     🗑️
                 </button>
             </form>

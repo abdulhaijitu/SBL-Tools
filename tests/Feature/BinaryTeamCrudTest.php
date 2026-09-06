@@ -171,12 +171,48 @@ class BinaryTeamCrudTest extends TestCase
             'point_value' => 100.00,
         ]);
 
-        // Try deleting parent child
+        // Try deleting parent child without cascade
         $response = $this->actingAs($this->admin)->delete(route('binary.destroy', $child->id));
 
         $response->assertSessionHas('error');
         $this->assertDatabaseHas('binary_nodes', [
             'id' => $child->id,
+        ]);
+    }
+
+    public function test_admin_can_cascade_delete_member_with_active_downlines(): void
+    {
+        // Create child
+        $child = BinaryNode::create([
+            'member_name' => 'Parent Child',
+            'member_code' => 'SBL-3001',
+            'parent_id' => $this->root->id,
+            'position' => 'left',
+            'package_name' => 'National 120k',
+            'point_value' => 100.00,
+        ]);
+
+        // Create grandchild
+        $grandchild = BinaryNode::create([
+            'member_name' => 'Grand Child',
+            'member_code' => 'SBL-3002',
+            'parent_id' => $child->id,
+            'position' => 'left',
+            'package_name' => 'National 120k',
+            'point_value' => 100.00,
+        ]);
+
+        // Delete with cascade
+        $response = $this->actingAs($this->admin)->delete(route('binary.destroy', $child->id), [
+            'cascade' => '1',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseMissing('binary_nodes', [
+            'id' => $child->id,
+        ]);
+        $this->assertDatabaseMissing('binary_nodes', [
+            'id' => $grandchild->id,
         ]);
     }
 }

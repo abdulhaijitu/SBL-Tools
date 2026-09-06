@@ -502,13 +502,40 @@ export default {
                 if (effectiveMethod === "DELETE" && nodeId) {
                     if (db) {
                         try {
+                            const isCascade = formData ? (formData.get("cascade") === "1" || formData.get("force") === "1") : true;
+
+                            async function getDescendantIds(parentId) {
+                                const direct = await db.prepare("SELECT id FROM binary_nodes WHERE parent_id = ?").bind(parentId).all();
+                                let ids = [];
+                                if (direct && direct.results) {
+                                    for (const row of direct.results) {
+                                        ids.push(row.id);
+                                        const subIds = await getDescendantIds(row.id);
+                                        ids = ids.concat(subIds);
+                                    }
+                                }
+                                return ids;
+                            }
+
                             const check = await db
                                 .prepare(
                                     "SELECT count(*) as count FROM binary_nodes WHERE parent_id = ?",
                                 )
                                 .bind(nodeId)
                                 .first();
-                            if (!check || check.count === 0) {
+                            const hasChildren = check && check.count > 0;
+
+                            if (!hasChildren || isCascade) {
+                                if (hasChildren) {
+                                    const descIds = await getDescendantIds(nodeId);
+                                    for (const did of descIds) {
+                                        try {
+                                            await db.prepare("DELETE FROM investments WHERE binary_node_id = ?").bind(did).run();
+                                        } catch (_) {}
+                                        await db.prepare("DELETE FROM binary_nodes WHERE id = ?").bind(did).run();
+                                    }
+                                }
+
                                 const node = await db
                                     .prepare(
                                         "SELECT * FROM binary_nodes WHERE id = ?",
@@ -533,6 +560,9 @@ export default {
                                             .run();
                                     }
                                 }
+                                try {
+                                    await db.prepare("DELETE FROM investments WHERE binary_node_id = ?").bind(nodeId).run();
+                                } catch (_) {}
                                 await db
                                     .prepare(
                                         "DELETE FROM binary_nodes WHERE id = ?",

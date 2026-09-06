@@ -525,16 +525,29 @@ class BinaryTreeService
     }
 
     /**
-     * Delete a leaf node from the binary tree.
+     * Delete a leaf node or cascade delete a subtree from the binary tree.
      */
-    public function deleteNode(BinaryNode $node): void
+    public function deleteNode(BinaryNode $node, bool $cascade = false): void
     {
-        DB::transaction(function () use ($node) {
-            if ($node->children()->exists()) {
-                throw new InvalidArgumentException("এই মেম্বারের ডাউনলাইনে সক্রিয় টিম মেম্বার রয়েছে। ট্রি স্ট্রাকচার অক্ষুণ্ণ রাখতে ডাউনলাইন মেম্বারসহ নোড সরাসরি মুছে ফেলা যাবে না।");
+        DB::transaction(function () use ($node, $cascade) {
+            $hasChildren = $node->children()->exists();
+            if ($hasChildren && !$cascade) {
+                throw new InvalidArgumentException("এই মেম্বারের ডাউনলাইনে সক্রিয় টিম মেম্বার রয়েছে। ট্রি স্ট্রাকচার অক্ষুণ্ণ রাখতে ডাউনলাইন মেম্বারসহ নোড সরাসরি মুছে ফেলা যাবে না। সম্পূর্ণ ব্রাঞ্চ মুছে ফেলতে Cascade ডিলিট অপশন ব্যবহার করুন।");
             }
 
             $parent = $node->parent_id ? BinaryNode::find($node->parent_id) : null;
+
+            if ($hasChildren && $cascade) {
+                // Collect all descendants recursively
+                $descendants = [];
+                $this->collectAllSubtreeDescendants($node, $descendants);
+
+                // Delete in reverse order (bottom-up)
+                foreach (array_reverse($descendants) as $descendant) {
+                    $descendant->investments()->delete();
+                    $descendant->delete();
+                }
+            }
 
             $node->investments()->delete();
             $node->delete();

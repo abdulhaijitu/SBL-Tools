@@ -115,8 +115,9 @@ class BinaryTeamController extends Controller
             $name = $node->member_name;
             $code = $node->member_code;
             $parentId = $node->parent_id;
+            $cascade = $request->boolean('cascade', false) || $request->has('force');
 
-            $this->treeService->deleteNode($node);
+            $this->treeService->deleteNode($node, $cascade);
 
             $targetUrl = $parentId ? route('binary.index', ['node_id' => $parentId]) : route('binary.index');
 

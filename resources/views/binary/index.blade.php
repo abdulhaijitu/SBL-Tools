@@ -414,12 +414,14 @@
                                     </button>
                                 </form>
                                 @else
-                                <button type="button" 
-                                        onclick="alert('এই মেম্বারের ডাউনলাইনে সক্রিয় মেম্বার রয়েছে। ট্রি অখণ্ড রাখতে ডাউনলাইন থাকা অবস্থায় ডিলিট করা সম্ভব নয়।')"
-                                        class="p-1.5 rounded-lg bg-slate-100 text-slate-400 cursor-not-allowed" 
-                                        title="ডাউনলাইন থাকায় ডিলিট সম্ভব নয়">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
+                                <form action="{{ route('binary.destroy', $member->id) }}" method="POST" onsubmit="return confirm('এই মেম্বারের ({{ $member->member_name }}) ডাউনলাইনে টিম মেম্বার রয়েছে। আপনি কি এই মেম্বারসহ তার পুরো ডাউনলাইন মুছে ফেলতে চান?');" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="cascade" value="1">
+                                    <button type="submit" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors" title="মেম্বার ও ডাউনলাইন রিমুভ করুন">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </form>
                                 @endif
                             </div>
                         </td>
@@ -988,13 +990,31 @@
                 </div>
 
                 <!-- Buttons -->
-                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
-                    <button type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
-                        <span>Save Changes</span>
+                <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" 
+                            @click="if(confirm('⚠️ আপনি কি নিশ্চিত যে এই মেম্বার কার্ডটি ডিলিট করতে চান? মেম্বারের নিচের সাব-টিম থাকলে তাও মুছে যাবে।')) { document.getElementById('delete-modal-node-form').submit(); }"
+                            class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 transition-colors flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>মেম্বার ডিলিট করুন</span>
                     </button>
+                    
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
+                        <button type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
                 </div>
 
+            </form>
+
+            <!-- Delete Form for Modal -->
+            <form id="delete-modal-node-form" :action="'/binary/' + editNode.id" method="POST" class="hidden">
+                @csrf
+                @method('DELETE')
+                <input type="hidden" name="cascade" value="1">
             </form>
 
         </div>
