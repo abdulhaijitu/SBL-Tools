@@ -484,22 +484,45 @@ export default {
                     if (db) {
                         try {
                             const memberName = formData.get("member_name");
-                            const memberCode = formData.get("member_code") || null;
+                            const memberCode =
+                                formData.get("member_code") || null;
                             const phone = formData.get("phone") || null;
                             const email = formData.get("email") || null;
                             const packageName = formData.get("package_name");
                             const rankName = formData.get("rank_name") || "NA";
-                            const sponsorId = formData.get("sponsor_id") ? Number(formData.get("sponsor_id")) : null;
-                            const pointValue = formData.get("point_value") ? Number(formData.get("point_value")) : null;
-                            const leftCount = formData.get("left_count") ? Number(formData.get("left_count")) : null;
-                            const rightCount = formData.get("right_count") ? Number(formData.get("right_count")) : null;
-                            const leftBv = formData.get("left_bv") ? Number(formData.get("left_bv")) : null;
-                            const rightBv = formData.get("right_bv") ? Number(formData.get("right_bv")) : null;
-                            const userId = formData.get("user_id") ? Number(formData.get("user_id")) : null;
+                            const sponsorId = formData.get("sponsor_id")
+                                ? Number(formData.get("sponsor_id"))
+                                : null;
+                            const pointValue = formData.get("point_value")
+                                ? Number(formData.get("point_value"))
+                                : null;
+                            const leftCount = formData.get("left_count")
+                                ? Number(formData.get("left_count"))
+                                : null;
+                            const rightCount = formData.get("right_count")
+                                ? Number(formData.get("right_count"))
+                                : null;
+                            const leftBv = formData.get("left_bv")
+                                ? Number(formData.get("left_bv"))
+                                : null;
+                            const rightBv = formData.get("right_bv")
+                                ? Number(formData.get("right_bv"))
+                                : null;
+                            const userId = formData.get("user_id")
+                                ? Number(formData.get("user_id"))
+                                : null;
                             const isActive = formData.has("is_active") ? 1 : 0;
 
-                            let query = "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP";
-                            const params = [memberName, phone, email, packageName, rankName, isActive];
+                            let query =
+                                "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP";
+                            const params = [
+                                memberName,
+                                phone,
+                                email,
+                                packageName,
+                                rankName,
+                                isActive,
+                            ];
 
                             if (memberCode) {
                                 query += ", member_code = ?";
@@ -537,7 +560,10 @@ export default {
                             query += " WHERE id = ?";
                             params.push(nodeId);
 
-                            await db.prepare(query).bind(...params).run();
+                            await db
+                                .prepare(query)
+                                .bind(...params)
+                                .run();
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
                         }
