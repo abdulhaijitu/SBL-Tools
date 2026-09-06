@@ -24,7 +24,7 @@ class BinaryTreeService
         $namedRoot = BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])
             ->where(function ($q) {
                 $q->where('member_name', 'like', '%Abdul Hai%')
-                  ->orWhere('member_code', 'like', '%abdulhai%');
+                    ->orWhere('member_code', 'like', '%abdulhai%');
             })
             ->whereNull('parent_id')
             ->first();
