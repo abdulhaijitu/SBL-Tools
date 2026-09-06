@@ -100,6 +100,16 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
+        // 5. Team Explorer Summary for current user
+        $currentUser = auth()->user();
+        $teamRoot = null;
+        if ($currentUser) {
+            $teamRoot = \App\Models\BinaryNode::with('children')
+                ->where('tree_owner_id', $currentUser->id)
+                ->whereNull('parent_id')
+                ->first();
+        }
+
         return view('dashboard', compact(
             'todayTasks',
             'followupsDueToday',
@@ -111,7 +121,8 @@ class DashboardController extends Controller
             'hotLeads',
             'warmLeads',
             'staleLeads',
-            'recentActivities'
+            'recentActivities',
+            'teamRoot'
         ));
     }
 }

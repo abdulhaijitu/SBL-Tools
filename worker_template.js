@@ -502,15 +502,25 @@ export default {
                 if (effectiveMethod === "DELETE" && nodeId) {
                     if (db) {
                         try {
-                            const isCascade = formData ? (formData.get("cascade") === "1" || formData.get("force") === "1") : true;
+                            const isCascade = formData
+                                ? formData.get("cascade") === "1" ||
+                                  formData.get("force") === "1"
+                                : true;
 
                             async function getDescendantIds(parentId) {
-                                const direct = await db.prepare("SELECT id FROM binary_nodes WHERE parent_id = ?").bind(parentId).all();
+                                const direct = await db
+                                    .prepare(
+                                        "SELECT id FROM binary_nodes WHERE parent_id = ?",
+                                    )
+                                    .bind(parentId)
+                                    .all();
                                 let ids = [];
                                 if (direct && direct.results) {
                                     for (const row of direct.results) {
                                         ids.push(row.id);
-                                        const subIds = await getDescendantIds(row.id);
+                                        const subIds = await getDescendantIds(
+                                            row.id,
+                                        );
                                         ids = ids.concat(subIds);
                                     }
                                 }
@@ -527,12 +537,23 @@ export default {
 
                             if (!hasChildren || isCascade) {
                                 if (hasChildren) {
-                                    const descIds = await getDescendantIds(nodeId);
+                                    const descIds =
+                                        await getDescendantIds(nodeId);
                                     for (const did of descIds) {
                                         try {
-                                            await db.prepare("DELETE FROM investments WHERE binary_node_id = ?").bind(did).run();
+                                            await db
+                                                .prepare(
+                                                    "DELETE FROM investments WHERE binary_node_id = ?",
+                                                )
+                                                .bind(did)
+                                                .run();
                                         } catch (_) {}
-                                        await db.prepare("DELETE FROM binary_nodes WHERE id = ?").bind(did).run();
+                                        await db
+                                            .prepare(
+                                                "DELETE FROM binary_nodes WHERE id = ?",
+                                            )
+                                            .bind(did)
+                                            .run();
                                     }
                                 }
 
@@ -561,7 +582,12 @@ export default {
                                     }
                                 }
                                 try {
-                                    await db.prepare("DELETE FROM investments WHERE binary_node_id = ?").bind(nodeId).run();
+                                    await db
+                                        .prepare(
+                                            "DELETE FROM investments WHERE binary_node_id = ?",
+                                        )
+                                        .bind(nodeId)
+                                        .run();
                                 } catch (_) {}
                                 await db
                                     .prepare(
@@ -2094,7 +2120,12 @@ export default {
             html = PAGES.ecosystem;
         } else if (path === "/contacts") {
             html = PAGES.contacts;
-        } else if (path === "/binary" || path.startsWith("/binary") || path === "/team" || path.startsWith("/team")) {
+        } else if (
+            path === "/binary" ||
+            path.startsWith("/binary") ||
+            path === "/team" ||
+            path.startsWith("/team")
+        ) {
             const viewMode = url.searchParams.get("view");
             html =
                 viewMode === "table"
