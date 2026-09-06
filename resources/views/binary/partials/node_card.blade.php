@@ -94,7 +94,7 @@
 
             <!-- 4. Rank -->
             <div class="text-xs {{ $subTextColor }} font-normal">
-                Rank: {{ $node['rank_name'] ?: 'Member' }}
+                Rank: <span class="font-bold {{ !empty($node['is_fme']) ? 'text-amber-200' : '' }}">{{ $node['rank_name'] ?: 'Member' }}</span>
             </div>
 
             <!-- 5. Email with Copy Icon -->
@@ -154,8 +154,8 @@
                         <svg class="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     </button>
                 </div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['left_count'] }}/{{ $leftTarget }}</div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)$node['left_bv'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['left_bv']) }}'">{{ \App\Services\CurrencyService::format((float)$node['left_bv']) }}</span></div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['left_display'] ?? ($node['left_count'] < 5 ? $node['left_count'].'/5' : $node['left_count']) }}</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)($node['left_investment_volume'] ?? $node['left_bv']) }}) : '{{ \App\Services\CurrencyService::format((float)($node['left_investment_volume'] ?? $node['left_bv'])) }}'">{{ \App\Services\CurrencyService::format((float)($node['left_investment_volume'] ?? $node['left_bv'])) }}</span></div>
             </div>
 
             <!-- Right Leg -->
@@ -169,16 +169,16 @@
                         <svg class="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     </button>
                 </div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['right_count'] }}/{{ $rightTarget }}</div>
-                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)$node['right_bv'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['right_bv']) }}'">{{ \App\Services\CurrencyService::format((float)$node['right_bv']) }}</span></div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Team- {{ $node['right_display'] ?? ($node['right_count'] < 5 ? $node['right_count'].'/5' : $node['right_count']) }}</div>
+                <div class="text-[11px] text-white/95 font-semibold leading-tight">Vol- <span x-text="$store.currency ? $store.currency.format({{ (float)($node['right_investment_volume'] ?? $node['right_bv']) }}) : '{{ \App\Services\CurrencyService::format((float)($node['right_investment_volume'] ?? $node['right_bv'])) }}'">{{ \App\Services\CurrencyService::format((float)($node['right_investment_volume'] ?? $node['right_bv'])) }}</span></div>
             </div>
         </div>
 
-        <!-- 9. Bottom Total Contribution Row -->
+        <!-- 9. Bottom Total Investment Row -->
         <div class="mt-2 pt-1.5 border-t border-white/20 text-xs font-semibold text-white/95 flex items-center justify-between px-1">
-            <span>Total Contribution: <span x-text="$store.currency ? $store.currency.format({{ (float)$node['point_value'] }}) : '{{ \App\Services\CurrencyService::format((float)$node['point_value']) }}'">{{ \App\Services\CurrencyService::format((float)$node['point_value']) }}</span></span>
+            <span>Total Investment: <span x-text="$store.currency ? $store.currency.format({{ (float)($node['total_investment'] ?? $node['point_value']) }}) : '{{ \App\Services\CurrencyService::format((float)($node['total_investment'] ?? $node['point_value'])) }}'">{{ \App\Services\CurrencyService::format((float)($node['total_investment'] ?? $node['point_value'])) }}</span></span>
             @if(!empty($node['contributions']) && count($node['contributions']) > 1)
-            <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-bold" title="Multiple contributions added">
+            <span class="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-full font-bold" title="Multiple investments added">
                 {{ count($node['contributions']) }} records
             </span>
             @endif

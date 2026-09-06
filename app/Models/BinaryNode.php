@@ -93,6 +93,27 @@ class BinaryNode extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function investments(): HasMany
+    {
+        return $this->hasMany(Investment::class, 'binary_node_id');
+    }
+
+    public function getTotalInvestmentAmountAttribute(): float
+    {
+        if ($this->relationLoaded('investments')) {
+            return (float)$this->investments->where('status', 'active')->sum('amount');
+        }
+        return (float)$this->investments()->where('status', 'active')->sum('amount');
+    }
+
+    public function getTotalInvestmentPvAttribute(): float
+    {
+        if ($this->relationLoaded('investments')) {
+            return (float)$this->investments->where('status', 'active')->sum('point_value');
+        }
+        return (float)$this->investments()->where('status', 'active')->sum('point_value');
+    }
+
     public function getWeakerLegAttribute(): string
     {
         return $this->carry_left <= $this->carry_right ? 'left' : 'right';
