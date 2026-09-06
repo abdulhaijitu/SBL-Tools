@@ -217,4 +217,3 @@ class Lead extends Model
             ->whereNull('next_action_at');
     }
 }
-
