@@ -210,6 +210,137 @@ class BinaryTreeService
     }
 
     /**
+     * Update an existing member in the binary tree.
+     */
+    public function updateMember(BinaryNode $node, array $data): BinaryNode
+    {
+        return DB::transaction(function () use ($node, $data) {
+            $oldPv = (float)$node->point_value;
+            $newPv = $oldPv;
+
+            if (isset($data['package_name']) && $data['package_name'] !== $node->package_name) {
+                if (str_contains(strtolower($data['package_name']), '550')) {
+                    $newPv = 500.00;
+                } elseif (str_contains(strtolower($data['package_name']), '120')) {
+                    $newPv = 100.00;
+                } elseif (str_contains(strtolower($data['package_name']), '25')) {
+                    $newPv = 25.00;
+                }
+            }
+            if (isset($data['point_value'])) {
+                $newPv = (float)$data['point_value'];
+            }
+
+            $node->update([
+                'member_name' => $data['member_name'] ?? $node->member_name,
+                'phone' => $data['phone'] ?? $node->phone,
+                'email' => $data['email'] ?? $node->email,
+                'package_name' => $data['package_name'] ?? $node->package_name,
+                'point_value' => $newPv,
+                'rank_name' => $data['rank_name'] ?? $node->rank_name,
+                'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : $node->is_active,
+                'user_id' => array_key_exists('user_id', $data) ? $data['user_id'] : $node->user_id,
+            ]);
+
+            // If PV changed, propagate difference upline
+            $pvDiff = $newPv - $oldPv;
+            if (abs($pvDiff) > 0.001) {
+                $this->propagatePvDifference($node, $pvDiff);
+            }
+
+            return $node;
+        });
+    }
+
+    /**
+     * Delete a node from the binary tree.
+     * Only leaf nodes (nodes without children) can be removed to preserve tree integrity.
+     */
+    public function deleteNode(BinaryNode $node): void
+    {
+        DB::transaction(function () use ($node) {
+            if ($node->children()->exists()) {
+                throw new InvalidArgumentException("এই মেম্বারের ডাউনলাইনে সক্রিয় টিম মেম্বার রয়েছে। ট্রি স্ট্রাকচার অক্ষুণ্ণ রাখতে ডাউনলাইন মেম্বারসহ নোড সরাসরি মুছে ফেলা যাবে না।");
+            }
+
+            // Rollback upline counts and volume
+            $this->rollbackUpline($node);
+
+            $node->delete();
+        });
+    }
+
+    /**
+     * Subtract counts and point volume from ancestors when a leaf node is removed.
+     */
+    protected function rollbackUpline(BinaryNode $node): void
+    {
+        $current = $node;
+        $pv = (float)$node->point_value;
+
+        while ($current->parent_id) {
+            $parent = BinaryNode::find($current->parent_id);
+            if (! $parent) {
+                break;
+            }
+
+            $pos = $current->position;
+
+            if ($pos === 'left') {
+                $parent->left_count = max(0, $parent->left_count - 1);
+                $parent->left_bv = max(0, $parent->left_bv - $pv);
+                $parent->carry_left = max(0, $parent->carry_left - $pv);
+            } elseif ($pos === 'right') {
+                $parent->right_count = max(0, $parent->right_count - 1);
+                $parent->right_bv = max(0, $parent->right_bv - $pv);
+                $parent->carry_right = max(0, $parent->carry_right - $pv);
+            }
+
+            $parent->save();
+            $current = $parent;
+        }
+    }
+
+    /**
+     * Adjust upline BV when member package/PV is modified.
+     */
+    protected function propagatePvDifference(BinaryNode $node, float $pvDiff): void
+    {
+        $current = $node;
+
+        while ($current->parent_id) {
+            $parent = BinaryNode::find($current->parent_id);
+            if (! $parent) {
+                break;
+            }
+
+            $pos = $current->position;
+
+            if ($pos === 'left') {
+                $parent->left_bv = max(0, $parent->left_bv + $pvDiff);
+                $parent->carry_left = max(0, $parent->carry_left + $pvDiff);
+            } elseif ($pos === 'right') {
+                $parent->right_bv = max(0, $parent->right_bv + $pvDiff);
+                $parent->carry_right = max(0, $parent->carry_right + $pvDiff);
+            }
+
+            if ($pvDiff > 0) {
+                $pairUnit = 100.00;
+                $possiblePairs = (int)floor(min($parent->carry_left, $parent->carry_right) / $pairUnit);
+                if ($possiblePairs > 0) {
+                    $parent->matched_pairs += $possiblePairs;
+                    $deduction = $possiblePairs * $pairUnit;
+                    $parent->carry_left = max(0, $parent->carry_left - $deduction);
+                    $parent->carry_right = max(0, $parent->carry_right - $deduction);
+                }
+            }
+
+            $parent->save();
+            $current = $parent;
+        }
+    }
+
+    /**
      * Find extreme left descendant of a node.
      */
     public function getExtremeLeft(BinaryNode $node): BinaryNode
@@ -241,6 +372,9 @@ class BinaryTreeService
             'member_name' => $node->member_name,
             'member_code' => $node->member_code,
             'phone' => $node->phone,
+            'email' => $node->email,
+            'user_id' => $node->user_id,
+            'is_active' => (bool)$node->is_active,
             'package_name' => $node->package_name,
             'point_value' => (float)$node->point_value,
             'rank_name' => $node->rank_name,
@@ -254,6 +388,7 @@ class BinaryTreeService
             'matched_pairs' => $node->matched_pairs,
             'weaker_leg' => $node->weaker_leg,
             'parent_id' => $node->parent_id,
+            'has_children' => $node->children()->exists(),
         ];
     }
 

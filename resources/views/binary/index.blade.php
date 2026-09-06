@@ -1,11 +1,24 @@
 @extends('layouts.app')
 
 @section('page-title', 'Binary Team Engine')
-@section('page-subtitle', 'Visual Dual-Team Genealogy Tree, Placement & Matching Volume')
+@section('page-subtitle', 'Visual Dual-Team Genealogy Tree, Member Directory & Placement Volume')
 
 @section('content')
 <div class="space-y-6" x-data="{
+    viewMode: '{{ $viewMode }}',
     placementModalOpen: false,
+    editModalOpen: false,
+    editNode: {
+        id: null,
+        member_name: '',
+        member_code: '',
+        phone: '',
+        email: '',
+        package_name: '',
+        rank_name: '',
+        is_active: true,
+        user_id: ''
+    },
     selectedParentId: null,
     selectedParentName: '',
     selectedParentCode: '',
@@ -18,6 +31,20 @@
         this.selectedParentCode = parentCode;
         this.selectedPosition = position;
         this.placementModalOpen = true;
+    },
+    openEditModal(node) {
+        this.editNode = {
+            id: node.id,
+            member_name: node.member_name || '',
+            member_code: node.member_code || '',
+            phone: node.phone || '',
+            email: node.email || '',
+            package_name: node.package_name || 'National 120k',
+            rank_name: node.rank_name || 'Member',
+            is_active: node.is_active !== undefined ? Boolean(node.is_active) : true,
+            user_id: node.user_id || ''
+        };
+        this.editModalOpen = true;
     }
 }">
 
@@ -53,33 +80,223 @@
             </p>
         </div>
 
-        <!-- Tree Fast Navigation Actions -->
-        <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
-            <a href="{{ route('binary.index') }}" 
-               class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5" title="টপ রুট মেম্বারে ফিরুন">
-                <span>🏠</span> Top Root
-            </a>
+        <!-- View Switcher & Fast Navigation Actions -->
+        <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3 flex-shrink-0">
+            <!-- View Mode Switcher -->
+            <div class="inline-flex rounded-xl bg-slate-800/90 p-1 border border-slate-700 shadow-xs">
+                <a href="{{ route('binary.index', ['view' => 'tree', 'node_id' => request('node_id')]) }}" 
+                   class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                    🌲 Tree View
+                </a>
+                <a href="{{ route('binary.index', ['view' => 'table']) }}" 
+                   class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
+                    📋 Member Directory
+                </a>
+            </div>
 
-            @if($treeData['root'] && $treeData['root']->parent_id)
-            <a href="{{ route('binary.index', ['node_id' => $treeData['root']->parent_id]) }}" 
-               class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5" title="এক ধাপ আপলাইনে যান">
-                <span>⬆️</span> Up 1 Level
-            </a>
-            @endif
+            @if($viewMode !== 'table')
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('binary.index') }}" 
+                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1" title="টপ রুট মেম্বারে ফিরুন">
+                    <span>🏠</span> Top
+                </a>
 
-            @if($treeData['root'])
-            <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'left']) }}" 
-               class="px-3 py-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="বাম পাশের শেষ প্রান্তে যান">
-                <span>◀️</span> Extreme Left
-            </a>
-            <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'right']) }}" 
-               class="px-3 py-2 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="ডান পাশের শেষ প্রান্তে যান">
-                <span>Extreme Right</span> <span>▶️</span>
-            </a>
+                @if($treeData['root'] && $treeData['root']->parent_id)
+                <a href="{{ route('binary.index', ['node_id' => $treeData['root']->parent_id]) }}" 
+                   class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1" title="এক ধাপ আপলাইনে যান">
+                    <span>⬆️</span> Up
+                </a>
+                @endif
+
+                @if($treeData['root'])
+                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'left']) }}" 
+                   class="px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="বাম পাশের শেষ প্রান্তে যান">
+                    <span>◀️</span> Left
+                </a>
+                <a href="{{ route('binary.extreme', ['node' => $treeData['root']->id, 'direction' => 'right']) }}" 
+                   class="px-2.5 py-1.5 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-800/80 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1" title="ডান পাশের শেষ প্রান্তে যান">
+                    <span>Right</span> <span>▶️</span>
+                </a>
+                @endif
+            </div>
             @endif
         </div>
     </div>
 
+    @if($viewMode === 'table')
+    <!-- ==================== MEMBER DIRECTORY TABLE VIEW ==================== -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden space-y-4 p-5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">টিম মেম্বার তালিকা (Member Directory)</h3>
+                <p class="text-xs text-slate-500">বাইনারি নেটওয়ার্কের সকল সক্রিয় মেম্বারের বিবরণ, পজিশন ও ডাউনলাইন ভলিউম।</p>
+            </div>
+
+            <!-- Search Form -->
+            <form action="{{ route('binary.index') }}" method="GET" class="w-full sm:w-80 flex items-center gap-2">
+                <input type="hidden" name="view" value="table">
+                <div class="relative flex-1">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ request('search') }}"
+                           placeholder="নাম, কোড বা মোবাইল নম্বর..." 
+                           class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <button type="submit" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors">
+                    Search
+                </button>
+                @if(request('search'))
+                <a href="{{ route('binary.index', ['view' => 'table']) }}" class="text-xs text-slate-400 hover:text-slate-600">Clear</a>
+                @endif
+            </form>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/80 border-y border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="py-3 px-4">মেম্বার</th>
+                        <th class="py-3 px-4">প্লেসমেন্ট (Upline)</th>
+                        <th class="py-3 px-4">প্যাকেজ ও পদবী</th>
+                        <th class="py-3 px-4 text-center">বাম টিম (Left)</th>
+                        <th class="py-3 px-4 text-center">ডান টিম (Right)</th>
+                        <th class="py-3 px-4 text-center">ম্যাচিং পেয়ার</th>
+                        <th class="py-3 px-4 text-center">স্ট্যাটাস</th>
+                        <th class="py-3 px-4 text-right">অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                    @forelse($members as $member)
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <!-- Member Profile -->
+                        <td class="py-3.5 px-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-900 to-slate-800 text-orange-400 font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-xs">
+                                    {{ substr($member->member_name, 0, 1) }}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-900 hover:text-orange-600 transition-colors">{{ $member->member_name }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">{{ $member->member_code }} @if($member->phone) • {{ $member->phone }} @endif</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Placement Upline -->
+                        <td class="py-3.5 px-4">
+                            @if($member->parent)
+                                <div class="font-semibold text-slate-800">{{ $member->parent->member_name }}</div>
+                                <div class="text-[11px]">
+                                    <span class="px-1.5 py-0.5 rounded font-bold {{ $member->position === 'left' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700' }}">
+                                        {{ $member->position === 'left' ? '👈 Left Team' : '👉 Right Team' }}
+                                    </span>
+                                </div>
+                            @else
+                                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[11px]">Top Root</span>
+                            @endif
+                        </td>
+
+                        <!-- Package & Rank -->
+                        <td class="py-3.5 px-4">
+                            <div class="font-semibold text-slate-900">{{ $member->package_name }}</div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                                {{ $member->rank_name }}
+                            </span>
+                        </td>
+
+                        <!-- Left Team Count & BV -->
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="font-bold text-emerald-700">{{ $member->left_count }} জন</span>
+                            <div class="text-[11px] text-slate-500">{{ (int)$member->left_bv }} BV</div>
+                        </td>
+
+                        <!-- Right Team Count & BV -->
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="font-bold text-blue-700">{{ $member->right_count }} জন</span>
+                            <div class="text-[11px] text-slate-500">{{ (int)$member->right_bv }} BV</div>
+                        </td>
+
+                        <!-- Matched Pairs -->
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="font-extrabold text-purple-700">{{ $member->matched_pairs }}</span>
+                            <div class="text-[10px] text-slate-400">Pairs</div>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="py-3.5 px-4 text-center">
+                            @if($member->is_active)
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">Active</span>
+                            @else
+                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold text-[10px]">Inactive</span>
+                            @endif
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="py-3.5 px-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{{ route('binary.index', ['node_id' => $member->id]) }}" 
+                                   class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
+                                   title="ট্রি ভিউতে দেখুন">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </a>
+
+                                <button type="button" 
+                                        @click="openEditModal({
+                                            id: {{ $member->id }},
+                                            member_name: '{{ addslashes($member->member_name) }}',
+                                            member_code: '{{ $member->member_code }}',
+                                            phone: '{{ $member->phone }}',
+                                            email: '{{ $member->email }}',
+                                            package_name: '{{ $member->package_name }}',
+                                            rank_name: '{{ $member->rank_name }}',
+                                            is_active: {{ $member->is_active ? 'true' : 'false' }},
+                                            user_id: '{{ $member->user_id }}'
+                                        })"
+                                        class="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 transition-colors" 
+                                        title="মেম্বার এডিট করুন">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+
+                                @if($member->children->isEmpty())
+                                <form action="{{ route('binary.destroy', $member->id) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $member->member_name }}) রিমুভ করতে চান?');" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors" title="মেম্বার রিমুভ করুন">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </form>
+                                @else
+                                <button type="button" 
+                                        onclick="alert('এই মেম্বারের ডাউনলাইনে সক্রিয় মেম্বার রয়েছে। ট্রি অখণ্ড রাখতে ডাউনলাইন থাকা অবস্থায় ডিলিট করা সম্ভব নয়।')"
+                                        class="p-1.5 rounded-lg bg-slate-100 text-slate-400 cursor-not-allowed" 
+                                        title="ডাউনলাইন থাকায় ডিলিট সম্ভব নয়">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="text-center py-12 text-slate-400">
+                            কোনো টিম মেম্বার পাওয়া যায়নি।
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($members->hasPages())
+        <div class="pt-4 border-t border-slate-100">
+            {{ $members->links() }}
+        </div>
+        @endif
+    </div>
+
+    @else
+    <!-- ==================== VISUAL GENEALOGY TREE VIEW ==================== -->
     <!-- Search & Live Metrics Summary Bar -->
     <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
         
@@ -98,15 +315,17 @@
                 </button>
             </form>
 
-            <!-- Current Root Tag -->
-            @if($treeData['root'])
-            <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
-                <span class="text-slate-400">বর্তমান ফোকাস:</span>
-                <span class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200">
-                    {{ $treeData['root']->member_name }} ({{ $treeData['root']->member_code }})
-                </span>
+            <!-- Current Root Tag & Quick Placement -->
+            <div class="flex items-center gap-2">
+                @if($treeData['root'])
+                <div class="text-xs font-medium text-slate-600 flex items-center gap-2">
+                    <span class="text-slate-400">বর্তমান ফোকাস:</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-bold border border-orange-200">
+                        {{ $treeData['root']->member_name }} ({{ $treeData['root']->member_code }})
+                    </span>
+                </div>
+                @endif
             </div>
-            @endif
         </div>
 
         <!-- 4-Col Performance Cards -->
@@ -253,13 +472,11 @@
                 </div>
 
                 <!-- LEVEL 3: 4 Nodes (LL, LR, RL, RR) -->
-                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-[960px]">
-                    @foreach($treeData['levels'][3] as $node)
+                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-[950px]">
+                    @foreach($treeData['levels'][3] as $index => $node)
                         <div class="flex justify-center">
                             @if($node)
                                 @include('binary.partials.node_card', ['node' => $node, 'level' => 3])
-                            @else
-                                <div class="w-48 h-32 opacity-0 pointer-events-none"></div>
                             @endif
                         </div>
                     @endforeach
@@ -269,21 +486,16 @@
 
         </div>
     </div>
+    @endif
 
-    <!-- Visual Member Placement Modal -->
+    <!-- ==================== 1. PLACEMENT MODAL (+ ADD MEMBER) ==================== -->
     <div x-show="placementModalOpen" 
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 scale-95"
-         x-transition:enter-end="opacity-100 scale-100"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 scale-100"
-         x-transition:leave-end="opacity-0 scale-95"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+         x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
          x-cloak>
         <div @click.outside="placementModalOpen = false" 
-             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             
-            <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>➕</span> নতুন মেম্বার প্লেসমেন্ট করুন
@@ -397,6 +609,102 @@
                     <button type="button" @click="placementModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
                     <button type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
                         <span>Save Placement</span>
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- ==================== 2. EDIT MEMBER MODAL ==================== -->
+    <div x-show="editModalOpen" 
+         x-transition.opacity
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+         x-cloak>
+        <div @click.outside="editModalOpen = false" 
+             class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+            
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>✏️</span> মেম্বার প্রোফাইল এডিট করুন
+                </h3>
+                <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            </div>
+
+            <form :action="'{{ url('/binary') }}/' + editNode.id" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+
+                <!-- Member Code (Readonly) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মেম্বার আইডি কোড</label>
+                    <input type="text" :value="editNode.member_code" readonly class="w-full px-3.5 py-2 text-sm bg-slate-100 border border-slate-200 rounded-xl font-mono text-slate-600 cursor-not-allowed">
+                </div>
+
+                <!-- Name -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মেম্বারের পূর্ণ নাম <span class="text-rose-500">*</span></label>
+                    <input type="text" name="member_name" x-model="editNode.member_name" required class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">মোবাইল নম্বর</label>
+                        <input type="text" name="phone" x-model="editNode.phone" placeholder="017xxxxxxxx" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইমেইল</label>
+                        <input type="email" name="email" x-model="editNode.email" placeholder="member@example.com" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Package & Rank -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">প্যাকেজ <span class="text-rose-500">*</span></label>
+                        <select name="package_name" x-model="editNode.package_name" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-semibold">
+                            @foreach($packages as $pkg)
+                            <option value="{{ $pkg['name'] }}">{{ $pkg['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Rank)</label>
+                        <select name="rank_name" x-model="editNode.rank_name" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
+                            <option value="Member">Member</option>
+                            <option value="Silver Member">Silver Member</option>
+                            <option value="Gold Member">Gold Member</option>
+                            <option value="Platinum Leader">Platinum Leader</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- User Link & Status -->
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">লিংকড ইউজার</label>
+                        <select name="user_id" x-model="editNode.user_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
+                            <option value="">-- কোনো ইউজার নয় --</option>
+                            @foreach($users as $user)
+                            <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="pt-4">
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                            <input type="checkbox" name="is_active" value="1" x-model="editNode.is_active" class="rounded border-slate-300 text-orange-600 focus:ring-orange-500 w-4 h-4">
+                            <span>অ্যাকাউন্ট সক্রিয় (Active)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white text-sm font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2">
+                        <span>Save Changes</span>
                     </button>
                 </div>
 

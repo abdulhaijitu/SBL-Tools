@@ -55,6 +55,11 @@ $pages = [
         return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
     },
     'binary' => function() {
+        request()->merge(['view' => 'tree']);
+        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+    },
+    'binary_table' => function() {
+        request()->merge(['view' => 'table']);
         return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
     },
     'leads_show' => function() {

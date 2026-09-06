@@ -66,6 +66,8 @@ Route::middleware(['auth'])->group(function () {
     // SBL Binary Team Tree & Placement Engine
     Route::get('/binary', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('binary.index');
     Route::post('/binary/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('binary.store');
+    Route::put('/binary/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'update'])->name('binary.update');
+    Route::delete('/binary/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'destroy'])->name('binary.destroy');
     Route::get('/binary/search', [\App\Http\Controllers\BinaryTeamController::class, 'search'])->name('binary.search');
     Route::get('/binary/{node}/extreme/{direction}', [\App\Http\Controllers\BinaryTeamController::class, 'extreme'])->name('binary.extreme');
 

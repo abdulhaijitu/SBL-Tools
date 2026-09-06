@@ -75,12 +75,40 @@
             </div>
         </div>
 
-        <!-- Drill-down View Link -->
-        <a href="{{ route('binary.index', ['node_id' => $node['id']]) }}" 
-           class="w-full text-center py-1 rounded-lg text-[11px] font-bold text-orange-600 hover:bg-orange-50 transition-colors flex items-center justify-center gap-1 border-t border-slate-100 pt-1.5">
-            <span>ডাউনলাইন দেখুন</span>
-            <span class="text-xs">⬇️</span>
-        </a>
+        <!-- Action Row: Downline Drill-down + Edit/Delete Actions -->
+        <div class="border-t border-slate-100 pt-1.5 flex items-center justify-between gap-1">
+            <a href="{{ route('binary.index', ['node_id' => $node['id']]) }}" 
+               class="text-[11px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2 py-0.5 rounded transition-colors flex items-center gap-1" title="এই মেম্বারকে কেন্দ্র করে ট্রি দেখুন">
+                <span>ডাউনলাইন</span>
+                <span class="text-xs">⬇️</span>
+            </a>
+
+            <div class="flex items-center gap-1">
+                <button type="button" 
+                        @click="openEditModal({{ json_encode($node) }})"
+                        class="text-slate-400 hover:text-orange-600 p-1 rounded hover:bg-orange-50 transition-colors" 
+                        title="মেম্বার এডিট করুন">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+
+                @if(! $node['has_children'])
+                <form action="{{ route('binary.destroy', $node['id']) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত যে এই মেম্বারকে ({{ $node['member_name'] }}) রিমুভ করতে চান? এর ফলে আপলাইন পয়েন্ট রোলব্যাক হবে।');" class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors" title="মেম্বার রিমুভ করুন">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </form>
+                @else
+                <button type="button" 
+                        onclick="alert('এই মেম্বারের ডাউনলাইনে সক্রিয় টিম রয়েছে। ট্রি অখণ্ড রাখতে ডাউনলাইন থাকা অবস্থায় সরাসরি মুছে ফেলা যাবে না।')"
+                        class="text-slate-300 hover:text-slate-400 p-1 rounded transition-colors cursor-not-allowed" 
+                        title="ডাউনলাইন থাকায় ডিলিট সম্ভব নয়">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+                @endif
+            </div>
+        </div>
 
     </div>
 @endif
