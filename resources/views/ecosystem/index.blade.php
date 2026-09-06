@@ -73,7 +73,7 @@
     <!-- Platform Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @forelse($links as $link)
-        <div x-show="(activeCategory === 'all' || activeCategory === '{{ $link->category }}') && ('{{ strtolower($link->title . ' ' . $link->url . ' ' . $link->description . ' ' . $link->badge) }}'.includes(searchQuery.toLowerCase()))"
+        <div data-link-id="{{ $link->id }}" x-show="(activeCategory === 'all' || activeCategory === '{{ $link->category }}') && ('{{ strtolower($link->title . ' ' . $link->url . ' ' . $link->description . ' ' . $link->badge) }}'.includes(searchQuery.toLowerCase()))"
              class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-orange-200 transition-all group">
             
             <div class="space-y-3">

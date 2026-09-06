@@ -76,7 +76,7 @@
     <!-- Contacts Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @forelse($contacts as $contact)
-        <div x-show="'{{ strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description) }}'.includes(searchQuery.toLowerCase())"
+        <div data-contact-id="{{ $contact->id }}" x-show="'{{ strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description) }}'.includes(searchQuery.toLowerCase())"
              class="bg-white rounded-2xl border {{ $contact->is_primary ? 'border-emerald-300 ring-2 ring-emerald-500/20 shadow-md' : 'border-slate-200/80 shadow-xs' }} p-5 flex flex-col justify-between hover:shadow-md hover:border-emerald-300 transition-all group">
             
             <div class="space-y-4">

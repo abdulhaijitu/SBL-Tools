@@ -62,7 +62,7 @@
     <!-- Tasks List -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs divide-y divide-slate-100 overflow-hidden">
         @forelse ($tasks as $task)
-            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors">
+            <div data-task-id="{{ $task->id }}" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors">
                 <div class="flex items-start gap-3">
                     <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider {{ $task->priority->badgeClasses() }} flex-shrink-0 mt-0.5">
                         {{ $task->priority->value }}
