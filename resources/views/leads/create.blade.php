@@ -9,12 +9,24 @@
         name: '{{ old('name', '') }}',
         mobile: '{{ old('mobile', '') }}',
         whatsapp: '{{ old('whatsapp', '') }}',
-        sameAsMobile: false,
+        email: '{{ old('email', '') }}',
+        sameAsMobile: true,
         contactPickerOpen: false,
         pickerTarget: 'mobile',
         activeTab: 'sbl',
         searchTerm: '',
         devicePickerSupported: ('contacts' in navigator && 'ContactsManager' in window),
+
+        cleanPhone(num) {
+            if (!num) return '';
+            let cleaned = num.replace(/[^\d+]/g, '');
+            if (cleaned.startsWith('+880')) {
+                cleaned = '0' + cleaned.substring(4);
+            } else if (cleaned.startsWith('880') && cleaned.length > 10) {
+                cleaned = '0' + cleaned.substring(3);
+            }
+            return cleaned;
+        },
 
         toggleSameAsMobile() {
             if (this.sameAsMobile) {
@@ -35,17 +47,18 @@
         },
 
         selectContact(contactName, phone, wa) {
-            const chosen = (this.pickerTarget === 'whatsapp') ? (wa || phone || '') : (phone || wa || '');
+            const raw = (this.pickerTarget === 'whatsapp') ? (wa || phone || '') : (phone || wa || '');
+            const cleaned = this.cleanPhone(raw);
             if (this.pickerTarget === 'mobile') {
-                this.mobile = chosen;
+                this.mobile = cleaned;
                 if (!this.name && contactName) {
                     this.name = contactName;
                 }
                 if (this.sameAsMobile) {
-                    this.whatsapp = chosen;
+                    this.whatsapp = cleaned;
                 }
             } else if (this.pickerTarget === 'whatsapp') {
-                this.whatsapp = chosen;
+                this.whatsapp = cleaned;
             }
             this.contactPickerOpen = false;
         },
@@ -53,22 +66,98 @@
         async pickFromPhonebook() {
             if ('contacts' in navigator && 'ContactsManager' in window) {
                 try {
-                    const props = ['name', 'tel'];
+                    const props = ['name', 'tel', 'email'];
                     const contacts = await navigator.contacts.select(props, { multiple: false });
                     if (contacts && contacts.length > 0) {
                         const c = contacts[0];
-                        const pickedTel = (c.tel && c.tel.length > 0) ? c.tel[0].replace(/\s+/g, '') : '';
                         const pickedName = (c.name && c.name.length > 0) ? c.name[0] : '';
-                        this.selectContact(pickedName, pickedTel, pickedTel);
+                        const rawTel = (c.tel && c.tel.length > 0) ? c.tel[0] : '';
+                        const pickedTel = this.cleanPhone(rawTel);
+                        const pickedEmail = (c.email && c.email.length > 0) ? c.email[0] : '';
+
+                        if (pickedName) this.name = pickedName;
+                        if (pickedTel) {
+                            this.mobile = pickedTel;
+                            if (this.sameAsMobile || !this.whatsapp) {
+                                this.whatsapp = pickedTel;
+                            }
+                        }
+                        if (pickedEmail && !this.email) this.email = pickedEmail;
+
+                        this.contactPickerOpen = false;
+                        this.$dispatch('notify', { 
+                            message: '✓ ফোনবুক থেকে ' + (pickedName || pickedTel) + ' এর তথ্য যুক্ত হয়েছে!', 
+                            type: 'success' 
+                        });
                     }
                 } catch (err) {
-                    console.warn('Native contact picker error:', err);
+                    console.warn('Native contact picker cancelled or failed:', err);
                 }
             } else {
-                alert('Device phonebook picker is supported on mobile Chrome/Android. Please select from the directory list below.');
+                this.openContactPicker('mobile');
             }
+        },
+
+        handleVCardUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                let cName = '';
+                let cTel = '';
+                let cEmail = '';
+
+                const fnMatch = text.match(/FN:(.*)/i) || text.match(/N:(?:[^;]*;)?([^;\r\n]*)/i);
+                if (fnMatch) cName = fnMatch[1].trim();
+
+                const telMatch = text.match(/TEL[^:]*:(.*)/i);
+                if (telMatch) cTel = this.cleanPhone(telMatch[1].trim());
+
+                const emailMatch = text.match(/EMAIL[^:]*:(.*)/i);
+                if (emailMatch) cEmail = emailMatch[1].trim();
+
+                if (cName) this.name = cName;
+                if (cTel) {
+                    this.mobile = cTel;
+                    if (this.sameAsMobile || !this.whatsapp) this.whatsapp = cTel;
+                }
+                if (cEmail) this.email = cEmail;
+
+                this.contactPickerOpen = false;
+                this.$dispatch('notify', { 
+                    message: '✓ কন্টাক্ট কার্ড (.vcf) থেকে ' + (cName || cTel) + ' যুক্ত হয়েছে!', 
+                    type: 'success' 
+                });
+            };
+            reader.readAsText(file);
         }
      }">
+
+    <!-- Quick Mobile Contact Import Action Bar -->
+    <div class="mb-4 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 rounded-2xl p-4 text-white shadow-lg shadow-orange-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl flex-shrink-0">
+                📱
+            </div>
+            <div>
+                <h3 class="font-bold text-sm leading-snug">মোবাইল কন্টাক্ট থেকে সরাসরি নিন</h3>
+                <p class="text-xs text-orange-100">১-ক্লিকে ফোনবুক থেকে নাম ও নাম্বার পূরণ করুন</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <button type="button" 
+                    @click="pickFromPhonebook()" 
+                    class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-white text-orange-700 font-bold text-xs hover:bg-orange-50 active:scale-95 shadow-xs transition-all flex items-center justify-center gap-1.5">
+                <span>📲 ফোনবুক খুলুন</span>
+            </button>
+            <button type="button" 
+                    @click="openContactPicker('mobile')" 
+                    class="px-3.5 py-2.5 rounded-xl bg-black/20 hover:bg-black/30 text-white font-semibold text-xs transition-all flex items-center justify-center gap-1">
+                <span>📖 ডিরেক্টরি</span>
+            </button>
+        </div>
+    </div>
 
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 md:p-8">
 
@@ -122,11 +211,18 @@
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                             Mobile Number <span class="text-rose-500">*</span>
                         </label>
-                        <button type="button" 
-                                @click="openContactPicker('mobile')" 
-                                class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 hover:underline">
-                            <span>📖 কন্টাক্ট থেকে নিন</span>
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" 
+                                    @click="pickFromPhonebook()" 
+                                    class="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-0.5 hover:underline bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-200/60">
+                                <span>📱 ফোনবুক</span>
+                            </button>
+                            <button type="button" 
+                                    @click="openContactPicker('mobile')" 
+                                    class="text-[11px] font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-0.5 hover:underline">
+                                <span>📖 ডিরেক্টরি</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="relative">
                         <input type="tel" 
@@ -137,13 +233,21 @@
                                x-model="mobile"
                                @input="onMobileChange()"
                                placeholder="017xxxxxxxx" 
-                               class="w-full text-base sm:text-sm rounded-xl border @error('mobile') border-rose-400 bg-rose-50/30 @else border-slate-300 @enderror focus:border-orange-500 focus:ring-1 focus:ring-orange-500 pl-3.5 pr-9 py-2.5">
-                        <button type="button" 
-                                @click="openContactPicker('mobile')" 
-                                title="Select from Contacts"
-                                class="absolute right-2.5 top-2.5 text-slate-400 hover:text-orange-600 p-0.5">
-                            📞
-                        </button>
+                               class="w-full text-base sm:text-sm rounded-xl border @error('mobile') border-rose-400 bg-rose-50/30 @else border-slate-300 @enderror focus:border-orange-500 focus:ring-1 focus:ring-orange-500 pl-3.5 pr-16 py-2.5 font-medium">
+                        <div class="absolute right-2 top-2 flex items-center gap-1">
+                            <button type="button" 
+                                    @click="pickFromPhonebook()" 
+                                    title="Open Mobile Phonebook"
+                                    class="p-1 text-orange-600 hover:bg-orange-50 rounded-md transition-colors text-sm">
+                                📱
+                            </button>
+                            <button type="button" 
+                                    @click="openContactPicker('mobile')" 
+                                    title="Select from SBL Contacts"
+                                    class="p-1 text-slate-400 hover:bg-slate-100 rounded-md transition-colors text-sm">
+                                📖
+                            </button>
+                        </div>
                     </div>
                     @error('mobile')
                         <p class="text-rose-600 text-[11px] mt-1">{{ $message }}</p>
@@ -358,13 +462,19 @@
                             @click="activeTab = 'sbl'" 
                             :class="activeTab === 'sbl' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                             class="flex-1 py-1.5 rounded-lg transition-all text-center">
-                        🏢 SBL Helpline & Offices ({{ count($sblContacts ?? []) }})
+                        🏢 SBL Contacts ({{ count($sblContacts ?? []) }})
                     </button>
                     <button type="button" 
                             @click="activeTab = 'team'" 
                             :class="activeTab === 'team' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                             class="flex-1 py-1.5 rounded-lg transition-all text-center">
-                        👥 Team Members ({{ count($teamMembers ?? []) }})
+                        👥 Team ({{ count($teamMembers ?? []) }})
+                    </button>
+                    <button type="button" 
+                            @click="activeTab = 'file'" 
+                            :class="activeTab === 'file' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
+                            class="flex-1 py-1.5 rounded-lg transition-all text-center">
+                        📁 .vcf / Card
                     </button>
                 </div>
             </div>
@@ -432,6 +542,21 @@
                         @empty
                             <div class="text-center py-6 text-xs text-slate-400">No Team Members with phone numbers found.</div>
                         @endforelse
+                    </div>
+                </template>
+
+                <!-- vCard / File Import -->
+                <template x-if="activeTab === 'file'">
+                    <div class="space-y-4 py-2">
+                        <div class="p-4 border-2 border-dashed border-orange-200 bg-orange-50/40 rounded-xl text-center">
+                            <div class="text-3xl mb-1">📇</div>
+                            <h4 class="font-bold text-xs text-slate-900">Upload vCard (.vcf) Contact File</h4>
+                            <p class="text-[11px] text-slate-500 mt-0.5">iPhone / Android contact export card</p>
+                            <label class="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-orange-600 text-white font-bold text-xs cursor-pointer hover:bg-orange-700 shadow-xs">
+                                <span>Choose .vcf File</span>
+                                <input type="file" accept=".vcf,text/vcard" @change="handleVCardUpload($event)" class="hidden">
+                            </label>
+                        </div>
                     </div>
                 </template>
             </div>
