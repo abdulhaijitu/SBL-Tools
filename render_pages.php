@@ -15,60 +15,60 @@ Illuminate\Support\Facades\View::share('errors', new Illuminate\Support\ViewErro
 echo "Bootstrap successful. User: " . (Illuminate\Support\Facades\Auth::user()->email ?? 'None') . "\n";
 
 $pages = [
-    'dashboard' => function() {
+    'dashboard' => function () {
         return app(App\Http\Controllers\DashboardController::class)->index(request())->render();
     },
-    'leads' => function() {
+    'leads' => function () {
         request()->merge(['view' => 'table']);
         return app(App\Http\Controllers\LeadController::class)->index(request())->render();
     },
-    'kanban' => function() {
+    'kanban' => function () {
         request()->merge(['view' => 'kanban']);
         return app(App\Http\Controllers\LeadController::class)->index(request())->render();
     },
-    'toolkit' => function() {
+    'toolkit' => function () {
         return app(App\Http\Controllers\SblToolkitController::class)->index(request())->render();
     },
-    'tasks' => function() {
+    'tasks' => function () {
         return app(App\Http\Controllers\TaskController::class)->index(request())->render();
     },
-    'reports' => function() {
+    'reports' => function () {
         return app(App\Http\Controllers\ReportController::class)->index(request())->render();
     },
-    'calendar' => function() {
+    'calendar' => function () {
         return app(App\Http\Controllers\ContentCalendarController::class)->index(request())->render();
     },
-    'users' => function() {
+    'users' => function () {
         return app(App\Http\Controllers\UserController::class)->index(request())->render();
     },
-    'roles' => function() {
+    'roles' => function () {
         return app(App\Http\Controllers\RoleController::class)->index()->render();
     },
-    'ecosystem' => function() {
+    'ecosystem' => function () {
         return app(App\Http\Controllers\EcosystemController::class)->index(request())->render();
     },
-    'contacts' => function() {
+    'contacts' => function () {
         return app(App\Http\Controllers\SblContactController::class)->index(request())->render();
     },
-    'leads_create' => function() {
+    'leads_create' => function () {
         return app(App\Http\Controllers\LeadController::class)->create()->render();
     },
-    'presentations' => function() {
+    'presentations' => function () {
         return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
     },
-    'binary' => function() {
+    'binary' => function () {
         request()->merge(['view' => 'tree']);
         return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
     },
-    'binary_table' => function() {
+    'binary_table' => function () {
         request()->merge(['view' => 'table']);
         return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
     },
-    'leads_show' => function() {
+    'leads_show' => function () {
         $lead = App\Models\Lead::first();
         return $lead ? app(App\Http\Controllers\LeadController::class)->show($lead)->render() : '';
     },
-    'leads_edit' => function() {
+    'leads_edit' => function () {
         $lead = App\Models\Lead::first();
         return $lead ? app(App\Http\Controllers\LeadController::class)->edit($lead)->render() : '';
     },

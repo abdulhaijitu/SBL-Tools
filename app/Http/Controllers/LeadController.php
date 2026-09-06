@@ -77,7 +77,7 @@ class LeadController extends Controller
         if ($viewMode === 'kanban') {
             $allLeads = $query->orderBy('score', 'desc')->get();
             $pipelineStages = LeadStage::activePipelineStages();
-            
+
             $kanbanColumns = [];
             foreach ($pipelineStages as $stageEnum) {
                 $kanbanColumns[$stageEnum->value] = $allLeads->where('stage', $stageEnum);
@@ -441,4 +441,3 @@ class LeadController extends Controller
             ->with('success', 'Lead removed successfully.');
     }
 }
-
