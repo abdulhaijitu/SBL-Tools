@@ -407,27 +407,58 @@
         </div>
     </div>
 
-    <!-- TAB 4: LIVE INTERACTIVE CALCULATOR (PDF Page 1, 2, 3) -->
+    <!-- TAB 4: LIVE INTERACTIVE CALCULATOR (PDF Page 1, 2, 3, 7) -->
     <div x-show="activeTab === 'calculator'" class="space-y-6" x-cloak 
          x-data="{
             packageType: 'national',
-            investmentAmount: 120000,
+            packageAmount: 120000,
             referralAmount: 120000,
+            teamPackageAmount: 10000,
+            teamMultiplier: 10,
+            activeGenView: 'matrix', // 'matrix' or 'single'
+
+            genRates: [
+                { gen: '1st', rate: 10.0, label: '1st Generation (Direct Sponsor)' },
+                { gen: '2nd', rate: 2.0, label: '2nd Generation' },
+                { gen: '3rd', rate: 1.0, label: '3rd Generation' },
+                { gen: '4th', rate: 1.0, label: '4th Generation' },
+                { gen: '5th', rate: 0.5, label: '5th Generation' },
+                { gen: '6th', rate: 0.1, label: '6th Generation' },
+                { gen: '7th', rate: 0.1, label: '7th Generation' },
+                { gen: '8th', rate: 0.1, label: '8th Generation' },
+                { gen: '9th', rate: 0.1, label: '9th Generation' },
+                { gen: '10th', rate: 0.1, label: '10th Generation' }
+            ],
+
+            // 1. Investment ROI Properties
+            get devFee() {
+                return this.packageType === 'national' ? 20000 : 50000;
+            },
+            get coreInvestment() {
+                return Math.max(0, this.packageAmount - this.devFee);
+            },
             get weeklyRate() {
                 return this.packageType === 'national' ? 0.0175 : 0.02;
             },
             get weeklyEarning() {
-                return Math.round(this.investmentAmount * this.weeklyRate);
+                return Math.round(this.coreInvestment * this.weeklyRate);
             },
             get monthlyEarning() {
-                return Math.round(this.weeklyEarning * 4.33);
+                // 1750 * 30 / 7 = 7500 (National 1,20,000)
+                // 10000 * 30 / 7 = 42857 (International 5,50,000)
+                return Math.round((this.weeklyEarning * 30) / 7);
             },
             get totalReturn100Weeks() {
                 return Math.round(this.weeklyEarning * 100);
             },
-            get netProfit() {
-                return Math.max(0, this.totalReturn100Weeks - this.investmentAmount);
+            get netProfitTotal() {
+                return Math.max(0, this.totalReturn100Weeks - this.packageAmount);
             },
+            get netProfitCore() {
+                return Math.max(0, this.totalReturn100Weeks - this.coreInvestment);
+            },
+
+            // 2. Direct Referral Simulator
             get spotCommission() {
                 return Math.round(this.referralAmount * 0.10);
             },
@@ -436,109 +467,364 @@
             },
             get totalReferReturn100Weeks() {
                 return Math.round(this.weeklyReferReturn * 100);
+            },
+
+            // 3. 10-Generation Matrix Calculations
+            getMatrixRow(index) {
+                let level = index + 1;
+                let rate = this.genRates[index].rate;
+                let people = Math.pow(this.teamMultiplier, level);
+                let volume = people * this.teamPackageAmount;
+                let commission = Math.round(volume * (rate / 100));
+                return {
+                    level: level,
+                    gen: this.genRates[index].gen,
+                    rate: rate,
+                    people: people,
+                    volume: volume,
+                    commission: commission
+                };
+            },
+            get totalMatrixCommission() {
+                let sum = 0;
+                for (let i = 0; i < 10; i++) {
+                    sum += this.getMatrixRow(i).commission;
+                }
+                return sum;
+            },
+            get totalMatrixPeople() {
+                let sum = 0;
+                for (let i = 0; i < 10; i++) {
+                    sum += Math.pow(this.teamMultiplier, i + 1);
+                }
+                return sum;
             }
          }">
         
+        <!-- Top Row: Investment ROI Simulator & Direct Referral Simulator -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <!-- Investment ROI Simulator -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-                <div class="border-b border-slate-100 pb-3">
-                    <h3 class="text-base font-bold text-slate-900">ইনভেস্টমেন্ট রিটার্ন ক্যালকুলেটর (100 Weeks)</h3>
-                    <p class="text-xs text-slate-500">বিনিয়োগকৃত মূলধনের ওপর সাপ্তাহিক রিটার্ন এবং ২৪ মাসের মোট আয় হিসাব করুন।</p>
-                </div>
-
-                <!-- Package Type Toggle -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">প্যাকেজ নির্বাচন করুন:</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" @click="packageType = 'national'; if(investmentAmount > 490000) investmentAmount = 120000;"
-                                :class="packageType === 'national' ? 'bg-orange-600 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                                class="py-2 px-3 rounded-xl text-xs transition-all">
-                            National Package (1.75%/wk)
-                        </button>
-                        <button type="button" @click="packageType = 'international'; if(investmentAmount < 500000) investmentAmount = 550000;"
-                                :class="packageType === 'international' ? 'bg-purple-600 text-white font-bold' : 'bg-slate-100 text-slate-700'"
-                                class="py-2 px-3 rounded-xl text-xs transition-all">
-                            International Package (2%/wk)
-                        </button>
+            <!-- 1. Investment ROI Simulator -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="border-b border-slate-100 pb-3">
+                        <span class="px-2.5 py-0.5 bg-orange-100 text-orange-800 text-[10px] font-bold rounded-md uppercase">ROI Simulator</span>
+                        <h3 class="text-base font-bold text-slate-900 mt-1">ইনভেস্টমেন্ট রিটার্ন ক্যালকুলেটর (100 Weeks)</h3>
+                        <p class="text-xs text-slate-500">ডেভেলপমেন্ট ফি বাদে মূল বিনিয়োগের ওপর সাপ্তাহিক ও মাসিক রিটার্ন হিসাব।</p>
                     </div>
-                </div>
 
-                <!-- Investment Amount Input -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">বিনিয়োগের পরিমাণ (টাকায়):</label>
-                    <input type="number" x-model.number="investmentAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
-                    
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                        <button type="button" @click="packageType = 'national'; investmentAmount = 120000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">১,২০,০০০ ৳</button>
-                        <button type="button" @click="packageType = 'national'; investmentAmount = 250000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">২,৫০,০০০ ৳</button>
-                        <button type="button" @click="packageType = 'international'; investmentAmount = 550000" class="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-xs font-medium">৫,৫০,০০০ ৳</button>
-                        <button type="button" @click="packageType = 'international'; investmentAmount = 1000000" class="px-2.5 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg text-xs font-medium">১০,০০,০০০ ৳</button>
+                    <!-- Package Type Toggle -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">প্যাকেজ নির্বাচন করুন:</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" @click="packageType = 'national'; if(packageAmount > 490000 || packageAmount < 100000) packageAmount = 120000;"
+                                    :class="packageType === 'national' ? 'bg-orange-600 text-white font-bold shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                    class="py-2.5 px-3 rounded-xl text-xs transition-all text-left">
+                                <span class="block font-bold">National Package</span>
+                                <span class="text-[11px] opacity-90">১.৭৫%/সপ্তাহ • ফি ২০,০০০ ৳</span>
+                            </button>
+                            <button type="button" @click="packageType = 'international'; if(packageAmount < 500000) packageAmount = 550000;"
+                                    :class="packageType === 'international' ? 'bg-purple-600 text-white font-bold shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                    class="py-2.5 px-3 rounded-xl text-xs transition-all text-left">
+                                <span class="block font-bold">International Package</span>
+                                <span class="text-[11px] opacity-90">২.০০%/সপ্তাহ • ফি ৫০,০০০ ৳</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Package Amount Input -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-semibold text-slate-700">মোট প্যাকেজ মূল্য (টাকায়):</label>
+                            <span class="text-[11px] font-medium text-slate-500">
+                                ফি বাদ দিয়ে মূল ইনভেস্ট: <strong class="text-orange-600" x-text="coreInvestment.toLocaleString('en-IN') + ' ৳'"></strong>
+                            </span>
+                        </div>
+                        <input type="number" x-model.number="packageAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
+                        
+                        <!-- Quick Presets -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button type="button" @click="packageType = 'national'; packageAmount = 120000" 
+                                    :class="packageType === 'national' && packageAmount === 120000 ? 'border-orange-500 bg-orange-50 text-orange-800 font-bold' : 'bg-slate-100 text-slate-700'"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent hover:bg-slate-200 transition-all">
+                                ১,২০,০০০ ৳ (National)
+                            </button>
+                            <button type="button" @click="packageType = 'national'; packageAmount = 250000" 
+                                    :class="packageType === 'national' && packageAmount === 250000 ? 'border-orange-500 bg-orange-50 text-orange-800 font-bold' : 'bg-slate-100 text-slate-700'"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent hover:bg-slate-200 transition-all">
+                                ২,৫০,০০০ ৳
+                            </button>
+                            <button type="button" @click="packageType = 'international'; packageAmount = 550000" 
+                                    :class="packageType === 'international' && packageAmount === 550000 ? 'border-purple-500 bg-purple-50 text-purple-800 font-bold' : 'bg-slate-100 text-slate-700'"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent hover:bg-slate-200 transition-all">
+                                ৫,৫০,০০০ ৳ (International)
+                            </button>
+                            <button type="button" @click="packageType = 'international'; packageAmount = 1000000" 
+                                    :class="packageType === 'international' && packageAmount === 1000000 ? 'border-purple-500 bg-purple-50 text-purple-800 font-bold' : 'bg-slate-100 text-slate-700'"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-medium border border-transparent hover:bg-slate-200 transition-all">
+                                ১০,০০,০০০ ৳
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Development Charge Clarification Notice -->
+                    <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                        <div class="flex items-center justify-between font-semibold">
+                            <span>🛠️ ডেভেলপমেন্ট চার্জ (অফেরতযোগ্য):</span>
+                            <span class="font-bold text-amber-950" x-text="devFee.toLocaleString('en-IN') + ' ৳'"></span>
+                        </div>
+                        <p class="text-[11px] text-amber-800 leading-relaxed">
+                            * এটি মূল ইনভেস্টমেন্ট নয় (ওয়েবসাইট ও টেকনিক্যাল সেটআপ ফি)। তাই রিটার্ন গণনা হবে মূল ইনভেস্ট 
+                            <strong x-text="coreInvestment.toLocaleString('en-IN') + ' ৳'"></strong>-এর ওপর।
+                        </p>
                     </div>
                 </div>
 
                 <!-- Live Results Display -->
-                <div class="p-4 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2.5 text-xs">
-                    <div class="flex items-center justify-between">
-                        <span class="text-slate-600 font-medium">সাপ্তাহিক রিটার্ন:</span>
-                        <span class="font-extrabold text-orange-600 text-base" x-text="weeklyEarning.toLocaleString('en-IN') + ' ৳ / সপ্তাহ'"></span>
+                <div class="p-4 bg-slate-900 text-white rounded-2xl space-y-3 text-xs shadow-md">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span class="text-slate-400">মূল বিনিয়োগ (Core Capital):</span>
+                        <span class="font-bold text-white text-sm" x-text="coreInvestment.toLocaleString('en-IN') + ' ৳'"></span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <span class="text-slate-600 font-medium">মাসিক আনুমানিক রিটার্ন:</span>
-                        <span class="font-bold text-slate-800" x-text="monthlyEarning.toLocaleString('en-IN') + ' ৳ / মাস'"></span>
+                        <span class="text-slate-300 font-medium">সাপ্তাহিক রিটার্ন:</span>
+                        <span class="font-extrabold text-orange-400 text-base" x-text="weeklyEarning.toLocaleString('en-IN') + ' ৳ / সপ্তাহ'"></span>
                     </div>
-                    <div class="border-t border-orange-200 pt-2 flex items-center justify-between">
-                        <span class="text-slate-700 font-bold">১০০ সপ্তাহে মোট রিটার্ন (২৪ মাস):</span>
-                        <span class="font-black text-emerald-700 text-lg" x-text="totalReturn100Weeks.toLocaleString('en-IN') + ' ৳'"></span>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-300 font-medium">মাসিক আনুমানিক রিটার্ন:</span>
+                        <span class="font-bold text-emerald-400 text-sm" x-text="monthlyEarning.toLocaleString('en-IN') + ' ৳ / মাস'"></span>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>নিট প্রফিট (মূলধন বাদে):</span>
-                        <span class="font-bold text-slate-700" x-text="netProfit.toLocaleString('en-IN') + ' ৳'"></span>
+                    <div class="border-t border-slate-800 pt-2 flex items-center justify-between">
+                        <div>
+                            <span class="text-slate-200 font-bold block">১০০ সপ্তাহে মোট রিটার্ন:</span>
+                            <span class="text-[10px] text-slate-400">২৪ মাস মেয়াদে নিশ্চিত প্রাপ্তি</span>
+                        </div>
+                        <span class="font-black text-emerald-400 text-xl" x-text="totalReturn100Weeks.toLocaleString('en-IN') + ' ৳'"></span>
+                    </div>
+                    <div class="border-t border-slate-800 pt-2 flex items-center justify-between text-[11px]">
+                        <span class="text-slate-400">নিট প্রফিট (মোট প্যাকেজ বাদে):</span>
+                        <span class="font-bold text-emerald-300" x-text="netProfitTotal.toLocaleString('en-IN') + ' ৳'"></span>
                     </div>
                 </div>
             </div>
 
-            <!-- Referral & Commission Simulator -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-                <div class="border-b border-slate-100 pb-3">
-                    <h3 class="text-base font-bold text-slate-900">রেফারেল ও মার্কেটিং কমিশন সিমুলেটর</h3>
-                    <p class="text-xs text-slate-500">আপনার মাধ্যমে কোনো প্রজেক্ট রেফার হলে তৎক্ষণাৎ এবং সাপ্তাহিক কমিশন হিসাব।</p>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">রেফারেন্সকৃত প্রজেক্ট অ্যামাউন্ট (টাকায়):</label>
-                    <input type="number" x-model.number="referralAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
-                </div>
-
-                <div class="space-y-3 text-xs">
-                    <!-- Spot Commission 10% -->
-                    <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center justify-between">
-                        <div>
-                            <span class="font-bold text-emerald-900 block">১০% স্পট কমিশন (তাৎক্ষণিক)</span>
-                            <span class="text-[11px] text-emerald-700">প্রজেক্ট শুরুর সাথে সাথে প্রদেয়</span>
-                        </div>
-                        <span class="text-xl font-black text-emerald-700" x-text="spotCommission.toLocaleString('en-IN') + ' ৳'"></span>
+            <!-- 2. Direct Referral & Spot Commission Simulator -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="border-b border-slate-100 pb-3">
+                        <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md uppercase">Direct Referral</span>
+                        <h3 class="text-base font-bold text-slate-900 mt-1">ডিরেক্ট রেফারেল কমিশন (১ম জেনারেশন)</h3>
+                        <p class="text-xs text-slate-500">আপনার ডিরেক্ট রেফারেন্সে কোনো প্রজেক্ট যুক্ত হলে তাৎক্ষণিক ও সাপ্তাহিক আয়।</p>
                     </div>
 
-                    <!-- Refer Return 0.25% -->
-                    <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-1.5">
-                        <div class="flex items-center justify-between">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">রেফারেন্সকৃত প্রজেক্ট অ্যামাউন্ট (টাকায়):</label>
+                        <input type="number" x-model.number="referralAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
+                        
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button type="button" @click="referralAmount = 10000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">১০,০০০ ৳</button>
+                            <button type="button" @click="referralAmount = 120000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">১,২০,০০০ ৳</button>
+                            <button type="button" @click="referralAmount = 250000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">২,৫০,০০০ ৳</button>
+                            <button type="button" @click="referralAmount = 550000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">৫,৫০,০০০ ৳</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <!-- Spot Commission 10% -->
+                        <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center justify-between">
                             <div>
-                                <span class="font-bold text-blue-900 block">০.২৫% সাপ্তাহিক রেফার রিটার্ন</span>
-                                <span class="text-[11px] text-blue-700">১০০ সপ্তাহ পর্যন্ত প্রতি সপ্তাহে প্রদেয়</span>
+                                <span class="font-bold text-emerald-900 block text-sm">১০% স্পট কমিশন (তাৎক্ষণিক)</span>
+                                <span class="text-[11px] text-emerald-700">প্রজেক্ট শুরুর সাথে সাথে ওয়ালেটে প্রদেয়</span>
                             </div>
-                            <span class="text-lg font-bold text-blue-700" x-text="weeklyReferReturn.toLocaleString('en-IN') + ' ৳ / সপ্তাহ'"></span>
+                            <span class="text-2xl font-black text-emerald-700" x-text="spotCommission.toLocaleString('en-IN') + ' ৳'"></span>
                         </div>
-                        <div class="border-t border-blue-200 pt-1.5 flex items-center justify-between text-[11px] text-blue-800">
-                            <span>১০০ সপ্তাহে মোট রেফার রিটার্ন:</span>
-                            <span class="font-bold" x-text="totalReferReturn100Weeks.toLocaleString('en-IN') + ' ৳'"></span>
+
+                        <!-- Refer Return 0.25% -->
+                        <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="font-bold text-blue-900 block">০.২৫% সাপ্তাহিক রেফার রিটার্ন</span>
+                                    <span class="text-[11px] text-blue-700">১০০ সপ্তাহ পর্যন্ত প্রতি সপ্তাহে প্রদেয়</span>
+                                </div>
+                                <span class="text-lg font-bold text-blue-700" x-text="weeklyReferReturn.toLocaleString('en-IN') + ' ৳ / সপ্তাহ'"></span>
+                            </div>
+                            <div class="border-t border-blue-200 pt-1.5 flex items-center justify-between text-[11px] text-blue-800">
+                                <span>১০০ সপ্তাহে মোট রেফার রিটার্ন:</span>
+                                <span class="font-bold text-blue-900" x-text="totalReferReturn100Weeks.toLocaleString('en-IN') + ' ৳'"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-                    💡 <em>পেয়ার রিওয়ার্ড:</em> সেলস টিম গঠন করে প্রতি পেয়ারে পাবেন ৫০০ টাকা (দৈনিক সর্বোচ্চ ৫০,০০০ টাকা পর্যন্ত)।
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+                    <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>💡 পেয়ার রিওয়ার্ড (Pair Reward):</span>
+                    </div>
+                    <p class="text-[11px] leading-relaxed">
+                        সেলস টিম গঠন করে প্রতি পেয়ারে পাবেন ৫০০ টাকা (দৈনিক সর্বোচ্চ ১০০ পেয়ার = ৫০,০০০ টাকা পর্যন্ত ক্যাশ ইনকাম)।
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Section: 10-Generation Affiliate Commission Simulator (PDF Page 7) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded-md uppercase">Multi-Tier Affiliate</span>
+                        <h3 class="text-lg font-bold text-slate-900">১০-জেনারেশন কমিশন সিমুলেটর (10-Generation Matrix)</h3>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">আপনার সম্পূর্ণ ১০ স্তরের টিম ও নেটওয়ার্কের কমিশন প্রজেকশন সিমুলেট করুন।</p>
+                </div>
+
+                <!-- Simulation Mode Buttons -->
+                <div class="flex items-center gap-2 text-xs">
+                    <button type="button" @click="activeGenView = 'matrix'"
+                            :class="activeGenView === 'matrix' ? 'bg-orange-600 text-white font-bold' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg transition-all">
+                        টিম ম্যাট্রিক্স সিমুলেশন
+                    </button>
+                    <button type="button" @click="activeGenView = 'single'"
+                            :class="activeGenView === 'single' ? 'bg-orange-600 text-white font-bold' : 'bg-slate-100 text-slate-700'"
+                            class="px-3 py-1.5 rounded-lg transition-all">
+                        একক প্রজেক্ট বণ্টন (Single Project)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Matrix Mode Controls -->
+            <div x-show="activeGenView === 'matrix'" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">গড় প্যাকেজ / মেম্বারশিপ সাইজ (টাকায়):</label>
+                        <input type="number" x-model.number="teamPackageAmount" step="1000" class="w-full text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-2 bg-white">
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                            <button type="button" @click="teamPackageAmount = 10000" class="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium hover:border-orange-500">১০,০০০ ৳ (PDF Default)</button>
+                            <button type="button" @click="teamPackageAmount = 120000" class="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium hover:border-orange-500">১,২০,০০০ ৳ (National)</button>
+                            <button type="button" @click="teamPackageAmount = 550000" class="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium hover:border-orange-500">৫,৫০,০০০ ৳ (International)</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">জনপ্রতি রেফারেল গুণক (Team Multiplier):</label>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <button type="button" @click="teamMultiplier = 2" 
+                                    :class="teamMultiplier === 2 ? 'bg-slate-900 text-white font-bold' : 'bg-white border border-slate-200 text-slate-700'"
+                                    class="py-2 rounded-xl text-xs text-center transition-all">২×২ টিম</button>
+                            <button type="button" @click="teamMultiplier = 3" 
+                                    :class="teamMultiplier === 3 ? 'bg-slate-900 text-white font-bold' : 'bg-white border border-slate-200 text-slate-700'"
+                                    class="py-2 rounded-xl text-xs text-center transition-all">৩×৩ টিম</button>
+                            <button type="button" @click="teamMultiplier = 5" 
+                                    :class="teamMultiplier === 5 ? 'bg-slate-900 text-white font-bold' : 'bg-white border border-slate-200 text-slate-700'"
+                                    class="py-2 rounded-xl text-xs text-center transition-all">৫×৫ টিম</button>
+                            <button type="button" @click="teamMultiplier = 10" 
+                                    :class="teamMultiplier === 10 ? 'bg-orange-600 text-white font-bold' : 'bg-white border border-slate-200 text-slate-700'"
+                                    class="py-2 rounded-xl text-xs text-center transition-all">১০×১০ টিম (PDF)</button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">প্রতি ব্যক্তি গড়ে কতজনকে রেফার করবে সেই ভিত্তিতে টিম বৃদ্ধি পাবে।</p>
+                    </div>
+                </div>
+
+                <!-- Grand Matrix Summary Banner -->
+                <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-orange-950 text-white p-5 md:p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs text-orange-400 font-bold uppercase tracking-wider block">
+                            ১০ জেনারেশন সর্বমোট সম্ভাব্য কমিশন
+                        </span>
+                        <div class="text-2xl md:text-3xl font-black text-white mt-1">
+                            <span x-text="totalMatrixCommission.toLocaleString('en-IN')"></span> ৳
+                        </div>
+                        <p class="text-xs text-slate-300 mt-1">
+                            গড় প্যাকেজ <span class="font-bold text-orange-300" x-text="teamPackageAmount.toLocaleString('en-IN') + ' ৳'"></span> এবং 
+                            <span class="font-bold text-orange-300" x-text="teamMultiplier + '×' + teamMultiplier"></span> ডুপ্লিকেশনে ১০টি লেভেল পূর্ণ হলে।
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-4 text-center">
+                        <div class="bg-white/10 px-4 py-2.5 rounded-xl border border-white/10">
+                            <span class="text-[10px] text-slate-300 block uppercase">১ম জেনারেশন (ডিরেক্ট)</span>
+                            <span class="text-base font-bold text-emerald-400" x-text="getMatrixRow(0).commission.toLocaleString('en-IN') + ' ৳'"></span>
+                        </div>
+                        <div class="bg-white/10 px-4 py-2.5 rounded-xl border border-white/10">
+                            <span class="text-[10px] text-slate-300 block uppercase">২য় - ১০ম জেনারেশন</span>
+                            <span class="text-base font-bold text-orange-400" x-text="(totalMatrixCommission - getMatrixRow(0).commission).toLocaleString('en-IN') + ' ৳'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 10-Generation Breakdown Table -->
+                <div class="overflow-x-auto border border-slate-200/80 rounded-2xl">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 text-slate-700 uppercase tracking-wider font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">জেনারেশন</th>
+                                <th class="py-3 px-4">কমিশন রেট %</th>
+                                <th class="py-3 px-4">টিম সদস্য সংখ্যা</th>
+                                <th class="py-3 px-4">মোট টিম সেলস / ভলিউম</th>
+                                <th class="py-3 px-4 text-right">আপনার কমিশন (টাকায়)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="(gen, index) in genRates" :key="index">
+                                <tr class="hover:bg-slate-50/80 transition-colors" :class="index === 0 ? 'bg-orange-50/40 font-medium' : ''">
+                                    <td class="py-3 px-4 font-bold text-slate-900">
+                                        <span class="px-2 py-0.5 rounded-md text-[11px] font-bold"
+                                              :class="index === 0 ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700'"
+                                              x-text="gen.gen"></span>
+                                        <span class="ml-1.5 hidden sm:inline" x-text="index === 0 ? '(Direct Sponsor)' : ''"></span>
+                                    </td>
+                                    <td class="py-3 px-4 font-extrabold text-orange-600" x-text="gen.rate + '%'"></td>
+                                    <td class="py-3 px-4 font-semibold text-slate-800" x-text="getMatrixRow(index).people.toLocaleString('en-IN')"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="getMatrixRow(index).volume.toLocaleString('en-IN') + ' ৳'"></td>
+                                    <td class="py-3 px-4 text-right font-black text-emerald-700 text-sm" x-text="getMatrixRow(index).commission.toLocaleString('en-IN') + ' ৳'"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Single Project Distribution Mode -->
+            <div x-show="activeGenView === 'single'" class="space-y-4" x-cloak>
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <span class="text-xs font-bold text-slate-900 block">একটি একক প্রজেক্ট বিক্রয় হলে ১০ স্তরে কার কত কমিশন:</span>
+                        <p class="text-xs text-slate-500">যেকোনো একটি নির্দিষ্ট প্যাকেজের ক্ষেত্রে আপলাইনে কীভাবে ১০ লেভেলে কমিশন জমা হয়।</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-semibold text-slate-700">প্রজেক্ট অ্যামাউন্ট:</label>
+                        <input type="number" x-model.number="referralAmount" step="10000" class="w-36 text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-1.5 bg-white">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200/80 rounded-2xl">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 text-slate-700 uppercase tracking-wider font-bold border-b border-slate-200">
+                            <tr>
+                                <th class="py-3 px-4">আপলাইন লেভেল</th>
+                                <th class="py-3 px-4">কমিশন রেট %</th>
+                                <th class="py-3 px-4">প্রজেক্ট ভলিউম</th>
+                                <th class="py-3 px-4 text-right">প্রদেয় কমিশন (টাকায়)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="(gen, index) in genRates" :key="'single-' + index">
+                                <tr class="hover:bg-slate-50/80" :class="index === 0 ? 'bg-emerald-50/50' : ''">
+                                    <td class="py-2.5 px-4 font-bold text-slate-900">
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-bold"
+                                              :class="index === 0 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'"
+                                              x-text="gen.gen"></span>
+                                        <span class="ml-2" x-text="index === 0 ? '১ম জেনারেশন (স্পন্সর)' : index + 1 + 'ম আপলাইন লেভেল'"></span>
+                                    </td>
+                                    <td class="py-2.5 px-4 font-bold text-orange-600" x-text="gen.rate + '%'"></td>
+                                    <td class="py-2.5 px-4 text-slate-700" x-text="referralAmount.toLocaleString('en-IN') + ' ৳'"></td>
+                                    <td class="py-2.5 px-4 text-right font-black text-emerald-700" x-text="Math.round(referralAmount * (gen.rate / 100)).toLocaleString('en-IN') + ' ৳'"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
