@@ -9,952 +9,1811 @@ const JS_PATH = __JS_PATH__;
 const PAGES = __PAGES__;
 
 function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    if (str === null || str === undefined) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname;
+    async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        const path = url.pathname;
 
-    // 1. Compiled Vite CSS
-    if (path === CSS_PATH) {
-      return new Response(CSS_CONTENT, {
-        headers: {
-          "Content-Type": "text/css; charset=utf-8",
-          "Cache-Control": "public, max-age=31536000, immutable"
+        // 1. Compiled Vite CSS
+        if (path === CSS_PATH) {
+            return new Response(CSS_CONTENT, {
+                headers: {
+                    "Content-Type": "text/css; charset=utf-8",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
         }
-      });
-    }
 
-    // 2. Compiled Vite JS
-    if (path === JS_PATH) {
-      return new Response(JS_CONTENT, {
-        headers: {
-          "Content-Type": "application/javascript; charset=utf-8",
-          "Cache-Control": "public, max-age=31536000, immutable"
+        // 2. Compiled Vite JS
+        if (path === JS_PATH) {
+            return new Response(JS_CONTENT, {
+                headers: {
+                    "Content-Type": "application/javascript; charset=utf-8",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
         }
-      });
-    }
 
-    // 3. Logo & Static Images
-    if (path === "/images/sbl-logo.png" || path === "/favicon.png" || path === "/apple-touch-icon.png") {
-      const binaryString = atob(SBL_LOGO_BASE64);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return new Response(bytes.buffer, {
-        headers: {
-          "Content-Type": "image/png",
-          "Cache-Control": "public, max-age=31536000, immutable"
-        }
-      });
-    }
-
-    if (path === "/ping") {
-      return new Response("pong", { status: 200 });
-    }
-
-    const db = env.DB || env.sbl_database;
-
-    // 4. Handle POST, PUT, PATCH, DELETE Form Actions on Cloudflare D1
-    if (request.method === "POST" || request.method === "PUT" || request.method === "PATCH" || request.method === "DELETE") {
-      let effectiveMethod = request.method;
-      let formData = null;
-      const contentType = request.headers.get("content-type") || "";
-
-      if (contentType.includes("form") || contentType.includes("multipart") || contentType.includes("urlencoded")) {
-        try {
-          formData = await request.formData();
-          const spoofed = formData.get("_method");
-          if (spoofed) {
-            effectiveMethod = spoofed.toUpperCase();
-          }
-        } catch (e) {
-          console.error("Error parsing formData:", e);
-        }
-      }
-
-      // 4a. Leads Handlers
-      if (path === "/leads" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const name = formData.get("name") || "Unnamed Lead";
-            const mobile = formData.get("mobile") || "";
-            const whatsapp = formData.get("whatsapp") || null;
-            const email = formData.get("email") || null;
-            const location = formData.get("location") || null;
-            const profession = formData.get("profession_or_business") || null;
-            const sourceId = Number(formData.get("lead_source_id")) || 1;
-            const stage = formData.get("stage") || "new";
-            const interests = formData.getAll("interest_types[]") || [];
-            const interestsJson = JSON.stringify(interests);
-            const nextActionType = formData.get("next_action_type") || null;
-            const nextActionAt = formData.get("next_action_at") || null;
-            const notes = formData.get("notes") || null;
-            const score = (interests.length > 0 ? 20 : 0) + (nextActionAt ? 15 : 0);
-            const temperature = score >= 50 ? "hot" : (score >= 25 ? "warm" : "cold");
-
-            const insRes = await db.prepare(
-              "INSERT INTO leads (name, mobile, whatsapp, email, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(name, mobile, whatsapp, email, location, profession, sourceId, interestsJson, stage, temperature, score, nextActionType, nextActionAt, notes).run();
-
-            const newLeadId = insRes?.meta?.last_row_id;
-            if (nextActionAt && newLeadId) {
-              await db.prepare(
-                "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                "VALUES (?, ?, ?, 'Medium', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-              ).bind(nextActionType ? (nextActionType + ": " + name) : ("Follow-up: " + name), nextActionType || "Follow-up", nextActionAt, notes, newLeadId).run();
+        // 3. Logo & Static Images
+        if (
+            path === "/images/sbl-logo.png" ||
+            path === "/favicon.png" ||
+            path === "/apple-touch-icon.png"
+        ) {
+            const binaryString = atob(SBL_LOGO_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
             }
-          } catch (e) {
-            console.error("D1 Leads create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/leads", request.url), 302);
-      }
-
-      if (path.startsWith("/leads/")) {
-        const parts = path.split("/");
-        const leadId = parseInt(parts[2], 10);
-
-        if (effectiveMethod === "DELETE" && leadId) {
-          if (db) {
-            try {
-              await db.prepare("UPDATE leads SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?").bind(leadId).run();
-            } catch (e) {
-              console.error("D1 Leads delete error:", e);
-            }
-          }
-          return Response.redirect(new URL("/leads?deleted_lead=" + leadId, request.url), 302);
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
         }
 
-        if (effectiveMethod === "PUT" && leadId && formData) {
-          if (db) {
-            try {
-              const name = formData.get("name") || "Unnamed Lead";
-              const mobile = formData.get("mobile") || "";
-              const whatsapp = formData.get("whatsapp") || null;
-              const email = formData.get("email") || null;
-              const location = formData.get("location") || null;
-              const profession = formData.get("profession_or_business") || null;
-              const sourceId = Number(formData.get("lead_source_id")) || 1;
-              const stage = formData.get("stage") || "new";
-              const interests = formData.getAll("interest_types[]") || [];
-              const interestsJson = JSON.stringify(interests);
-              const notes = formData.get("notes") || null;
-              const score = formData.get("score") ? Number(formData.get("score")) : 30;
-
-              await db.prepare(
-                "UPDATE leads SET name = ?, mobile = ?, whatsapp = ?, email = ?, location = ?, profession_or_business = ?, lead_source_id = ?, interest_types = ?, stage = ?, notes = ?, score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-              ).bind(name, mobile, whatsapp, email, location, profession, sourceId, interestsJson, stage, notes, score, leadId).run();
-            } catch (e) {
-              console.error("D1 Leads update error:", e);
-            }
-          }
-          return Response.redirect(new URL("/leads/" + leadId, request.url), 302);
+        if (path === "/ping") {
+            return new Response("pong", { status: 200 });
         }
 
-        if (parts[3] === "stage" && effectiveMethod === "POST" && leadId && formData) {
-          if (db) {
-            try {
-              const stage = formData.get("stage") || "new";
-              await db.prepare("UPDATE leads SET stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(stage, leadId).run();
-            } catch (e) {
-              console.error("D1 Leads stage update error:", e);
-            }
-          }
-          return Response.redirect(new URL("/leads", request.url), 302);
-        }
+        const db = env.DB || env.sbl_database;
 
-        if (parts[3] === "convert" && effectiveMethod === "POST" && leadId) {
-          if (db) {
-            try {
-              await db.prepare("UPDATE leads SET stage = 'converted', converted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(leadId).run();
-            } catch (e) {
-              console.error("D1 Leads convert error:", e);
-            }
-          }
-          return Response.redirect(new URL("/leads/" + leadId, request.url), 302);
-        }
+        // 4. Handle POST, PUT, PATCH, DELETE Form Actions on Cloudflare D1
+        if (
+            request.method === "POST" ||
+            request.method === "PUT" ||
+            request.method === "PATCH" ||
+            request.method === "DELETE"
+        ) {
+            let effectiveMethod = request.method;
+            let formData = null;
+            const contentType = request.headers.get("content-type") || "";
 
-        if (parts[3] === "activities" && effectiveMethod === "POST" && leadId && formData) {
-          if (db) {
-            try {
-              const actType = formData.get("type") || "Call";
-              const title = formData.get("title") || (actType + " Interaction");
-              const description = formData.get("description") || null;
-              const nextActionType = formData.get("next_action_type") || null;
-              const nextActionAt = formData.get("next_action_at") || null;
-
-              await db.prepare(
-                "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                "VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-              ).bind(leadId, actType, title, description).run();
-
-              await db.prepare(
-                "UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-              ).bind(nextActionType, nextActionAt, leadId).run();
-
-              if (nextActionAt) {
-                await db.prepare(
-                  "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                  "VALUES (?, ?, ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                ).bind((nextActionType || "Follow-up") + ": " + title, nextActionType || "Follow-up", nextActionAt, description, leadId).run();
-              }
-            } catch (e) {
-              console.error("D1 Lead activities error:", e);
-            }
-          }
-          return Response.redirect(new URL("/leads/" + leadId, request.url), 302);
-        }
-      }
-
-      // 4b. Binary Tree Handlers
-      if ((path === "/binary" || path === "/binary/place") && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const memberName = formData.get("member_name") || "New Member";
-            const phone = formData.get("phone") || null;
-            const email = formData.get("email") || null;
-            const packageName = formData.get("package_name") || "National 120k";
-            const rankName = formData.get("rank_name") || "Member";
-            const parentId = Number(formData.get("parent_id")) || 1;
-            const position = formData.get("position") || "left";
-            const pointValue = Number(formData.get("point_value")) || 100;
-            const sponsorId = formData.get("sponsor_id") ? Number(formData.get("sponsor_id")) : null;
-            const userId = formData.get("user_id") ? Number(formData.get("user_id")) : null;
-            const memberCode = formData.get("member_code") || ("SBL-" + (Math.floor(1000 + Math.random() * 9000)));
-
-            await db.prepare(
-              "INSERT INTO binary_nodes (member_name, member_code, phone, email, package_name, rank_name, parent_id, sponsor_id, user_id, position, point_value, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(memberName, memberCode, phone, email, packageName, rankName, parentId, sponsorId, userId, position, pointValue).run();
-
-            if (position === "left") {
-              await db.prepare("UPDATE binary_nodes SET left_count = left_count + 1, left_bv = left_bv + ?, carry_left = carry_left + ? WHERE id = ?").bind(pointValue, pointValue, parentId).run();
-            } else if (position === "right") {
-              await db.prepare("UPDATE binary_nodes SET right_count = right_count + 1, right_bv = right_bv + ?, carry_right = carry_right + ? WHERE id = ?").bind(pointValue, pointValue, parentId).run();
-            }
-          } catch (e) {
-            console.error("D1 Binary create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/binary", request.url), 302);
-      }
-
-      if (path.startsWith("/binary/")) {
-        const parts = path.split("/");
-        const nodeId = parseInt(parts[2], 10);
-        if (effectiveMethod === "DELETE" && nodeId) {
-          if (db) {
-            try {
-              const check = await db.prepare("SELECT count(*) as count FROM binary_nodes WHERE parent_id = ?").bind(nodeId).first();
-              if (!check || check.count === 0) {
-                const node = await db.prepare("SELECT * FROM binary_nodes WHERE id = ?").bind(nodeId).first();
-                if (node && node.parent_id) {
-                  const pv = Number(node.point_value) || 0;
-                  if (node.position === "left") {
-                    await db.prepare("UPDATE binary_nodes SET left_count = MAX(0, left_count - 1), left_bv = MAX(0, left_bv - ?), carry_left = MAX(0, carry_left - ?) WHERE id = ?").bind(pv, pv, node.parent_id).run();
-                  } else if (node.position === "right") {
-                    await db.prepare("UPDATE binary_nodes SET right_count = MAX(0, right_count - 1), right_bv = MAX(0, right_bv - ?), carry_right = MAX(0, carry_right - ?) WHERE id = ?").bind(pv, pv, node.parent_id).run();
-                  }
+            if (
+                contentType.includes("form") ||
+                contentType.includes("multipart") ||
+                contentType.includes("urlencoded")
+            ) {
+                try {
+                    formData = await request.formData();
+                    const spoofed = formData.get("_method");
+                    if (spoofed) {
+                        effectiveMethod = spoofed.toUpperCase();
+                    }
+                } catch (e) {
+                    console.error("Error parsing formData:", e);
                 }
-                await db.prepare("DELETE FROM binary_nodes WHERE id = ?").bind(nodeId).run();
-              }
-            } catch (e) {
-              console.error("D1 Binary delete error:", e);
             }
-          }
-          return Response.redirect(new URL("/binary?deleted_node=" + nodeId, request.url), 302);
-        }
 
-        if (effectiveMethod === "PUT" && nodeId && formData) {
-          if (db) {
-            try {
-              const memberName = formData.get("member_name");
-              const phone = formData.get("phone") || null;
-              const email = formData.get("email") || null;
-              const packageName = formData.get("package_name");
-              const rankName = formData.get("rank_name");
-              const isActive = formData.has("is_active") ? 1 : 0;
-              await db.prepare("UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                .bind(memberName, phone, email, packageName, rankName, isActive, nodeId)
-                .run();
-            } catch (e) {
-              console.error("D1 Binary update error:", e);
+            // 4a. Leads Handlers
+            if (path === "/leads" && effectiveMethod === "POST" && formData) {
+                if (db) {
+                    try {
+                        const name = formData.get("name") || "Unnamed Lead";
+                        const mobile = formData.get("mobile") || "";
+                        const whatsapp = formData.get("whatsapp") || null;
+                        const email = formData.get("email") || null;
+                        const location = formData.get("location") || null;
+                        const profession =
+                            formData.get("profession_or_business") || null;
+                        const sourceId =
+                            Number(formData.get("lead_source_id")) || 1;
+                        const stage = formData.get("stage") || "new";
+                        const interests =
+                            formData.getAll("interest_types[]") || [];
+                        const interestsJson = JSON.stringify(interests);
+                        const nextActionType =
+                            formData.get("next_action_type") || null;
+                        const nextActionAt =
+                            formData.get("next_action_at") || null;
+                        const notes = formData.get("notes") || null;
+                        const score =
+                            (interests.length > 0 ? 20 : 0) +
+                            (nextActionAt ? 15 : 0);
+                        const temperature =
+                            score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
+
+                        const insRes = await db
+                            .prepare(
+                                "INSERT INTO leads (name, mobile, whatsapp, email, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                name,
+                                mobile,
+                                whatsapp,
+                                email,
+                                location,
+                                profession,
+                                sourceId,
+                                interestsJson,
+                                stage,
+                                temperature,
+                                score,
+                                nextActionType,
+                                nextActionAt,
+                                notes,
+                            )
+                            .run();
+
+                        const newLeadId = insRes?.meta?.last_row_id;
+                        if (nextActionAt && newLeadId) {
+                            await db
+                                .prepare(
+                                    "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                        "VALUES (?, ?, ?, 'Medium', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                )
+                                .bind(
+                                    nextActionType
+                                        ? nextActionType + ": " + name
+                                        : "Follow-up: " + name,
+                                    nextActionType || "Follow-up",
+                                    nextActionAt,
+                                    notes,
+                                    newLeadId,
+                                )
+                                .run();
+                        }
+                    } catch (e) {
+                        console.error("D1 Leads create error:", e);
+                    }
+                }
+                return Response.redirect(new URL("/leads", request.url), 302);
             }
-          }
-          return Response.redirect(new URL("/binary", request.url), 302);
-        }
-      }
 
-      // 4c. Team & Users Handlers (POST, PUT, DELETE)
-      if (path === "/users" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const name = formData.get("name") || "New Team Member";
-            const email = formData.get("email") || "";
-            const phone = formData.get("phone") || null;
-            const designation = formData.get("designation") || null;
-            const roleId = Number(formData.get("role_id")) || 3;
-            const status = formData.get("status") || "active";
-            const passwordHash = "$2y$12$e/e8u9R52f4q4z1V0h.qgeNq4mGkLpY4o5wOQvS5c9zQvT/zKk2yC";
+            if (path.startsWith("/leads/")) {
+                const parts = path.split("/");
+                const leadId = parseInt(parts[2], 10);
 
-            const insRes = await db.prepare(
-              "INSERT INTO users (name, email, password, phone, designation, status, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(name, email, passwordHash, phone, designation, status).run();
-
-            const newUserId = insRes?.meta?.last_row_id;
-            if (newUserId) {
-              await db.prepare("INSERT INTO role_user (user_id, role_id) VALUES (?, ?)").bind(newUserId, roleId).run();
-            }
-          } catch (e) {
-            console.error("D1 User create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/users", request.url), 302);
-      }
-
-      if (path.startsWith("/users/")) {
-        const parts = path.split("/");
-        const userId = parseInt(parts[2], 10);
-
-        if (effectiveMethod === "DELETE" && userId) {
-          if (db) {
-            try {
-              if (userId !== 1) { // Never delete super admin
-                await db.prepare("DELETE FROM role_user WHERE user_id = ?").bind(userId).run();
-                await db.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
-              }
-            } catch (e) {
-              console.error("D1 User delete error:", e);
-            }
-          }
-          return Response.redirect(new URL("/users?deleted_user=" + userId, request.url), 302);
-        }
-
-        if (effectiveMethod === "PUT" && userId && formData) {
-          if (db) {
-            try {
-              const name = formData.get("name");
-              const email = formData.get("email");
-              const phone = formData.get("phone") || null;
-              const designation = formData.get("designation") || null;
-              const roleId = Number(formData.get("role_id")) || 3;
-              const status = formData.get("status") || "active";
-
-              await db.prepare(
-                "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-              ).bind(name, email, phone, designation, status, userId).run();
-
-              await db.prepare("DELETE FROM role_user WHERE user_id = ?").bind(userId).run();
-              await db.prepare("INSERT INTO role_user (user_id, role_id) VALUES (?, ?)").bind(userId, roleId).run();
-            } catch (e) {
-              console.error("D1 User update error:", e);
-            }
-          }
-          return Response.redirect(new URL("/users", request.url), 302);
-        }
-      }
-
-      // 4d. Contacts Handlers
-      if (path === "/contacts" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const department = formData.get("department") || "General Support";
-            const contactPerson = formData.get("contact_person") || null;
-            const phone = formData.get("phone") || "";
-            const whatsapp = formData.get("whatsapp") || null;
-            const email = formData.get("email") || null;
-            const availableHours = formData.get("available_hours") || "10:00 AM - 08:00 PM";
-            const description = formData.get("description") || null;
-            const icon = formData.get("icon") || "📞";
-            const badge = formData.get("badge") || null;
-            const isPrimary = formData.has("is_primary") ? 1 : 0;
-
-            await db.prepare(
-              "INSERT INTO sbl_contacts (department, contact_person, phone, whatsapp, email, available_hours, description, icon, badge, is_primary, sort_order, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(department, contactPerson, phone, whatsapp, email, availableHours, description, icon, badge, isPrimary).run();
-          } catch (e) {
-            console.error("D1 Contacts create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/contacts", request.url), 302);
-      }
-
-      if (path.startsWith("/contacts/")) {
-        const parts = path.split("/");
-        const contactId = parseInt(parts[2], 10);
-        if (effectiveMethod === "DELETE" && contactId) {
-          if (db) {
-            try {
-              await db.prepare("DELETE FROM sbl_contacts WHERE id = ?").bind(contactId).run();
-            } catch (e) {
-              console.error("D1 Contacts delete error:", e);
-            }
-          }
-          return Response.redirect(new URL("/contacts?deleted_contact=" + contactId, request.url), 302);
-        }
-
-        if (effectiveMethod === "PUT" && contactId && formData) {
-          if (db) {
-            try {
-              const department = formData.get("department") || "General Support";
-              const contactPerson = formData.get("contact_person") || null;
-              const phone = formData.get("phone") || "";
-              const whatsapp = formData.get("whatsapp") || null;
-              const email = formData.get("email") || null;
-              const availableHours = formData.get("available_hours") || "10:00 AM - 08:00 PM";
-              const description = formData.get("description") || null;
-              const icon = formData.get("icon") || "📞";
-              const badge = formData.get("badge") || null;
-              const isPrimary = formData.has("is_primary") ? 1 : 0;
-
-              await db.prepare(
-                "UPDATE sbl_contacts SET department = ?, contact_person = ?, phone = ?, whatsapp = ?, email = ?, available_hours = ?, description = ?, icon = ?, badge = ?, is_primary = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-              ).bind(department, contactPerson, phone, whatsapp, email, availableHours, description, icon, badge, isPrimary, contactId).run();
-            } catch (e) {
-              console.error("D1 Contacts update error:", e);
-            }
-          }
-          return Response.redirect(new URL("/contacts", request.url), 302);
-        }
-      }
-
-      // 4e. Tasks Handlers
-      if (path === "/tasks" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const title = formData.get("title") || "New Task";
-            const type = formData.get("type") || "Follow-up";
-            const dueAt = formData.get("due_at") || new Date().toISOString();
-            const priority = formData.get("priority") || "Medium";
-            const notes = formData.get("notes") || null;
-            const leadId = formData.get("related_lead_id") ? Number(formData.get("related_lead_id")) : null;
-
-            await db.prepare(
-              "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(title, type, dueAt, priority, notes, leadId).run();
-
-            if (leadId) {
-              await db.prepare("UPDATE leads SET next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(type, dueAt, leadId).run();
-            }
-          } catch (e) {
-            console.error("D1 Tasks create error:", e);
-          }
-        }
-        const ref = request.headers.get("referer") || "";
-        const m = ref.match(/\/leads\/(\d+)/);
-        if (m) return Response.redirect(new URL("/leads/" + m[1], request.url), 302);
-        return Response.redirect(new URL("/tasks", request.url), 302);
-      }
-
-      if (path.startsWith("/tasks/")) {
-        const parts = path.split("/");
-        const taskId = parseInt(parts[2], 10);
-        if (parts[3] === "complete" && effectiveMethod === "POST" && taskId) {
-          if (db) {
-            try {
-              const outcome = formData ? (formData.get("outcome") || "Completed") : "Completed";
-              const nextAction = formData ? formData.get("next_action") : null;
-              const nextActionAt = formData ? formData.get("next_action_at") : null;
-
-              await db.prepare("UPDATE tasks SET status = 'Completed', outcome = ?, next_action = ?, next_action_at = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(outcome, nextAction, nextActionAt, taskId).run();
-
-              const taskRec = await db.prepare("SELECT * FROM tasks WHERE id = ?").bind(taskId).first();
-              if (taskRec && taskRec.related_lead_id) {
-                const leadId = taskRec.related_lead_id;
-                await db.prepare("UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(nextAction || null, nextActionAt || null, leadId).run();
-
-                if (nextActionAt) {
-                  await db.prepare(
-                    "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                    "VALUES (?, 'Follow-up', ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                  ).bind((nextAction || "Follow-up"), nextActionAt, "Generated from outcome: " + outcome, leadId).run();
+                if (effectiveMethod === "DELETE" && leadId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(leadId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Leads delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/leads?deleted_lead=" + leadId, request.url),
+                        302,
+                    );
                 }
 
-                await db.prepare(
-                  "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                  "VALUES (?, 1, 'task_completed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                ).bind(leadId, "Task Completed: " + (taskRec.title || "Follow-up"), "Outcome: " + outcome + (nextAction ? " | Next: " + nextAction : "")).run();
-              }
-            } catch (e) {
-              console.error("D1 Tasks complete error:", e);
+                if (effectiveMethod === "PUT" && leadId && formData) {
+                    if (db) {
+                        try {
+                            const name = formData.get("name") || "Unnamed Lead";
+                            const mobile = formData.get("mobile") || "";
+                            const whatsapp = formData.get("whatsapp") || null;
+                            const email = formData.get("email") || null;
+                            const location = formData.get("location") || null;
+                            const profession =
+                                formData.get("profession_or_business") || null;
+                            const sourceId =
+                                Number(formData.get("lead_source_id")) || 1;
+                            const stage = formData.get("stage") || "new";
+                            const interests =
+                                formData.getAll("interest_types[]") || [];
+                            const interestsJson = JSON.stringify(interests);
+                            const notes = formData.get("notes") || null;
+                            const score = formData.get("score")
+                                ? Number(formData.get("score"))
+                                : 30;
+
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET name = ?, mobile = ?, whatsapp = ?, email = ?, location = ?, profession_or_business = ?, lead_source_id = ?, interest_types = ?, stage = ?, notes = ?, score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    name,
+                                    mobile,
+                                    whatsapp,
+                                    email,
+                                    location,
+                                    profession,
+                                    sourceId,
+                                    interestsJson,
+                                    stage,
+                                    notes,
+                                    score,
+                                    leadId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Leads update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/leads/" + leadId, request.url),
+                        302,
+                    );
+                }
+
+                if (
+                    parts[3] === "stage" &&
+                    effectiveMethod === "POST" &&
+                    leadId &&
+                    formData
+                ) {
+                    if (db) {
+                        try {
+                            const stage = formData.get("stage") || "new";
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET stage = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(stage, leadId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Leads stage update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/leads", request.url),
+                        302,
+                    );
+                }
+
+                if (
+                    parts[3] === "convert" &&
+                    effectiveMethod === "POST" &&
+                    leadId
+                ) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET stage = 'converted', converted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(leadId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Leads convert error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/leads/" + leadId, request.url),
+                        302,
+                    );
+                }
+
+                if (
+                    parts[3] === "activities" &&
+                    effectiveMethod === "POST" &&
+                    leadId &&
+                    formData
+                ) {
+                    if (db) {
+                        try {
+                            const actType = formData.get("type") || "Call";
+                            const title =
+                                formData.get("title") ||
+                                actType + " Interaction";
+                            const description =
+                                formData.get("description") || null;
+                            const nextActionType =
+                                formData.get("next_action_type") || null;
+                            const nextActionAt =
+                                formData.get("next_action_at") || null;
+
+                            await db
+                                .prepare(
+                                    "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                                        "VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                )
+                                .bind(leadId, actType, title, description)
+                                .run();
+
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(nextActionType, nextActionAt, leadId)
+                                .run();
+
+                            if (nextActionAt) {
+                                await db
+                                    .prepare(
+                                        "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                            "VALUES (?, ?, ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    )
+                                    .bind(
+                                        (nextActionType || "Follow-up") +
+                                            ": " +
+                                            title,
+                                        nextActionType || "Follow-up",
+                                        nextActionAt,
+                                        description,
+                                        leadId,
+                                    )
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Lead activities error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/leads/" + leadId, request.url),
+                        302,
+                    );
+                }
             }
-          }
-          return Response.redirect(new URL("/tasks", request.url), 302);
-        }
-        if (effectiveMethod === "DELETE" && taskId) {
-          if (db) {
-            try {
-              await db.prepare("DELETE FROM tasks WHERE id = ?").bind(taskId).run();
-            } catch (e) {
-              console.error("D1 Tasks delete error:", e);
+
+            // 4b. Binary Tree Handlers
+            if (
+                (path === "/binary" || path === "/binary/place") &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const memberName =
+                            formData.get("member_name") || "New Member";
+                        const phone = formData.get("phone") || null;
+                        const email = formData.get("email") || null;
+                        const packageName =
+                            formData.get("package_name") || "National 120k";
+                        const rankName = formData.get("rank_name") || "Member";
+                        const parentId = Number(formData.get("parent_id")) || 1;
+                        const position = formData.get("position") || "left";
+                        const pointValue =
+                            Number(formData.get("point_value")) || 100;
+                        const sponsorId = formData.get("sponsor_id")
+                            ? Number(formData.get("sponsor_id"))
+                            : null;
+                        const userId = formData.get("user_id")
+                            ? Number(formData.get("user_id"))
+                            : null;
+                        const memberCode =
+                            formData.get("member_code") ||
+                            "SBL-" + Math.floor(1000 + Math.random() * 9000);
+
+                        await db
+                            .prepare(
+                                "INSERT INTO binary_nodes (member_name, member_code, phone, email, package_name, rank_name, parent_id, sponsor_id, user_id, position, point_value, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                memberName,
+                                memberCode,
+                                phone,
+                                email,
+                                packageName,
+                                rankName,
+                                parentId,
+                                sponsorId,
+                                userId,
+                                position,
+                                pointValue,
+                            )
+                            .run();
+
+                        if (position === "left") {
+                            await db
+                                .prepare(
+                                    "UPDATE binary_nodes SET left_count = left_count + 1, left_bv = left_bv + ?, carry_left = carry_left + ? WHERE id = ?",
+                                )
+                                .bind(pointValue, pointValue, parentId)
+                                .run();
+                        } else if (position === "right") {
+                            await db
+                                .prepare(
+                                    "UPDATE binary_nodes SET right_count = right_count + 1, right_bv = right_bv + ?, carry_right = carry_right + ? WHERE id = ?",
+                                )
+                                .bind(pointValue, pointValue, parentId)
+                                .run();
+                        }
+                    } catch (e) {
+                        console.error("D1 Binary create error:", e);
+                    }
+                }
+                return Response.redirect(new URL("/binary", request.url), 302);
             }
-          }
-          return Response.redirect(new URL("/tasks", request.url), 302);
-        }
-      }
 
-      // 4f. Ecosystem Handlers
-      if (path === "/ecosystem" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const title = formData.get("title") || "New Portal";
-            const urlVal = formData.get("url") || "#";
-            const category = formData.get("category") || "Official Portals";
-            const badge = formData.get("badge") || null;
-            const description = formData.get("description") || null;
-            const icon = formData.get("icon") || "🌐";
-            const isActive = formData.has("is_active") ? 1 : 0;
+            if (path.startsWith("/binary/")) {
+                const parts = path.split("/");
+                const nodeId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && nodeId) {
+                    if (db) {
+                        try {
+                            const check = await db
+                                .prepare(
+                                    "SELECT count(*) as count FROM binary_nodes WHERE parent_id = ?",
+                                )
+                                .bind(nodeId)
+                                .first();
+                            if (!check || check.count === 0) {
+                                const node = await db
+                                    .prepare(
+                                        "SELECT * FROM binary_nodes WHERE id = ?",
+                                    )
+                                    .bind(nodeId)
+                                    .first();
+                                if (node && node.parent_id) {
+                                    const pv = Number(node.point_value) || 0;
+                                    if (node.position === "left") {
+                                        await db
+                                            .prepare(
+                                                "UPDATE binary_nodes SET left_count = MAX(0, left_count - 1), left_bv = MAX(0, left_bv - ?), carry_left = MAX(0, carry_left - ?) WHERE id = ?",
+                                            )
+                                            .bind(pv, pv, node.parent_id)
+                                            .run();
+                                    } else if (node.position === "right") {
+                                        await db
+                                            .prepare(
+                                                "UPDATE binary_nodes SET right_count = MAX(0, right_count - 1), right_bv = MAX(0, right_bv - ?), carry_right = MAX(0, carry_right - ?) WHERE id = ?",
+                                            )
+                                            .bind(pv, pv, node.parent_id)
+                                            .run();
+                                    }
+                                }
+                                await db
+                                    .prepare(
+                                        "DELETE FROM binary_nodes WHERE id = ?",
+                                    )
+                                    .bind(nodeId)
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Binary delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/binary?deleted_node=" + nodeId, request.url),
+                        302,
+                    );
+                }
 
-            await db.prepare(
-              "INSERT INTO ecosystem_links (title, url, category, badge, description, icon, is_active, sort_order, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(title, urlVal, category, badge, description, icon, isActive).run();
-          } catch (e) {
-            console.error("D1 Ecosystem create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/ecosystem", request.url), 302);
-      }
-
-      if (path.startsWith("/ecosystem/")) {
-        const parts = path.split("/");
-        const linkId = parseInt(parts[2], 10);
-        if (effectiveMethod === "DELETE" && linkId) {
-          if (db) {
-            try {
-              await db.prepare("DELETE FROM ecosystem_links WHERE id = ?").bind(linkId).run();
-            } catch (e) {
-              console.error("D1 Ecosystem delete error:", e);
+                if (effectiveMethod === "PUT" && nodeId && formData) {
+                    if (db) {
+                        try {
+                            const memberName = formData.get("member_name");
+                            const phone = formData.get("phone") || null;
+                            const email = formData.get("email") || null;
+                            const packageName = formData.get("package_name");
+                            const rankName = formData.get("rank_name");
+                            const isActive = formData.has("is_active") ? 1 : 0;
+                            await db
+                                .prepare(
+                                    "UPDATE binary_nodes SET member_name = ?, phone = ?, email = ?, package_name = ?, rank_name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    memberName,
+                                    phone,
+                                    email,
+                                    packageName,
+                                    rankName,
+                                    isActive,
+                                    nodeId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Binary update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/binary", request.url),
+                        302,
+                    );
+                }
             }
-          }
-          return Response.redirect(new URL("/ecosystem", request.url), 302);
-        }
-        if (effectiveMethod === "PUT" && linkId && formData) {
-          if (db) {
-            try {
-              const title = formData.get("title") || "New Portal";
-              const urlVal = formData.get("url") || "#";
-              const category = formData.get("category") || "Official Portals";
-              const badge = formData.get("badge") || null;
-              const description = formData.get("description") || null;
-              const icon = formData.get("icon") || "🌐";
-              const isActive = formData.has("is_active") ? 1 : 0;
 
-              await db.prepare(
-                "UPDATE ecosystem_links SET title = ?, url = ?, category = ?, badge = ?, description = ?, icon = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-              ).bind(title, urlVal, category, badge, description, icon, isActive, linkId).run();
-            } catch (e) {
-              console.error("D1 Ecosystem update error:", e);
+            // 4c. Team & Users Handlers (POST, PUT, DELETE)
+            if (path === "/users" && effectiveMethod === "POST" && formData) {
+                if (db) {
+                    try {
+                        const name = formData.get("name") || "New Team Member";
+                        const email = formData.get("email") || "";
+                        const phone = formData.get("phone") || null;
+                        const designation = formData.get("designation") || null;
+                        const roleId = Number(formData.get("role_id")) || 3;
+                        const status = formData.get("status") || "active";
+                        const passwordHash =
+                            "$2y$12$e/e8u9R52f4q4z1V0h.qgeNq4mGkLpY4o5wOQvS5c9zQvT/zKk2yC";
+
+                        const insRes = await db
+                            .prepare(
+                                "INSERT INTO users (name, email, password, phone, designation, status, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                name,
+                                email,
+                                passwordHash,
+                                phone,
+                                designation,
+                                status,
+                            )
+                            .run();
+
+                        const newUserId = insRes?.meta?.last_row_id;
+                        if (newUserId) {
+                            await db
+                                .prepare(
+                                    "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
+                                )
+                                .bind(newUserId, roleId)
+                                .run();
+                        }
+                    } catch (e) {
+                        console.error("D1 User create error:", e);
+                    }
+                }
+                return Response.redirect(new URL("/users", request.url), 302);
             }
-          }
-          return Response.redirect(new URL("/ecosystem", request.url), 302);
-        }
-      }
 
-      // 4g. Presentations Handlers
-      if (path === "/presentations" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const leadId = Number(formData.get("lead_id")) || null;
-            const type = formData.get("type") || "1-on-1 In-person";
-            const dateTime = formData.get("date_time") || formData.get("presentation_at") || new Date().toISOString();
-            const topic = formData.get("topic") || null;
-            const questions = formData.get("questions") || null;
-            const objections = formData.get("objections") || null;
-            const outcome = formData.get("outcome") || null;
-            const nextFollowUpAt = formData.get("next_follow_up_at") || null;
-            const notes = formData.get("notes") || null;
+            if (path.startsWith("/users/")) {
+                const parts = path.split("/");
+                const userId = parseInt(parts[2], 10);
 
-            await db.prepare(
-              "INSERT INTO presentations (lead_id, user_id, date_time, type, topic, questions, objections, outcome, next_follow_up_at, notes, created_at, updated_at) " +
-              "VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(leadId, dateTime, type, topic, questions, objections, outcome, nextFollowUpAt, notes).run();
+                if (effectiveMethod === "DELETE" && userId) {
+                    if (db) {
+                        try {
+                            if (userId !== 1) {
+                                // Never delete super admin
+                                await db
+                                    .prepare(
+                                        "DELETE FROM role_user WHERE user_id = ?",
+                                    )
+                                    .bind(userId)
+                                    .run();
+                                await db
+                                    .prepare("DELETE FROM users WHERE id = ?")
+                                    .bind(userId)
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 User delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/users?deleted_user=" + userId, request.url),
+                        302,
+                    );
+                }
 
-            if (leadId) {
-              await db.prepare("UPDATE leads SET stage = 'presentation', last_contact_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(leadId).run();
-              await db.prepare(
-                "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                "VALUES (?, 1, 'presentation', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-              ).bind(leadId, "Presentation Conducted: " + type, topic || notes || "Presentation session recorded").run();
+                if (effectiveMethod === "PUT" && userId && formData) {
+                    if (db) {
+                        try {
+                            const name = formData.get("name");
+                            const email = formData.get("email");
+                            const phone = formData.get("phone") || null;
+                            const designation =
+                                formData.get("designation") || null;
+                            const roleId = Number(formData.get("role_id")) || 3;
+                            const status = formData.get("status") || "active";
 
-              if (nextFollowUpAt) {
-                await db.prepare(
-                  "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                  "VALUES (?, 'Follow-up', ?, 'High', 'Follow up on presentation session', ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                ).bind("Follow-up: Presentation discussion", nextFollowUpAt, leadId).run();
-              }
+                            await db
+                                .prepare(
+                                    "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    name,
+                                    email,
+                                    phone,
+                                    designation,
+                                    status,
+                                    userId,
+                                )
+                                .run();
+
+                            await db
+                                .prepare(
+                                    "DELETE FROM role_user WHERE user_id = ?",
+                                )
+                                .bind(userId)
+                                .run();
+                            await db
+                                .prepare(
+                                    "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
+                                )
+                                .bind(userId, roleId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 User update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/users", request.url),
+                        302,
+                    );
+                }
             }
-          } catch (e) {
-            console.error("D1 Presentation create error:", e);
-          }
-        }
-        const ref = request.headers.get("referer") || "";
-        const m = ref.match(/\/leads\/(\d+)/);
-        if (m) return Response.redirect(new URL("/leads/" + m[1], request.url), 302);
-        return Response.redirect(new URL("/presentations", request.url), 302);
-      }
 
-      if (path.startsWith("/presentations/")) {
-        const parts = path.split("/");
-        const presId = parseInt(parts[2], 10);
-        if (effectiveMethod === "DELETE" && presId) {
-          if (db) {
-            try {
-              await db.prepare("DELETE FROM presentations WHERE id = ?").bind(presId).run();
-            } catch (e) {
-              console.error("D1 Presentation delete error:", e);
+            // 4d. Contacts Handlers
+            if (
+                path === "/contacts" &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const department =
+                            formData.get("department") || "General Support";
+                        const contactPerson =
+                            formData.get("contact_person") || null;
+                        const phone = formData.get("phone") || "";
+                        const whatsapp = formData.get("whatsapp") || null;
+                        const email = formData.get("email") || null;
+                        const availableHours =
+                            formData.get("available_hours") ||
+                            "10:00 AM - 08:00 PM";
+                        const description = formData.get("description") || null;
+                        const icon = formData.get("icon") || "📞";
+                        const badge = formData.get("badge") || null;
+                        const isPrimary = formData.has("is_primary") ? 1 : 0;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO sbl_contacts (department, contact_person, phone, whatsapp, email, available_hours, description, icon, badge, is_primary, sort_order, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                department,
+                                contactPerson,
+                                phone,
+                                whatsapp,
+                                email,
+                                availableHours,
+                                description,
+                                icon,
+                                badge,
+                                isPrimary,
+                            )
+                            .run();
+                    } catch (e) {
+                        console.error("D1 Contacts create error:", e);
+                    }
+                }
+                return Response.redirect(
+                    new URL("/contacts", request.url),
+                    302,
+                );
             }
-          }
-          return Response.redirect(new URL("/presentations?deleted_pres=" + presId, request.url), 302);
-        }
-      }
 
-      // 4h. Content Calendar Handlers
-      if (path === "/marketing/content-calendar" && effectiveMethod === "POST" && formData) {
-        if (db) {
-          try {
-            const title = formData.get("title") || "New Post";
-            const platform = formData.get("platform") || "Facebook";
-            const status = formData.get("status") || "Draft";
-            const scheduledAt = formData.get("scheduled_at") || new Date().toISOString();
-            const copyText = formData.get("copy_text") || null;
-            const mediaUrl = formData.get("media_url") || null;
+            if (path.startsWith("/contacts/")) {
+                const parts = path.split("/");
+                const contactId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && contactId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "DELETE FROM sbl_contacts WHERE id = ?",
+                                )
+                                .bind(contactId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Contacts delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL(
+                            "/contacts?deleted_contact=" + contactId,
+                            request.url,
+                        ),
+                        302,
+                    );
+                }
 
-            await db.prepare(
-              "INSERT INTO content_items (title, platform, status, scheduled_at, copy_text, media_url, created_at, updated_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(title, platform, status, scheduledAt, copyText, mediaUrl).run();
-          } catch (e) {
-            console.error("D1 Content Calendar create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/marketing/content-calendar", request.url), 302);
-      }
+                if (effectiveMethod === "PUT" && contactId && formData) {
+                    if (db) {
+                        try {
+                            const department =
+                                formData.get("department") || "General Support";
+                            const contactPerson =
+                                formData.get("contact_person") || null;
+                            const phone = formData.get("phone") || "";
+                            const whatsapp = formData.get("whatsapp") || null;
+                            const email = formData.get("email") || null;
+                            const availableHours =
+                                formData.get("available_hours") ||
+                                "10:00 AM - 08:00 PM";
+                            const description =
+                                formData.get("description") || null;
+                            const icon = formData.get("icon") || "📞";
+                            const badge = formData.get("badge") || null;
+                            const isPrimary = formData.has("is_primary")
+                                ? 1
+                                : 0;
 
-      if (path.startsWith("/marketing/content-calendar/")) {
-        const parts = path.split("/");
-        const itemId = parseInt(parts[3], 10);
-        if (effectiveMethod === "DELETE" && itemId) {
-          if (db) {
-            try {
-              await db.prepare("DELETE FROM content_items WHERE id = ?").bind(itemId).run();
-            } catch (e) {
-              console.error("D1 Content Calendar delete error:", e);
+                            await db
+                                .prepare(
+                                    "UPDATE sbl_contacts SET department = ?, contact_person = ?, phone = ?, whatsapp = ?, email = ?, available_hours = ?, description = ?, icon = ?, badge = ?, is_primary = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    department,
+                                    contactPerson,
+                                    phone,
+                                    whatsapp,
+                                    email,
+                                    availableHours,
+                                    description,
+                                    icon,
+                                    badge,
+                                    isPrimary,
+                                    contactId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Contacts update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/contacts", request.url),
+                        302,
+                    );
+                }
             }
-          }
-          return Response.redirect(new URL("/marketing/content-calendar", request.url), 302);
-        }
-      }
+
+            // 4e. Tasks Handlers
+            if (path === "/tasks" && effectiveMethod === "POST" && formData) {
+                if (db) {
+                    try {
+                        const title = formData.get("title") || "New Task";
+                        const type = formData.get("type") || "Follow-up";
+                        const dueAt =
+                            formData.get("due_at") || new Date().toISOString();
+                        const priority = formData.get("priority") || "Medium";
+                        const notes = formData.get("notes") || null;
+                        const leadId = formData.get("related_lead_id")
+                            ? Number(formData.get("related_lead_id"))
+                            : null;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(title, type, dueAt, priority, notes, leadId)
+                            .run();
+
+                        if (leadId) {
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(type, dueAt, leadId)
+                                .run();
+                        }
+                    } catch (e) {
+                        console.error("D1 Tasks create error:", e);
+                    }
+                }
+                const ref = request.headers.get("referer") || "";
+                const m = ref.match(/\/leads\/(\d+)/);
+                if (m)
+                    return Response.redirect(
+                        new URL("/leads/" + m[1], request.url),
+                        302,
+                    );
+                return Response.redirect(new URL("/tasks", request.url), 302);
+            }
+
+            if (path.startsWith("/tasks/")) {
+                const parts = path.split("/");
+                const taskId = parseInt(parts[2], 10);
+                if (
+                    parts[3] === "complete" &&
+                    effectiveMethod === "POST" &&
+                    taskId
+                ) {
+                    if (db) {
+                        try {
+                            const outcome = formData
+                                ? formData.get("outcome") || "Completed"
+                                : "Completed";
+                            const nextAction = formData
+                                ? formData.get("next_action")
+                                : null;
+                            const nextActionAt = formData
+                                ? formData.get("next_action_at")
+                                : null;
+
+                            await db
+                                .prepare(
+                                    "UPDATE tasks SET status = 'Completed', outcome = ?, next_action = ?, next_action_at = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(outcome, nextAction, nextActionAt, taskId)
+                                .run();
+
+                            const taskRec = await db
+                                .prepare("SELECT * FROM tasks WHERE id = ?")
+                                .bind(taskId)
+                                .first();
+                            if (taskRec && taskRec.related_lead_id) {
+                                const leadId = taskRec.related_lead_id;
+                                await db
+                                    .prepare(
+                                        "UPDATE leads SET last_contact_at = CURRENT_TIMESTAMP, next_action_type = ?, next_action_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        nextAction || null,
+                                        nextActionAt || null,
+                                        leadId,
+                                    )
+                                    .run();
+
+                                if (nextActionAt) {
+                                    await db
+                                        .prepare(
+                                            "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                                "VALUES (?, 'Follow-up', ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                        )
+                                        .bind(
+                                            nextAction || "Follow-up",
+                                            nextActionAt,
+                                            "Generated from outcome: " +
+                                                outcome,
+                                            leadId,
+                                        )
+                                        .run();
+                                }
+
+                                await db
+                                    .prepare(
+                                        "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                                            "VALUES (?, 1, 'task_completed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    )
+                                    .bind(
+                                        leadId,
+                                        "Task Completed: " +
+                                            (taskRec.title || "Follow-up"),
+                                        "Outcome: " +
+                                            outcome +
+                                            (nextAction
+                                                ? " | Next: " + nextAction
+                                                : ""),
+                                    )
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Tasks complete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/tasks", request.url),
+                        302,
+                    );
+                }
+                if (effectiveMethod === "DELETE" && taskId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare("DELETE FROM tasks WHERE id = ?")
+                                .bind(taskId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Tasks delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/tasks", request.url),
+                        302,
+                    );
+                }
+            }
+
+            // 4f. Ecosystem Handlers
+            if (
+                path === "/ecosystem" &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const title = formData.get("title") || "New Portal";
+                        const urlVal = formData.get("url") || "#";
+                        const category =
+                            formData.get("category") || "Official Portals";
+                        const badge = formData.get("badge") || null;
+                        const description = formData.get("description") || null;
+                        const icon = formData.get("icon") || "🌐";
+                        const isActive = formData.has("is_active") ? 1 : 0;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO ecosystem_links (title, url, category, badge, description, icon, is_active, sort_order, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                title,
+                                urlVal,
+                                category,
+                                badge,
+                                description,
+                                icon,
+                                isActive,
+                            )
+                            .run();
+                    } catch (e) {
+                        console.error("D1 Ecosystem create error:", e);
+                    }
+                }
+                return Response.redirect(
+                    new URL("/ecosystem", request.url),
+                    302,
+                );
+            }
+
+            if (path.startsWith("/ecosystem/")) {
+                const parts = path.split("/");
+                const linkId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && linkId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "DELETE FROM ecosystem_links WHERE id = ?",
+                                )
+                                .bind(linkId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Ecosystem delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/ecosystem", request.url),
+                        302,
+                    );
+                }
+                if (effectiveMethod === "PUT" && linkId && formData) {
+                    if (db) {
+                        try {
+                            const title = formData.get("title") || "New Portal";
+                            const urlVal = formData.get("url") || "#";
+                            const category =
+                                formData.get("category") || "Official Portals";
+                            const badge = formData.get("badge") || null;
+                            const description =
+                                formData.get("description") || null;
+                            const icon = formData.get("icon") || "🌐";
+                            const isActive = formData.has("is_active") ? 1 : 0;
+
+                            await db
+                                .prepare(
+                                    "UPDATE ecosystem_links SET title = ?, url = ?, category = ?, badge = ?, description = ?, icon = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    title,
+                                    urlVal,
+                                    category,
+                                    badge,
+                                    description,
+                                    icon,
+                                    isActive,
+                                    linkId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Ecosystem update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/ecosystem", request.url),
+                        302,
+                    );
+                }
+            }
+
+            // 4g. Presentations Handlers
+            if (
+                path === "/presentations" &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const leadId = Number(formData.get("lead_id")) || null;
+                        const type = formData.get("type") || "1-on-1 In-person";
+                        const dateTime =
+                            formData.get("date_time") ||
+                            formData.get("presentation_at") ||
+                            new Date().toISOString();
+                        const topic = formData.get("topic") || null;
+                        const questions = formData.get("questions") || null;
+                        const objections = formData.get("objections") || null;
+                        const outcome = formData.get("outcome") || null;
+                        const nextFollowUpAt =
+                            formData.get("next_follow_up_at") || null;
+                        const notes = formData.get("notes") || null;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO presentations (lead_id, user_id, date_time, type, topic, questions, objections, outcome, next_follow_up_at, notes, created_at, updated_at) " +
+                                    "VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                leadId,
+                                dateTime,
+                                type,
+                                topic,
+                                questions,
+                                objections,
+                                outcome,
+                                nextFollowUpAt,
+                                notes,
+                            )
+                            .run();
+
+                        if (leadId) {
+                            await db
+                                .prepare(
+                                    "UPDATE leads SET stage = 'presentation', last_contact_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(leadId)
+                                .run();
+                            await db
+                                .prepare(
+                                    "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                                        "VALUES (?, 1, 'presentation', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                )
+                                .bind(
+                                    leadId,
+                                    "Presentation Conducted: " + type,
+                                    topic ||
+                                        notes ||
+                                        "Presentation session recorded",
+                                )
+                                .run();
+
+                            if (nextFollowUpAt) {
+                                await db
+                                    .prepare(
+                                        "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                            "VALUES (?, 'Follow-up', ?, 'High', 'Follow up on presentation session', ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    )
+                                    .bind(
+                                        "Follow-up: Presentation discussion",
+                                        nextFollowUpAt,
+                                        leadId,
+                                    )
+                                    .run();
+                            }
+                        }
+                    } catch (e) {
+                        console.error("D1 Presentation create error:", e);
+                    }
+                }
+                const ref = request.headers.get("referer") || "";
+                const m = ref.match(/\/leads\/(\d+)/);
+                if (m)
+                    return Response.redirect(
+                        new URL("/leads/" + m[1], request.url),
+                        302,
+                    );
+                return Response.redirect(
+                    new URL("/presentations", request.url),
+                    302,
+                );
+            }
+
+            if (path.startsWith("/presentations/")) {
+                const parts = path.split("/");
+                const presId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && presId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "DELETE FROM presentations WHERE id = ?",
+                                )
+                                .bind(presId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Presentation delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL(
+                            "/presentations?deleted_pres=" + presId,
+                            request.url,
+                        ),
+                        302,
+                    );
+                }
+            }
+
+            // 4h. Content Calendar Handlers
+            if (
+                path === "/marketing/content-calendar" &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const title = formData.get("title") || "New Post";
+                        const platform = formData.get("platform") || "Facebook";
+                        const status = formData.get("status") || "Draft";
+                        const scheduledAt =
+                            formData.get("scheduled_at") ||
+                            new Date().toISOString();
+                        const copyText = formData.get("copy_text") || null;
+                        const mediaUrl = formData.get("media_url") || null;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO content_items (title, platform, status, scheduled_at, copy_text, media_url, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                title,
+                                platform,
+                                status,
+                                scheduledAt,
+                                copyText,
+                                mediaUrl,
+                            )
+                            .run();
+                    } catch (e) {
+                        console.error("D1 Content Calendar create error:", e);
+                    }
+                }
+                return Response.redirect(
+                    new URL("/marketing/content-calendar", request.url),
+                    302,
+                );
+            }
+
+            if (path.startsWith("/marketing/content-calendar/")) {
+                const parts = path.split("/");
+                const itemId = parseInt(parts[3], 10);
+                if (effectiveMethod === "DELETE" && itemId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "DELETE FROM content_items WHERE id = ?",
+                                )
+                                .bind(itemId)
+                                .run();
+                        } catch (e) {
+                            console.error(
+                                "D1 Content Calendar delete error:",
+                                e,
+                            );
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/marketing/content-calendar", request.url),
+                        302,
+                    );
+                }
+            }
 
             // 4i. Roles & Permissions Handlers
-      if (path === "/roles" && effectiveMethod === "POST" && formData) {
+            if (path === "/roles" && effectiveMethod === "POST" && formData) {
+                if (db) {
+                    try {
+                        const name = formData.get("name") || "New Role";
+                        const slug = (
+                            formData.get("slug") ||
+                            name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+                        ).replace(/^-|-$/g, "");
+                        const description = formData.get("description") || null;
+                        const permissions =
+                            formData.getAll("permissions[]") || [];
+                        const insRes = await db
+                            .prepare(
+                                "INSERT INTO roles (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(name, slug, description)
+                            .run();
+
+                        const roleId = insRes?.meta?.last_row_id;
+                        if (roleId && permissions.length > 0) {
+                            for (const pId of permissions) {
+                                await db
+                                    .prepare(
+                                        "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                    )
+                                    .bind(roleId, Number(pId))
+                                    .run();
+                            }
+                        }
+                    } catch (e) {
+                        console.error("D1 Role create error:", e);
+                    }
+                }
+                return Response.redirect(new URL("/roles", request.url), 302);
+            }
+
+            if (path.startsWith("/roles/")) {
+                const parts = path.split("/");
+                const roleId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && roleId) {
+                    if (db) {
+                        try {
+                            if (roleId > 4) {
+                                // Keep core roles intact
+                                await db
+                                    .prepare(
+                                        "DELETE FROM permission_role WHERE role_id = ?",
+                                    )
+                                    .bind(roleId)
+                                    .run();
+                                await db
+                                    .prepare(
+                                        "DELETE FROM role_user WHERE role_id = ?",
+                                    )
+                                    .bind(roleId)
+                                    .run();
+                                await db
+                                    .prepare("DELETE FROM roles WHERE id = ?")
+                                    .bind(roleId)
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Role delete error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/roles", request.url),
+                        302,
+                    );
+                }
+                if (effectiveMethod === "PUT" && roleId && formData) {
+                    if (db) {
+                        try {
+                            const name = formData.get("name") || "Role";
+                            const description =
+                                formData.get("description") || null;
+                            const permissions =
+                                formData.getAll("permissions[]") || [];
+                            await db
+                                .prepare(
+                                    "UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(name, description, roleId)
+                                .run();
+                            await db
+                                .prepare(
+                                    "DELETE FROM permission_role WHERE role_id = ?",
+                                )
+                                .bind(roleId)
+                                .run();
+                            for (const pId of permissions) {
+                                await db
+                                    .prepare(
+                                        "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                    )
+                                    .bind(roleId, Number(pId))
+                                    .run();
+                            }
+                        } catch (e) {
+                            console.error("D1 Role update error:", e);
+                        }
+                    }
+                    return Response.redirect(
+                        new URL("/roles", request.url),
+                        302,
+                    );
+                }
+            }
+
+            // Smart Redirect based on Path
+            if (path.startsWith("/users")) {
+                return Response.redirect(new URL("/users", request.url), 302);
+            }
+            if (path.startsWith("/leads")) {
+                return Response.redirect(new URL("/leads", request.url), 302);
+            }
+            if (path.startsWith("/binary")) {
+                return Response.redirect(new URL("/binary", request.url), 302);
+            }
+            if (path.startsWith("/contacts")) {
+                return Response.redirect(
+                    new URL("/contacts", request.url),
+                    302,
+                );
+            }
+            if (path.startsWith("/tasks")) {
+                return Response.redirect(new URL("/tasks", request.url), 302);
+            }
+            if (path.startsWith("/ecosystem")) {
+                return Response.redirect(
+                    new URL("/ecosystem", request.url),
+                    302,
+                );
+            }
+            if (path.startsWith("/roles")) {
+                return Response.redirect(new URL("/roles", request.url), 302);
+            }
+            return Response.redirect(new URL(path, request.url), 302);
+        }
+
+        // 5. Query D1 for Live Dynamic Data
+        let liveLeads = [];
+        let deletedLeadIds = [];
+        let liveNodes = [];
+        let deletedNodeIds = [];
+        let liveContacts = [];
+        let liveTasks = [];
+        let liveEcosystem = [];
+        let liveUsers = [];
+        let deletedUserIds = [];
+        let livePresentations = [];
+        let deletedPresIds = [];
+        let liveContentItems = [];
+        let liveActivities = [];
+        let liveRoles = [];
+        let sourcesMap = {
+            1: "Direct Inbound",
+            2: "Facebook Page",
+            3: "LinkedIn Outreach",
+            4: "Referral / Team",
+            5: "Website / Landing Page",
+            6: "Seminar / Workshop",
+            7: "Investor Network",
+            8: "Cold Calling",
+        };
+
         if (db) {
-          try {
-            const name = formData.get("name") || "New Role";
-            const slug = (formData.get("slug") || name.toLowerCase().replace(/[^a-z0-9]+/g, "-")).replace(/^-|-$/g, "");
-            const description = formData.get("description") || null;
-            const permissions = formData.getAll("permissions[]") || [];
-            const insRes = await db.prepare(
-              "INSERT INTO roles (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ).bind(name, slug, description).run();
-
-            const roleId = insRes?.meta?.last_row_id;
-            if (roleId && permissions.length > 0) {
-              for (const pId of permissions) {
-                await db.prepare("INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)").bind(roleId, Number(pId)).run();
-              }
-            }
-          } catch (e) {
-            console.error("D1 Role create error:", e);
-          }
-        }
-        return Response.redirect(new URL("/roles", request.url), 302);
-      }
-
-      if (path.startsWith("/roles/")) {
-        const parts = path.split("/");
-        const roleId = parseInt(parts[2], 10);
-        if (effectiveMethod === "DELETE" && roleId) {
-          if (db) {
             try {
-              if (roleId > 4) { // Keep core roles intact
-                await db.prepare("DELETE FROM permission_role WHERE role_id = ?").bind(roleId).run();
-                await db.prepare("DELETE FROM role_user WHERE role_id = ?").bind(roleId).run();
-                await db.prepare("DELETE FROM roles WHERE id = ?").bind(roleId).run();
-              }
+                const [
+                    leadsRes,
+                    delLeadsRes,
+                    nodesRes,
+                    contactsRes,
+                    tasksRes,
+                    ecoRes,
+                    sourcesRes,
+                    usersRes,
+                    presRes,
+                    contentRes,
+                    actRes,
+                    rolesRes,
+                ] = await Promise.all([
+                    db
+                        .prepare(
+                            "SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY id DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT id FROM leads WHERE deleted_at IS NOT NULL",
+                        )
+                        .all(),
+                    db
+                        .prepare("SELECT * FROM binary_nodes ORDER BY id ASC")
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT t.*, l.name as lead_name, l.mobile as lead_mobile FROM tasks t LEFT JOIN leads l ON t.related_lead_id = l.id ORDER BY t.due_at ASC, t.id DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT * FROM ecosystem_links ORDER BY sort_order ASC, id DESC",
+                        )
+                        .all(),
+                    db.prepare("SELECT id, name FROM lead_sources").all(),
+                    db
+                        .prepare(
+                            "SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT p.*, l.name as lead_name, l.mobile as lead_mobile, l.stage as lead_stage, u.name as user_name FROM presentations p LEFT JOIN leads l ON p.lead_id = l.id LEFT JOIN users u ON p.user_id = u.id ORDER BY p.date_time DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT * FROM content_items ORDER BY scheduled_at DESC, id DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT a.*, u.name as user_name FROM activities a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.performed_at DESC, a.id DESC",
+                        )
+                        .all(),
+                    db
+                        .prepare(
+                            "SELECT r.*, count(ru.user_id) as users_count FROM roles r LEFT JOIN role_user ru ON r.id = ru.role_id GROUP BY r.id ORDER BY r.id ASC",
+                        )
+                        .all(),
+                ]);
+
+                if (leadsRes?.results) liveLeads = leadsRes.results;
+                if (delLeadsRes?.results)
+                    deletedLeadIds = delLeadsRes.results.map((r) =>
+                        Number(r.id),
+                    );
+                if (nodesRes?.results) liveNodes = nodesRes.results;
+                if (contactsRes?.results) liveContacts = contactsRes.results;
+                if (tasksRes?.results) liveTasks = tasksRes.results;
+                if (ecoRes?.results) liveEcosystem = ecoRes.results;
+                if (usersRes?.results) liveUsers = usersRes.results;
+                if (presRes?.results) livePresentations = presRes.results;
+                if (contentRes?.results) liveContentItems = contentRes.results;
+                if (actRes?.results) liveActivities = actRes.results;
+                if (rolesRes?.results) liveRoles = rolesRes.results;
+
+                if (sourcesRes?.results) {
+                    for (const s of sourcesRes.results) {
+                        sourcesMap[s.id] = s.name;
+                    }
+                }
+
+                const existingNodeIds = new Set(
+                    liveNodes.map((r) => Number(r.id)),
+                );
+                const allKnownNodeIds = [
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                ];
+                deletedNodeIds = allKnownNodeIds.filter(
+                    (id) => !existingNodeIds.has(id),
+                );
+
+                const existingUserIds = new Set(
+                    liveUsers.map((r) => Number(r.id)),
+                );
+                const allKnownUserIds = [1, 2, 3, 4];
+                deletedUserIds = allKnownUserIds.filter(
+                    (id) => !existingUserIds.has(id),
+                );
             } catch (e) {
-              console.error("D1 Role delete error:", e);
+                console.error("D1 Query error:", e);
             }
-          }
-          return Response.redirect(new URL("/roles", request.url), 302);
         }
-        if (effectiveMethod === "PUT" && roleId && formData) {
-          if (db) {
-            try {
-              const name = formData.get("name") || "Role";
-              const description = formData.get("description") || null;
-              const permissions = formData.getAll("permissions[]") || [];
-              await db.prepare("UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(name, description, roleId).run();
-              await db.prepare("DELETE FROM permission_role WHERE role_id = ?").bind(roleId).run();
-              for (const pId of permissions) {
-                await db.prepare("INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)").bind(roleId, Number(pId)).run();
-              }
-            } catch (e) {
-              console.error("D1 Role update error:", e);
+
+        // 6. Select Page Template
+        let html = null;
+
+        if (path === "/" || path === "/dashboard") {
+            html = PAGES.dashboard;
+        } else if (path === "/leads/create") {
+            html = PAGES.leads_create;
+        } else if (path.match(/^\/leads\/\d+\/edit$/)) {
+            const parts = path.split("/");
+            const leadId = parseInt(parts[2], 10);
+            let pageHtml = PAGES.leads_edit || PAGES.leads;
+
+            const currentLead = liveLeads.find((l) => Number(l.id) === leadId);
+            if (currentLead && pageHtml) {
+                let interests = [];
+                try {
+                    interests =
+                        typeof currentLead.interest_types === "string"
+                            ? JSON.parse(currentLead.interest_types)
+                            : currentLead.interest_types || [];
+                } catch (e) {}
+
+                const escapedName = escapeHtml(currentLead.name);
+                const escapedMobile = escapeHtml(currentLead.mobile);
+                const escapedWhatsapp = escapeHtml(
+                    currentLead.whatsapp || currentLead.mobile || "",
+                );
+                const jsName = (currentLead.name || "")
+                    .replace(/\\/g, "\\\\")
+                    .replace(/'/g, "\\'");
+                const jsMobile = (currentLead.mobile || "")
+                    .replace(/\\/g, "\\\\")
+                    .replace(/'/g, "\\'");
+                const jsWhatsapp = (
+                    currentLead.whatsapp ||
+                    currentLead.mobile ||
+                    ""
+                )
+                    .replace(/\\/g, "\\\\")
+                    .replace(/'/g, "\\'");
+
+                pageHtml = pageHtml
+                    .replace(
+                        /action="[^"]*\/leads\/\d+"/g,
+                        `action="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="lead-edit-delete-form" action="[^"]*"/g,
+                        `id="lead-edit-delete-form" action="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="delete-lead-form-\d+"/g,
+                        `id="delete-lead-form-${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="lead-edit-back-link" href="[^"]*"/g,
+                        `id="lead-edit-back-link" href="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="lead-edit-cancel-link" href="[^"]*"/g,
+                        `id="lead-edit-cancel-link" href="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /<title>.*?<\/title>/,
+                        `<title>Edit Lead: ${escapedName} - SBL Growth Manager</title>`,
+                    )
+                    .replace(
+                        /<h2 id="lead-edit-title"[^>]*>.*?<\/h2>/,
+                        `<h2 id="lead-edit-title" class="text-base font-bold text-slate-900">Edit Lead: ${escapedName}</h2>`,
+                    )
+                    .replace(/name:\s*'[^']*'/, `name: '${jsName}'`)
+                    .replace(/mobile:\s*'[^']*'/, `mobile: '${jsMobile}'`)
+                    .replace(/whatsapp:\s*'[^']*'/, `whatsapp: '${jsWhatsapp}'`)
+                    .replace(
+                        /name="email" value="[^"]*"/g,
+                        `name="email" value="${escapeHtml(currentLead.email || "")}"`,
+                    )
+                    .replace(
+                        /name="location" value="[^"]*"/g,
+                        `name="location" value="${escapeHtml(currentLead.location || "")}"`,
+                    )
+                    .replace(
+                        /name="profession_or_business" value="[^"]*"/g,
+                        `name="profession_or_business" value="${escapeHtml(currentLead.profession_or_business || "")}"`,
+                    )
+                    .replace(
+                        /<textarea name="notes"[^>]*>[\s\S]*?<\/textarea>/,
+                        `<textarea name="notes" rows="3" class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 p-3">${escapeHtml(currentLead.notes || "")}</textarea>`,
+                    )
+                    .replace(
+                        /<option value="(\w+)"([^>]*)selected/g,
+                        '<option value="$1"$2',
+                    )
+                    .replace(
+                        new RegExp(
+                            `<option value="${currentLead.stage || "new"}"`,
+                        ),
+                        `<option value="${currentLead.stage || "new"}" selected`,
+                    )
+                    .replace(
+                        new RegExp(
+                            `<option value="${currentLead.lead_source_id || 1}"`,
+                        ),
+                        `<option value="${currentLead.lead_source_id || 1}" selected`,
+                    );
             }
-          }
-          return Response.redirect(new URL("/roles", request.url), 302);
+            html = pageHtml;
+        } else if (path.match(/^\/leads\/\d+$/)) {
+            const parts = path.split("/");
+            const leadId = parseInt(parts[2], 10);
+            let pageHtml = PAGES.leads_show || PAGES.leads;
+
+            const currentLead = liveLeads.find((l) => Number(l.id) === leadId);
+            if (currentLead && pageHtml) {
+                const stageLabel = (currentLead.stage || "new")
+                    .replace("_", " ")
+                    .toUpperCase();
+                const initialLetter = (currentLead.name || "L")
+                    .charAt(0)
+                    .toUpperCase();
+                const sourceName =
+                    sourcesMap[currentLead.lead_source_id] || "Direct";
+                const score = currentLead.score || 25;
+                const temp = (currentLead.temperature || "warm").toUpperCase();
+                const escapedName = escapeHtml(currentLead.name);
+                const escapedMobile = escapeHtml(currentLead.mobile);
+
+                let interests = [];
+                try {
+                    interests =
+                        typeof currentLead.interest_types === "string"
+                            ? JSON.parse(currentLead.interest_types)
+                            : currentLead.interest_types || [];
+                } catch (e) {}
+
+                const cleanWhatsapp = (
+                    currentLead.whatsapp ||
+                    currentLead.mobile ||
+                    ""
+                ).replace(/[^0-9]/g, "");
+
+                pageHtml = pageHtml
+                    .replace(
+                        /data-lead-id="\d+"/g,
+                        `data-lead-id="${currentLead.id}"`,
+                    )
+                    .replace(
+                        /action="[^"]*\/leads\/\d+\/stage"/g,
+                        `action="/leads/${currentLead.id}/stage"`,
+                    )
+                    .replace(
+                        /action="[^"]*\/leads\/\d+\/convert"/g,
+                        `action="/leads/${currentLead.id}/convert"`,
+                    )
+                    .replace(
+                        /action="[^"]*\/leads\/\d+\/activities"/g,
+                        `action="/leads/${currentLead.id}/activities"`,
+                    )
+                    .replace(
+                        /action="[^"]*\/leads\/\d+"/g,
+                        `action="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /href="[^"]*\/leads\/\d+\/edit"/g,
+                        `href="/leads/${currentLead.id}/edit"`,
+                    )
+                    .replace(
+                        /href="[^"]*\/leads\/\d+"/g,
+                        `href="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="delete-lead-form-\d+"/g,
+                        `id="delete-lead-form-${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="lead-show-delete-form" action="[^"]*"/g,
+                        `id="lead-show-delete-form" action="/leads/${currentLead.id}"`,
+                    )
+                    .replace(
+                        /id="lead-show-stage-form" action="[^"]*"/g,
+                        `id="lead-show-stage-form" action="/leads/${currentLead.id}/stage"`,
+                    )
+                    .replace(
+                        /id="lead-show-convert-form" action="[^"]*"/g,
+                        `id="lead-show-convert-form" action="/leads/${currentLead.id}/convert"`,
+                    )
+                    .replace(
+                        /id="lead-show-activity-form"[\s\S]*?action="[^"]*"/,
+                        `id="lead-show-activity-form" action="/leads/${currentLead.id}/activities"`,
+                    )
+                    .replace(
+                        /id="lead-show-edit-link" href="[^"]*"/g,
+                        `id="lead-show-edit-link" href="/leads/${currentLead.id}/edit"`,
+                    )
+                    .replace(
+                        /value="1" name="lead_id"/g,
+                        `value="${currentLead.id}" name="lead_id"`,
+                    )
+                    .replace(
+                        /value="1" name="related_lead_id"/g,
+                        `value="${currentLead.id}" name="related_lead_id"`,
+                    )
+                    .replace(
+                        /<title>.*?<\/title>/,
+                        `<title>${escapedName} - SBL Growth Manager</title>`,
+                    )
+                    .replace(
+                        /<h2 id="lead-show-name"[^>]*>.*?<\/h2>/,
+                        `<h2 id="lead-show-name" class="text-xl font-bold text-slate-900">${escapedName}</h2>`,
+                    )
+                    .replace(
+                        /<div id="lead-show-avatar"[^>]*>.*?<\/div>/,
+                        `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs">${initialLetter}</div>`,
+                    )
+                    .replace(
+                        /id="lead-show-stage-badge">.*?<\/span>/,
+                        `id="lead-show-stage-badge">${stageLabel}</span>`,
+                    )
+                    .replace(
+                        /id="lead-show-temp-badge">.*?<\/span>/,
+                        `id="lead-show-temp-badge">${temp}</span>`,
+                    )
+                    .replace(
+                        /id="lead-show-mobile-btn" href="[^"]*"/,
+                        `id="lead-show-mobile-btn" href="tel:${escapedMobile}"`,
+                    )
+                    .replace(
+                        /id="lead-show-mobile-text">.*?<\/span>/,
+                        `id="lead-show-mobile-text">${escapedMobile}</span>`,
+                    )
+                    .replace(
+                        /id="lead-show-wa-btn" href="[^"]*"/,
+                        `id="lead-show-wa-btn" href="https://wa.me/${cleanWhatsapp}"`,
+                    )
+                    .replace(
+                        /id="lead-show-score-text">.*?<\/span>/,
+                        `id="lead-show-score-text">${score} / 100</span>`,
+                    )
+                    .replace(
+                        /id="lead-show-score-bar"[^>]*style="[^"]*"/,
+                        `id="lead-show-score-bar" style="width: ${score}%"`,
+                    )
+                    .replace(
+                        /id="lead-show-source-text">.*?<\/span>/,
+                        `id="lead-show-source-text">${escapeHtml(sourceName)}</span>`,
+                    );
+            }
+            html = pageHtml;
+        } else if (path === "/leads") {
+            const viewMode = url.searchParams.get("view");
+            html = viewMode === "kanban" ? PAGES.kanban : PAGES.leads;
+        } else if (path === "/presentations") {
+            html = PAGES.presentations;
+        } else if (path === "/toolkit") {
+            html = PAGES.toolkit;
+        } else if (path === "/tasks") {
+            html = PAGES.tasks;
+        } else if (path === "/reports") {
+            html = PAGES.reports;
+        } else if (path === "/marketing/content-calendar") {
+            html = PAGES.calendar;
+        } else if (path === "/users" || path.startsWith("/users/")) {
+            html = PAGES.users;
+        } else if (path === "/roles" || path.startsWith("/roles/")) {
+            html = PAGES.roles;
+        } else if (path === "/ecosystem") {
+            html = PAGES.ecosystem;
+        } else if (path === "/contacts") {
+            html = PAGES.contacts;
+        } else if (path === "/binary" || path.startsWith("/binary")) {
+            const viewMode = url.searchParams.get("view");
+            html =
+                viewMode === "table"
+                    ? PAGES.binary_table || PAGES.binary
+                    : PAGES.binary;
+        } else {
+            html = PAGES.dashboard;
         }
-      }
 
-      // Smart Redirect based on Path
-      if (path.startsWith("/users")) {
-        return Response.redirect(new URL("/users", request.url), 302);
-      }
-      if (path.startsWith("/leads")) {
-        return Response.redirect(new URL("/leads", request.url), 302);
-      }
-      if (path.startsWith("/binary")) {
-        return Response.redirect(new URL("/binary", request.url), 302);
-      }
-      if (path.startsWith("/contacts")) {
-        return Response.redirect(new URL("/contacts", request.url), 302);
-      }
-      if (path.startsWith("/tasks")) {
-        return Response.redirect(new URL("/tasks", request.url), 302);
-      }
-      if (path.startsWith("/ecosystem")) {
-        return Response.redirect(new URL("/ecosystem", request.url), 302);
-      }
-      if (path.startsWith("/roles")) {
-        return Response.redirect(new URL("/roles", request.url), 302);
-      }
-      return Response.redirect(new URL(path, request.url), 302);
-    }
+        let responseHtml = html;
 
-    // 5. Query D1 for Live Dynamic Data
-    let liveLeads = [];
-    let deletedLeadIds = [];
-    let liveNodes = [];
-    let deletedNodeIds = [];
-    let liveContacts = [];
-    let liveTasks = [];
-    let liveEcosystem = [];
-    let liveUsers = [];
-    let deletedUserIds = [];
-    let livePresentations = [];
-    let deletedPresIds = [];
-    let liveContentItems = [];
-    let liveActivities = [];
-    let liveRoles = [];
-    let sourcesMap = { 1: "Direct Inbound", 2: "Facebook Page", 3: "LinkedIn Outreach", 4: "Referral / Team", 5: "Website / Landing Page", 6: "Seminar / Workshop", 7: "Investor Network", 8: "Cold Calling" };
+        // 7. Inject Edge Styles
+        if (responseHtml && responseHtml.includes("</head>")) {
+            let syncStyles = "";
+            if (deletedLeadIds.length > 0) {
+                syncStyles +=
+                    deletedLeadIds
+                        .map((id) => '[data-lead-id="' + id + '"]')
+                        .join(", ") + " { display: none !important; }\n";
+            }
+            if (deletedNodeIds.length > 0) {
+                syncStyles +=
+                    deletedNodeIds
+                        .map((id) => '[data-node-id="' + id + '"]')
+                        .join(", ") + " { display: none !important; }\n";
+            }
+            if (deletedUserIds.length > 0) {
+                syncStyles +=
+                    deletedUserIds
+                        .map((id) => '[data-user-id="' + id + '"]')
+                        .join(", ") + " { display: none !important; }\n";
+            }
 
-    if (db) {
-      try {
-        const [leadsRes, delLeadsRes, nodesRes, contactsRes, tasksRes, ecoRes, sourcesRes, usersRes, presRes, contentRes, actRes, rolesRes] = await Promise.all([
-          db.prepare("SELECT * FROM leads WHERE deleted_at IS NULL ORDER BY id DESC").all(),
-          db.prepare("SELECT id FROM leads WHERE deleted_at IS NOT NULL").all(),
-          db.prepare("SELECT * FROM binary_nodes ORDER BY id ASC").all(),
-          db.prepare("SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id DESC").all(),
-          db.prepare("SELECT t.*, l.name as lead_name, l.mobile as lead_mobile FROM tasks t LEFT JOIN leads l ON t.related_lead_id = l.id ORDER BY t.due_at ASC, t.id DESC").all(),
-          db.prepare("SELECT * FROM ecosystem_links ORDER BY sort_order ASC, id DESC").all(),
-          db.prepare("SELECT id, name FROM lead_sources").all(),
-          db.prepare("SELECT u.*, ru.role_id, r.name as role_name, r.slug as role_slug FROM users u LEFT JOIN role_user ru ON u.id = ru.user_id LEFT JOIN roles r ON ru.role_id = r.id ORDER BY u.id ASC").all(),
-          db.prepare("SELECT p.*, l.name as lead_name, l.mobile as lead_mobile, l.stage as lead_stage, u.name as user_name FROM presentations p LEFT JOIN leads l ON p.lead_id = l.id LEFT JOIN users u ON p.user_id = u.id ORDER BY p.date_time DESC").all(),
-          db.prepare("SELECT * FROM content_items ORDER BY scheduled_at DESC, id DESC").all(),
-          db.prepare("SELECT a.*, u.name as user_name FROM activities a LEFT JOIN users u ON a.user_id = u.id ORDER BY a.performed_at DESC, a.id DESC").all(),
-          db.prepare("SELECT r.*, count(ru.user_id) as users_count FROM roles r LEFT JOIN role_user ru ON r.id = ru.role_id GROUP BY r.id ORDER BY r.id ASC").all()
-        ]);
-
-        if (leadsRes?.results) liveLeads = leadsRes.results;
-        if (delLeadsRes?.results) deletedLeadIds = delLeadsRes.results.map(r => Number(r.id));
-        if (nodesRes?.results) liveNodes = nodesRes.results;
-        if (contactsRes?.results) liveContacts = contactsRes.results;
-        if (tasksRes?.results) liveTasks = tasksRes.results;
-        if (ecoRes?.results) liveEcosystem = ecoRes.results;
-        if (usersRes?.results) liveUsers = usersRes.results;
-        if (presRes?.results) livePresentations = presRes.results;
-        if (contentRes?.results) liveContentItems = contentRes.results;
-        if (actRes?.results) liveActivities = actRes.results;
-        if (rolesRes?.results) liveRoles = rolesRes.results;
-
-        if (sourcesRes?.results) {
-          for (const s of sourcesRes.results) {
-            sourcesMap[s.id] = s.name;
-          }
+            responseHtml = responseHtml.replace(
+                "</head>",
+                () =>
+                    '<style id="sbl-edge-styles">\n' +
+                    CSS_CONTENT +
+                    "\n" +
+                    syncStyles +
+                    "</style>\n</head>",
+            );
         }
 
-        const existingNodeIds = new Set(liveNodes.map(r => Number(r.id)));
-        const allKnownNodeIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        deletedNodeIds = allKnownNodeIds.filter(id => !existingNodeIds.has(id));
+        // 8. Inject Live Dynamic Edge Synchronization Script (STRICT PATH ISOLATION)
+        if (responseHtml && responseHtml.includes("</body>")) {
+            const syncDataPayload = {
+                leads: liveLeads,
+                deletedLeads: deletedLeadIds,
+                nodes: liveNodes,
+                deletedNodes: deletedNodeIds,
+                contacts: liveContacts,
+                tasks: liveTasks,
+                ecosystem: liveEcosystem,
+                users: liveUsers,
+                deletedUsers: deletedUserIds,
+                sources: sourcesMap,
+                presentations: livePresentations,
+                deletedPresentations: deletedPresIds,
+                contentItems: liveContentItems,
+                activities: liveActivities,
+                roles: liveRoles,
+            };
 
-        const existingUserIds = new Set(liveUsers.map(r => Number(r.id)));
-        const allKnownUserIds = [1, 2, 3, 4];
-        deletedUserIds = allKnownUserIds.filter(id => !existingUserIds.has(id));
-      } catch (e) {
-        console.error("D1 Query error:", e);
-      }
-    }
-
-    // 6. Select Page Template
-    let html = null;
-
-    if (path === "/" || path === "/dashboard") {
-      html = PAGES.dashboard;
-    } else if (path === "/leads/create") {
-      html = PAGES.leads_create;
-    } else if (path.match(/^\/leads\/\d+\/edit$/)) {
-      const parts = path.split("/");
-      const leadId = parseInt(parts[2], 10);
-      let pageHtml = PAGES.leads_edit || PAGES.leads;
-
-      const currentLead = liveLeads.find(l => Number(l.id) === leadId);
-      if (currentLead && pageHtml) {
-        let interests = [];
-        try {
-          interests = typeof currentLead.interest_types === "string" ? JSON.parse(currentLead.interest_types) : (currentLead.interest_types || []);
-        } catch(e) {}
-
-        pageHtml = pageHtml
-          .replace(/action="[^"]*\/leads\/\d+"/g, `action="/leads/${currentLead.id}"`)
-          .replace(/id="delete-lead-form-\d+"/g, `id="delete-lead-form-${currentLead.id}"`)
-          .replace(/value="Rafiqul Islam"/g, `value="${escapeHtml(currentLead.name)}"`)
-          .replace(/value="01711001122"/g, `value="${escapeHtml(currentLead.mobile)}"`)
-          .replace(/value="rafiq@example.com"/g, `value="${escapeHtml(currentLead.email || '')}"`)
-          .replace(/value="Dhaka, Mirpur"/g, `value="${escapeHtml(currentLead.location || '')}"`)
-          .replace(/value="Retail Shop Owner"/g, `value="${escapeHtml(currentLead.profession_or_business || '')}"`)
-          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || ''))
-          .replace(/<option value="(\w+)"([^>]*)selected/g, '<option value="$1"$2')
-          .replace(new RegExp(`<option value="${currentLead.stage || 'new'}"`), `<option value="${currentLead.stage || 'new'}" selected`)
-          .replace(new RegExp(`<option value="${currentLead.lead_source_id || 1}"`), `<option value="${currentLead.lead_source_id || 1}" selected`);
-      }
-      html = pageHtml;
-    } else if (path.match(/^\/leads\/\d+$/)) {
-      const parts = path.split("/");
-      const leadId = parseInt(parts[2], 10);
-      let pageHtml = PAGES.leads_show || PAGES.leads;
-
-      const currentLead = liveLeads.find(l => Number(l.id) === leadId);
-      if (currentLead && pageHtml) {
-        const stageLabel = (currentLead.stage || 'new').replace('_', ' ').toUpperCase();
-        const initialLetter = (currentLead.name || 'L').charAt(0).toUpperCase();
-        const sourceName = sourcesMap[currentLead.lead_source_id] || 'Direct';
-        const score = currentLead.score || 25;
-        const temp = (currentLead.temperature || 'warm').toUpperCase();
-
-        let interests = [];
-        try {
-          interests = typeof currentLead.interest_types === "string" ? JSON.parse(currentLead.interest_types) : (currentLead.interest_types || []);
-        } catch(e) {}
-
-        const cleanWhatsapp = (currentLead.whatsapp || currentLead.mobile || '').replace(/[^0-9]/g, '');
-
-        pageHtml = pageHtml
-          .replace(/action="[^"]*\/leads\/\d+\/stage"/g, `action="/leads/${currentLead.id}/stage"`)
-          .replace(/action="[^"]*\/leads\/\d+\/convert"/g, `action="/leads/${currentLead.id}/convert"`)
-          .replace(/action="[^"]*\/leads\/\d+\/activities"/g, `action="/leads/${currentLead.id}/activities"`)
-          .replace(/action="[^"]*\/leads\/\d+"/g, `action="/leads/${currentLead.id}"`)
-          .replace(/href="[^"]*\/leads\/\d+\/edit"/g, `href="/leads/${currentLead.id}/edit"`)
-          .replace(/id="delete-lead-form-\d+"/g, `id="delete-lead-form-${currentLead.id}"`)
-          .replace(/value="1" name="lead_id"/g, `value="${currentLead.id}" name="lead_id"`)
-          .replace(/value="1" name="related_lead_id"/g, `value="${currentLead.id}" name="related_lead_id"`)
-          .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(currentLead.name)} - SBL Growth Manager</title>`)
-          .replace(/<h2 class="text-xl font-bold text-slate-900">.*?<\/h2>/, `<h2 class="text-xl font-bold text-slate-900">${escapeHtml(currentLead.name)}</h2>`)
-          .replace(/Rafiqul Islam/g, escapeHtml(currentLead.name))
-          .replace(/01711001122/g, escapeHtml(currentLead.mobile))
-          .replace(/rafiq@example\.com/g, escapeHtml(currentLead.email || 'N/A'))
-          .replace(/Dhaka, Mirpur/g, escapeHtml(currentLead.location || 'N/A'))
-          .replace(/Retail Shop Owner/g, escapeHtml(currentLead.profession_or_business || 'N/A'))
-          .replace(/Looking to expand his retail business to online dropshipping\./g, escapeHtml(currentLead.notes || 'No initial notes.'))
-          .replace(/Facebook Page<\/span>/g, `${escapeHtml(sourceName)}</span>`)
-          .replace(/<span>65 \/ 100<\/span>/g, `<span>${score} / 100</span>`)
-          .replace(/style="width: 65%"/g, `style="width: ${score}%"`);
-      }
-      html = pageHtml;
-    } else if (path === "/leads") {
-      const viewMode = url.searchParams.get("view");
-      html = viewMode === "kanban" ? PAGES.kanban : PAGES.leads;
-    } else if (path === "/presentations") {
-      html = PAGES.presentations;
-    } else if (path === "/toolkit") {
-      html = PAGES.toolkit;
-    } else if (path === "/tasks") {
-      html = PAGES.tasks;
-    } else if (path === "/reports") {
-      html = PAGES.reports;
-    } else if (path === "/marketing/content-calendar") {
-      html = PAGES.calendar;
-    } else if (path === "/users" || path.startsWith("/users/")) {
-      html = PAGES.users;
-    } else if (path === "/roles" || path.startsWith("/roles/")) {
-      html = PAGES.roles;
-    } else if (path === "/ecosystem") {
-      html = PAGES.ecosystem;
-    } else if (path === "/contacts") {
-      html = PAGES.contacts;
-    } else if (path === "/binary" || path.startsWith("/binary")) {
-      const viewMode = url.searchParams.get("view");
-      html = viewMode === "table" ? (PAGES.binary_table || PAGES.binary) : PAGES.binary;
-    } else {
-      html = PAGES.dashboard;
-    }
-
-    let responseHtml = html;
-
-    // 7. Inject Edge Styles
-    if (responseHtml && responseHtml.includes("</head>")) {
-      let syncStyles = "";
-      if (deletedLeadIds.length > 0) {
-        syncStyles += deletedLeadIds.map(id => '[data-lead-id="' + id + '"]').join(', ') + ' { display: none !important; }\n';
-      }
-      if (deletedNodeIds.length > 0) {
-        syncStyles += deletedNodeIds.map(id => '[data-node-id="' + id + '"]').join(', ') + ' { display: none !important; }\n';
-      }
-      if (deletedUserIds.length > 0) {
-        syncStyles += deletedUserIds.map(id => '[data-user-id="' + id + '"]').join(', ') + ' { display: none !important; }\n';
-      }
-
-      responseHtml = responseHtml.replace("</head>", () => 
-        "<style id=\"sbl-edge-styles\">\n" + CSS_CONTENT + "\n" + syncStyles + "</style>\n</head>"
-      );
-    }
-
-    // 8. Inject Live Dynamic Edge Synchronization Script (STRICT PATH ISOLATION)
-    if (responseHtml && responseHtml.includes("</body>")) {
-      const syncDataPayload = {
-        leads: liveLeads,
-        deletedLeads: deletedLeadIds,
-        nodes: liveNodes,
-        deletedNodes: deletedNodeIds,
-        contacts: liveContacts,
-        tasks: liveTasks,
-        ecosystem: liveEcosystem,
-        users: liveUsers,
-        deletedUsers: deletedUserIds,
-        sources: sourcesMap,
-        presentations: livePresentations,
-        deletedPresentations: deletedPresIds,
-        contentItems: liveContentItems,
-        activities: liveActivities,
-        roles: liveRoles
-      };
-
-      const syncScript = `
+            const syncScript = `
 <script id="sbl-live-d1-sync">
 (function() {
   const DATA = ${JSON.stringify(syncDataPayload)};
@@ -1155,7 +2014,7 @@ export default {
       }
     }
 
-    // 3. LEADS SYNC - ONLY on /leads!
+    // 3. LEADS LIST SYNC - ONLY on /leads!
     if (curPath === '/leads' || curPath.startsWith('/leads?')) {
       if (DATA.deletedLeads && DATA.deletedLeads.length > 0) {
         DATA.deletedLeads.forEach(function(id) {
@@ -1168,9 +2027,6 @@ export default {
         const mobileStack = document.querySelector('div.divide-y[class*="md:hidden"]');
 
         DATA.leads.slice().reverse().forEach(function(lead) {
-          const existingRow = document.querySelector('tr[data-lead-id="' + lead.id + '"]');
-          if (existingRow) return;
-
           let interests = [];
           try {
             interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
@@ -1181,20 +2037,32 @@ export default {
           const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
           const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
 
+          const existingRow = document.querySelector('tr[data-lead-id="' + lead.id + '"]');
           if (tableBody) {
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-lead-id', lead.id);
-            tr.className = 'hover:bg-slate-50/70 transition-colors bg-orange-50/20';
-            tr.innerHTML = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + lead.name + '</a><div class="text-[11px] text-slate-400">' + (lead.location || 'No location') + (lead.profession_or_business ? ' • ' + lead.profession_or_business : '') + '</div></div></div></td><td class="py-3.5 px-4"><div class="font-medium text-slate-800">' + lead.mobile + '</div><div class="flex items-center gap-2 mt-1"><a href="tel:' + lead.mobile + '" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a></div></td><td class="py-3.5 px-4"><span class="font-medium text-slate-800 block">' + sourceName + '</span><div class="flex flex-wrap gap-1 mt-1">' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('') + '</div></td><td class="py-3.5 px-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></td><td class="py-3.5 px-4"><div class="flex items-center gap-1.5"><span class="font-bold text-xs text-orange-600">' + (lead.score || 25) + '</span><span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">' + (lead.temperature || 'warm') + '</span></div></td><td class="py-3.5 px-4">' + (lead.next_action_at ? ('<div class="text-xs font-medium text-slate-700">' + (lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + lead.next_action_at + '</span></div>') : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>') + '</td><td class="py-3.5 px-4 text-right"><div class="flex items-center justify-end gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button></form></div></td>';
-            tableBody.prepend(tr);
+            const rowHtml = '<td class="py-3.5 px-4"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + escapeHtml(lead.name) + '</a><div class="text-[11px] text-slate-400">' + escapeHtml(lead.location || 'No location') + (lead.profession_or_business ? ' • ' + escapeHtml(lead.profession_or_business) : '') + '</div></div></div></td><td class="py-3.5 px-4"><div class="font-medium text-slate-800">' + escapeHtml(lead.mobile) + '</div><div class="flex items-center gap-2 mt-1"><a href="tel:' + escapeHtml(lead.mobile) + '" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a></div></td><td class="py-3.5 px-4"><span class="font-medium text-slate-800 block">' + escapeHtml(sourceName) + '</span><div class="flex flex-wrap gap-1 mt-1">' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + escapeHtml(i) + '</span>'; }).join('') + '</div></td><td class="py-3.5 px-4"><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></td><td class="py-3.5 px-4"><div class="flex items-center gap-1.5"><span class="font-bold text-xs text-orange-600">' + (lead.score || 25) + '</span><span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">' + (lead.temperature || 'warm') + '</span></div></td><td class="py-3.5 px-4">' + (lead.next_action_at ? ('<div class="text-xs font-medium text-slate-700">' + escapeHtml(lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + escapeHtml(lead.next_action_at) + '</span></div>') : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>') + '</td><td class="py-3.5 px-4 text-right"><div class="flex items-center justify-end gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors">Delete</button></form></div></td>';
+            if (existingRow) {
+              existingRow.innerHTML = rowHtml;
+            } else {
+              const tr = document.createElement('tr');
+              tr.setAttribute('data-lead-id', lead.id);
+              tr.className = 'hover:bg-slate-50/70 transition-colors bg-orange-50/20';
+              tr.innerHTML = rowHtml;
+              tableBody.prepend(tr);
+            }
           }
 
+          const existingMobileCard = document.querySelector('div[data-lead-id="' + lead.id + '"]');
           if (mobileStack) {
-            const card = document.createElement('div');
-            card.setAttribute('data-lead-id', lead.id);
-            card.className = 'p-4 space-y-3 hover:bg-slate-50/50 transition-colors bg-orange-50/20';
-            card.innerHTML = '<div class="flex items-start justify-between gap-2"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + lead.name + '</a><div class="text-xs text-slate-500">' + lead.mobile + '</div></div></div><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></div><div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1"><span>' + sourceName + '</span>' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + i + '</span>'; }).join('') + '</div><div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><div class="flex items-center gap-2"><a href="tel:' + lead.mobile + '" class="text-emerald-600 font-semibold">📞 Call</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a></div><div class="flex items-center gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button></form></div></div>';
-            mobileStack.prepend(card);
+            const cardHtml = '<div class="flex items-start justify-between gap-2"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' + initialLetter + '</div><div><a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + escapeHtml(lead.name) + '</a><div class="text-xs text-slate-500">' + escapeHtml(lead.mobile) + '</div></div></div><span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">' + stageLabel + '</span></div><div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1"><span>' + escapeHtml(sourceName) + '</span>' + interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + escapeHtml(i) + '</span>'; }).join('') + '</div><div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs"><div class="flex items-center gap-2"><a href="tel:' + escapeHtml(lead.mobile) + '" class="text-emerald-600 font-semibold">📞 Call</a><a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a></div><div class="flex items-center gap-1.5"><a href="/leads/' + lead.id + '" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a><a href="/leads/' + lead.id + '/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a><form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(&quot;Are you sure you want to delete this lead?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button></form></div></div>';
+            if (existingMobileCard) {
+              existingMobileCard.innerHTML = cardHtml;
+            } else {
+              const card = document.createElement('div');
+              card.setAttribute('data-lead-id', lead.id);
+              card.className = 'p-4 space-y-3 hover:bg-slate-50/50 transition-colors bg-orange-50/20';
+              card.innerHTML = cardHtml;
+              mobileStack.prepend(card);
+            }
           }
 
           const kanbanCol = document.querySelector('.kanban-cards-container[data-stage="' + (lead.stage || 'new') + '"]');
@@ -1202,9 +2070,235 @@ export default {
             const kCard = document.createElement('div');
             kCard.setAttribute('data-lead-id', lead.id);
             kCard.className = 'bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs hover:border-orange-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing kanban-card bg-orange-50/20';
-            kCard.innerHTML = '<div class="flex items-start justify-between gap-2"><a href="/leads/' + lead.id + '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">' + lead.name + '</a><span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">' + (lead.temperature || 'warm') + '</span></div><div class="text-xs text-slate-600 mt-1 flex items-center justify-between"><span>' + lead.mobile + '</span><span class="text-[11px] text-slate-400">' + sourceName + '</span></div><div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs"><span class="font-bold text-orange-600">' + (lead.score || 25) + ' pts</span><div class="flex items-center gap-1"><a href="/leads/' + lead.id + '" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a><a href="/leads/' + lead.id + '/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a></div></div>';
+            kCard.innerHTML = '<div class="flex items-start justify-between gap-2"><a href="/leads/' + lead.id + '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate block">' + escapeHtml(lead.name) + '</a><span class="px-1.5 py-0.5 text-[10px] font-bold rounded-md border flex-shrink-0 bg-orange-100 text-orange-800 border-orange-200">' + (lead.temperature || 'warm') + '</span></div><div class="text-xs text-slate-600 mt-1 flex items-center justify-between"><span>' + escapeHtml(lead.mobile) + '</span><span class="text-[11px] text-slate-400">' + escapeHtml(sourceName) + '</span></div><div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs"><span class="font-bold text-orange-600">' + (lead.score || 25) + ' pts</span><div class="flex items-center gap-1"><a href="/leads/' + lead.id + '" class="p-1 text-slate-400 hover:text-slate-700" title="View">👁️</a><a href="/leads/' + lead.id + '/edit" class="p-1 text-slate-400 hover:text-orange-600" title="Edit">✏️</a></div></div>';
             kanbanCol.prepend(kCard);
           }
+        });
+      }
+    }
+
+    // 3b. LEAD DETAILS PAGE SYNC - ONLY on /leads/:id!
+    const leadShowMatch = curPath.match(/^\/leads\/(\d+)$/);
+    if (leadShowMatch) {
+      const showLeadId = parseInt(leadShowMatch[1], 10);
+      const lead = DATA.leads ? DATA.leads.find(function(l) { return Number(l.id) === showLeadId; }) : null;
+      if (lead) {
+        const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
+        const initialLetter = (lead.name || 'L').charAt(0).toUpperCase();
+        const sourceName = DATA.sources[lead.lead_source_id] || 'Direct';
+        const score = lead.score || 25;
+        const temp = (lead.temperature || 'warm').toUpperCase();
+        const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
+
+        document.title = lead.name + ' - SBL Growth Manager';
+
+        const nameEl = document.getElementById('lead-show-name');
+        if (nameEl) nameEl.textContent = lead.name;
+
+        const avatarEl = document.getElementById('lead-show-avatar');
+        if (avatarEl) avatarEl.textContent = initialLetter;
+
+        const stageBadge = document.getElementById('lead-show-stage-badge');
+        if (stageBadge) stageBadge.textContent = stageLabel;
+
+        const tempBadge = document.getElementById('lead-show-temp-badge');
+        if (tempBadge) tempBadge.textContent = temp;
+
+        const mobileBtn = document.getElementById('lead-show-mobile-btn');
+        if (mobileBtn) {
+          mobileBtn.href = 'tel:' + lead.mobile;
+          const mobTxt = document.getElementById('lead-show-mobile-text');
+          if (mobTxt) mobTxt.textContent = lead.mobile;
+        }
+
+        const waBtn = document.getElementById('lead-show-wa-btn');
+        if (waBtn) waBtn.href = 'https://wa.me/' + cleanWhatsapp;
+
+        const locBox = document.getElementById('lead-show-location-container');
+        const locTxt = document.getElementById('lead-show-location-text');
+        if (locBox && locTxt) {
+          if (lead.location) {
+            locTxt.textContent = lead.location;
+            locBox.style.display = '';
+          } else {
+            locBox.style.display = 'none';
+          }
+        }
+
+        const scoreTxt = document.getElementById('lead-show-score-text');
+        if (scoreTxt) scoreTxt.textContent = score + ' / 100';
+
+        const scoreBar = document.getElementById('lead-show-score-bar');
+        if (scoreBar) scoreBar.style.width = score + '%';
+
+        const sourceTxt = document.getElementById('lead-show-source-text');
+        if (sourceTxt) sourceTxt.textContent = sourceName;
+
+        const nextActionEl = document.getElementById('lead-show-next-action-text');
+        if (nextActionEl) {
+          if (lead.next_action_at) {
+            nextActionEl.textContent = (lead.next_action_type || 'Action') + ' (' + lead.next_action_at + ')';
+            nextActionEl.className = 'mt-0.5 text-slate-800 font-semibold';
+          } else {
+            nextActionEl.textContent = 'Needs Next Action';
+            nextActionEl.className = 'text-amber-600 font-semibold text-xs mt-0.5 block';
+          }
+        }
+
+        const intList = document.getElementById('lead-show-interests-list');
+        if (intList) {
+          let interests = [];
+          try {
+            interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
+          } catch(e) {}
+          if (interests.length > 0) {
+            intList.innerHTML = interests.map(function(i) {
+              return '<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">' + escapeHtml(i) + '</span>';
+            }).join('');
+          } else {
+            intList.innerHTML = '<span class="text-slate-400">None specified</span>';
+          }
+        }
+
+        const stageSelect = document.getElementById('lead-show-stage-select');
+        if (stageSelect) stageSelect.value = lead.stage || 'new';
+
+        const editLink = document.getElementById('lead-show-edit-link');
+        if (editLink) editLink.href = '/leads/' + lead.id + '/edit';
+
+        const stageForm = document.getElementById('lead-show-stage-form');
+        if (stageForm) stageForm.action = '/leads/' + lead.id + '/stage';
+
+        const convertForm = document.getElementById('lead-show-convert-form');
+        if (convertForm) convertForm.action = '/leads/' + lead.id + '/convert';
+
+        const deleteForm = document.getElementById('lead-show-delete-form');
+        if (deleteForm) deleteForm.action = '/leads/' + lead.id;
+
+        const actForm = document.getElementById('lead-show-activity-form');
+        if (actForm) actForm.action = '/leads/' + lead.id + '/activities';
+
+        // Timeline activities
+        const timelineContainer = document.getElementById('lead-show-timeline-container');
+        if (timelineContainer && DATA.activities) {
+          const leadActivities = DATA.activities.filter(function(a) { return Number(a.lead_id) === Number(lead.id); });
+          const countEl = document.getElementById('lead-activities-count');
+          if (countEl) countEl.textContent = leadActivities.length + ' activities';
+
+          if (leadActivities.length > 0) {
+            timelineContainer.innerHTML = leadActivities.map(function(act) {
+              let dotBg = 'bg-slate-500';
+              if (act.type === 'conversion') dotBg = 'bg-emerald-500';
+              else if (act.type === 'stage_change') dotBg = 'bg-blue-500';
+              else if (act.type === 'call') dotBg = 'bg-orange-500';
+              else if (act.type === 'presentation') dotBg = 'bg-purple-500';
+
+              return '<div class="relative"><div class="absolute -left-6 top-1 w-4 h-4 rounded-full border-2 border-white ' + dotBg + '"></div><div class="bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-xs"><div class="flex items-center justify-between gap-2"><span class="font-bold text-slate-900 text-sm">' + escapeHtml(act.title) + '</span><span class="text-[11px] text-slate-400">' + escapeHtml(act.performed_at || '') + '</span></div>' + (act.description ? ('<p class="text-slate-600 mt-1 leading-relaxed">' + escapeHtml(act.description) + '</p>') : '') + '<div class="text-[10px] text-slate-400 mt-2">Logged by ' + escapeHtml(act.user_name || 'System') + '</div></div></div>';
+            }).join('');
+          } else {
+            timelineContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">No activity logged yet. Use the Quick Action bar above to log your first call or note.</div>';
+          }
+        }
+
+        // Associated tasks
+        const tasksContainer = document.getElementById('lead-show-tasks-container');
+        if (tasksContainer && DATA.tasks) {
+          const leadTasks = DATA.tasks.filter(function(t) { return Number(t.related_lead_id) === Number(lead.id); });
+          const tCount = document.getElementById('lead-tasks-count');
+          if (tCount) tCount.textContent = leadTasks.length + ' total';
+
+          if (leadTasks.length > 0) {
+            tasksContainer.innerHTML = leadTasks.map(function(task) {
+              const isCompleted = task.status === 'Completed';
+              return '<div class="p-3 rounded-xl border border-slate-100 text-xs hover:bg-slate-50 transition-colors"><div class="flex items-center justify-between"><span class="font-bold text-slate-800">' + escapeHtml(task.title) + '</span><span class="px-2 py-0.5 rounded text-[10px] font-semibold ' + (isCompleted ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700') + '">' + escapeHtml(task.status || 'Pending') + '</span></div><div class="text-slate-500 mt-1 flex items-center justify-between text-[11px]"><span>Due: ' + escapeHtml(task.due_at || '') + '</span><span class="font-semibold text-slate-700">' + escapeHtml(task.priority || 'Medium') + '</span></div></div>';
+            }).join('');
+          } else {
+            tasksContainer.innerHTML = '<div class="text-center py-4 text-slate-400 text-xs">No pending tasks.</div>';
+          }
+        }
+
+        // Associated presentations
+        const presContainer = document.getElementById('lead-show-presentations-container');
+        if (presContainer && DATA.presentations) {
+          const leadPres = DATA.presentations.filter(function(p) { return Number(p.lead_id) === Number(lead.id); });
+          const pCount = document.getElementById('lead-presentations-count');
+          if (pCount) pCount.textContent = leadPres.length + ' sessions';
+
+          if (leadPres.length > 0) {
+            presContainer.innerHTML = leadPres.map(function(pres) {
+              return '<div class="p-3 rounded-xl border border-purple-100 bg-purple-50/20 text-xs"><div class="flex items-center justify-between"><span class="font-bold text-purple-900">' + escapeHtml(pres.type || '1-on-1') + ' Session</span>' + (pres.outcome ? ('<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700">' + escapeHtml(pres.outcome) + '</span>') : '') + '</div><div class="text-slate-600 mt-1">' + escapeHtml(pres.topic || 'SBL Ecosystem Presentation') + '</div><div class="text-slate-400 text-[11px] mt-1">' + escapeHtml(pres.date_time || '') + '</div></div>';
+            }).join('');
+          } else {
+            presContainer.innerHTML = '<div class="text-center py-4 text-slate-400 text-xs">No presentations scheduled yet.</div>';
+          }
+        }
+      }
+    }
+
+    // 3c. LEAD EDIT PAGE SYNC - ONLY on /leads/:id/edit!
+    const leadEditMatch = curPath.match(/^\/leads\/(\d+)\/edit$/);
+    if (leadEditMatch) {
+      const editLeadId = parseInt(leadEditMatch[1], 10);
+      const lead = DATA.leads ? DATA.leads.find(function(l) { return Number(l.id) === editLeadId; }) : null;
+      if (lead) {
+        document.title = 'Edit Lead: ' + lead.name + ' - SBL Growth Manager';
+
+        const titleEl = document.getElementById('lead-edit-title') || document.querySelector('h2.text-base.font-bold');
+        if (titleEl) titleEl.textContent = 'Edit Lead: ' + lead.name;
+
+        const editForm = document.getElementById('lead-edit-form') || document.querySelector('form[action*="/leads/"]');
+        if (editForm) editForm.action = '/leads/' + lead.id;
+
+        const backLink = document.getElementById('lead-edit-back-link');
+        if (backLink) backLink.href = '/leads/' + lead.id;
+
+        const cancelLink = document.getElementById('lead-edit-cancel-link');
+        if (cancelLink) cancelLink.href = '/leads/' + lead.id;
+
+        const delForm = document.getElementById('lead-edit-delete-form') || document.getElementById('delete-lead-form-' + lead.id);
+        if (delForm) delForm.action = '/leads/' + lead.id;
+
+        // Alpine x-data update
+        const xDataContainer = document.querySelector('[x-data]');
+        if (xDataContainer && xDataContainer._x_dataStack && xDataContainer._x_dataStack[0]) {
+          xDataContainer._x_dataStack[0].name = lead.name || '';
+          xDataContainer._x_dataStack[0].mobile = lead.mobile || '';
+          xDataContainer._x_dataStack[0].whatsapp = lead.whatsapp || lead.mobile || '';
+        }
+
+        const nameInput = document.querySelector('input[name="name"]');
+        if (nameInput) nameInput.value = lead.name || '';
+
+        const mobileInput = document.querySelector('input[name="mobile"]');
+        if (mobileInput) mobileInput.value = lead.mobile || '';
+
+        const waInput = document.querySelector('input[name="whatsapp"]');
+        if (waInput) waInput.value = lead.whatsapp || lead.mobile || '';
+
+        const emailInput = document.querySelector('input[name="email"]');
+        if (emailInput) emailInput.value = lead.email || '';
+
+        const locInput = document.querySelector('input[name="location"]');
+        if (locInput) locInput.value = lead.location || '';
+
+        const profInput = document.querySelector('input[name="profession_or_business"]');
+        if (profInput) profInput.value = lead.profession_or_business || '';
+
+        const notesInput = document.querySelector('textarea[name="notes"]');
+        if (notesInput) notesInput.value = lead.notes || '';
+
+        const sourceSelect = document.querySelector('select[name="lead_source_id"]');
+        if (sourceSelect) sourceSelect.value = String(lead.lead_source_id || 1);
+
+        const stageSelect = document.querySelector('select[name="stage"]');
+        if (stageSelect) stageSelect.value = lead.stage || 'new';
+
+        let interests = [];
+        try {
+          interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
+        } catch(e) {}
+        document.querySelectorAll('input[name="interest_types[]"]').forEach(function(chk) {
+          chk.checked = interests.includes(chk.value);
         });
       }
     }
@@ -1383,15 +2477,19 @@ export default {
 })();
 </script>
 `;
-      responseHtml = responseHtml.replace("</body>", () => syncScript + "</body>");
-    }
+            responseHtml = responseHtml.replace(
+                "</body>",
+                () => syncScript + "</body>",
+            );
+        }
 
-    return new Response(responseHtml, {
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Powered-By": "Cloudflare Workers Edge (Laravel Pixel-Perfect Edition)"
-      }
-    });
-  }
+        return new Response(responseHtml, {
+            headers: {
+                "Content-Type": "text/html; charset=utf-8",
+                "Cache-Control": "public, max-age=0, must-revalidate",
+                "X-Powered-By":
+                    "Cloudflare Workers Edge (Laravel Pixel-Perfect Edition)",
+            },
+        });
+    },
 };
