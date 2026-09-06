@@ -388,6 +388,8 @@ export default {
                         if (typeof contributions !== "string") {
                             contributions = JSON.stringify(contributions);
                         }
+                        const sponsorName =
+                            formData.get("sponsor_name") || null;
                         const sponsorId = formData.get("sponsor_id")
                             ? Number(formData.get("sponsor_id"))
                             : null;
@@ -400,8 +402,8 @@ export default {
 
                         await db
                             .prepare(
-                                "INSERT INTO binary_nodes (member_name, member_code, phone, email, password_plain, tpin, package_name, rank_name, parent_id, sponsor_id, user_id, position, point_value, left_target_count, right_target_count, contributions, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO binary_nodes (member_name, member_code, phone, email, password_plain, tpin, package_name, rank_name, parent_id, sponsor_id, sponsor_name, user_id, position, point_value, left_target_count, right_target_count, contributions, is_active, left_count, right_count, left_bv, right_bv, carry_left, carry_right, matched_pairs, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 memberName,
@@ -414,6 +416,7 @@ export default {
                                 rankName,
                                 parentId,
                                 sponsorId,
+                                sponsorName,
                                 userId,
                                 position,
                                 pointValue,
@@ -517,6 +520,8 @@ export default {
                                 formData.get("package_name") || "National 120k";
                             const rankName =
                                 formData.get("rank_name") || "Member";
+                            const sponsorName =
+                                formData.get("sponsor_name") || null;
                             const sponsorId =
                                 formData.get("sponsor_id") &&
                                 formData.get("sponsor_id") !== ""
@@ -541,11 +546,11 @@ export default {
                                 contributionsArr.length > 0
                             ) {
                                 pointValue = contributionsArr.reduce(
-                                    (sum, c) =>
-                                        sum + (Number(c.amount) || 0),
+                                    (sum, c) => sum + (Number(c.amount) || 0),
                                     0,
                                 );
-                                contributions = JSON.stringify(contributionsArr);
+                                contributions =
+                                    JSON.stringify(contributionsArr);
                             } else if (typeof contributions !== "string") {
                                 contributions = JSON.stringify(contributions);
                             }
@@ -588,7 +593,7 @@ export default {
 
                             await db
                                 .prepare(
-                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, point_value = ?, contributions = ?, left_count = ?, right_count = ?, left_target_count = ?, right_target_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, left_count = ?, right_count = ?, left_target_count = ?, right_target_count = ?, left_bv = ?, right_bv = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 )
                                 .bind(
                                     memberName,
@@ -600,6 +605,7 @@ export default {
                                     packageName,
                                     rankName,
                                     sponsorId,
+                                    sponsorName,
                                     pointValue,
                                     contributions,
                                     leftCount,

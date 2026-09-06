@@ -159,6 +159,7 @@ class BinaryTreeService
                 'tpin' => $data['tpin'] ?? '1234',
                 'parent_id' => $parentId,
                 'sponsor_id' => $data['sponsor_id'] ?? $parentId,
+                'sponsor_name' => $data['sponsor_name'] ?? null,
                 'position' => $position,
                 'package_name' => $data['package_name'] ?? 'National 120k',
                 'point_value' => $pointValue,
@@ -235,7 +236,7 @@ class BinaryTreeService
                 } elseif (is_array($data['contributions'])) {
                     $contributions = $data['contributions'];
                 }
-                
+
                 // If contributions exist, recalculate point_value
                 if (!empty($contributions) && is_array($contributions)) {
                     $sum = 0.0;
@@ -275,6 +276,7 @@ class BinaryTreeService
                 'contributions' => $contributions,
                 'rank_name' => $data['rank_name'] ?? $node->rank_name,
                 'sponsor_id' => array_key_exists('sponsor_id', $data) ? ($data['sponsor_id'] ? (int)$data['sponsor_id'] : null) : $node->sponsor_id,
+                'sponsor_name' => array_key_exists('sponsor_name', $data) ? $data['sponsor_name'] : $node->sponsor_name,
                 'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : $node->is_active,
                 'user_id' => array_key_exists('user_id', $data) ? ($data['user_id'] ? (int)$data['user_id'] : null) : $node->user_id,
             ];
@@ -424,7 +426,7 @@ class BinaryTreeService
     protected function formatNodeForView(BinaryNode $node): array
     {
         $node->loadMissing(['sponsor', 'parent']);
-        $sponsorName = $node->sponsor?->member_name ?? ($node->parent?->member_name ?? 'Md Abdul Hai');
+        $sponsorName = $node->sponsor_name ?: ($node->sponsor?->member_name ?? ($node->parent?->member_name ?? 'Md Abdul Hai'));
 
         $code = $node->member_code ?: ('SBL-' . $node->id);
         $username = str_starts_with($code, '@') ? $code : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $code)));

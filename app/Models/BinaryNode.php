@@ -22,6 +22,7 @@ class BinaryNode extends Model
         'tpin',
         'parent_id',
         'sponsor_id',
+        'sponsor_name',
         'position',
         'package_name',
         'point_value',

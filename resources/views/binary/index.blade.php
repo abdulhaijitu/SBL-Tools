@@ -21,6 +21,7 @@
         contributions: [],
         rank_name: 'Member',
         sponsor_id: '',
+        sponsor_name: '',
         left_count: 0,
         left_target_count: 0,
         right_count: 0,
@@ -89,6 +90,7 @@
             contributions: contribs,
             rank_name: node.rank_name || 'Member',
             sponsor_id: node.sponsor_id || '',
+            sponsor_name: node.sponsor_name || '',
             left_count: node.left_count !== undefined ? node.left_count : 0,
             left_target_count: node.left_target_count !== undefined ? node.left_target_count : (node.left_count || 0),
             right_count: node.right_count !== undefined ? node.right_count : 0,
@@ -308,8 +310,20 @@
                                             member_code: '{{ $member->member_code }}',
                                             phone: '{{ $member->phone }}',
                                             email: '{{ $member->email }}',
+                                            password_plain: '{{ addslashes($member->password_plain ?? "sbl123456") }}',
+                                            tpin: '{{ $member->tpin ?? "1234" }}',
                                             package_name: '{{ $member->package_name }}',
+                                            point_value: {{ (float)$member->point_value }},
+                                            contributions: {{ json_encode($member->contributions ?: [['amount' => (float)$member->point_value, 'date' => now()->toDateString(), 'note' => $member->package_name]]) }},
                                             rank_name: '{{ $member->rank_name }}',
+                                            sponsor_id: '{{ $member->sponsor_id }}',
+                                            sponsor_name: '{{ addslashes($member->sponsor_name ?: ($member->sponsor?->member_name ?? "Md Abdul Hai")) }}',
+                                            left_count: {{ $member->left_count }},
+                                            left_target_count: {{ $member->left_target_count ?: $member->left_count }},
+                                            right_count: {{ $member->right_count }},
+                                            right_target_count: {{ $member->right_target_count ?: $member->right_count }},
+                                            left_bv: {{ (float)$member->left_bv }},
+                                            right_bv: {{ (float)$member->right_bv }},
                                             is_active: {{ $member->is_active ? 'true' : 'false' }},
                                             user_id: '{{ $member->user_id }}'
                                         })"
@@ -652,13 +666,20 @@
                 <!-- Sponsor / Direct Referral -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ডাইরেক্ট স্পন্সর</label>
-                        <select name="sponsor_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
-                            @foreach($allNodes as $n)
-                            <option value="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
-                            <option value="{{ $n->id }}" data-node-id="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
-                            @endforeach
-                        </select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ডাইরেক্ট স্পন্সর (By) - টাইপ বা সিলেক্ট</label>
+                        <div class="relative">
+                            <input type="text" 
+                                   name="sponsor_name" 
+                                   list="placement_sponsor_list" 
+                                   placeholder="স্পন্সরের নাম লিখুন..." 
+                                   value="{{ $allNodes->first() ? $allNodes->first()->member_name : 'Md Abdul Hai' }}" 
+                                   class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
+                            <datalist id="placement_sponsor_list">
+                                @foreach($allNodes as $n)
+                                <option value="{{ $n->member_name }}">{{ $n->member_code }} ({{ $n->member_name }})</option>
+                                @endforeach
+                            </datalist>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Initial Rank)</label>
@@ -743,14 +764,20 @@
                 <!-- Sponsor (By) & Rank -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">স্পন্সর (By)</label>
-                        <select name="sponsor_id" x-model="editNode.sponsor_id" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500">
-                            <option value="">-- কোনো স্পন্সর নয় --</option>
-                            @foreach($allNodes as $n)
-                            <option value="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
-                            <option value="{{ $n->id }}" data-node-id="{{ $n->id }}">{{ $n->member_name }} ({{ $n->member_code }})</option>
-                            @endforeach
-                        </select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">স্পন্সর (By) - টাইপ বা সিলেক্ট করুন</label>
+                        <div class="relative">
+                            <input type="text" 
+                                   name="sponsor_name" 
+                                   list="edit_sponsor_list" 
+                                   x-model="editNode.sponsor_name" 
+                                   placeholder="স্পন্সরের নাম টাইপ করুন..." 
+                                   class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
+                            <datalist id="edit_sponsor_list">
+                                @foreach($allNodes as $n)
+                                <option value="{{ $n->member_name }}">{{ $n->member_code }} ({{ $n->member_name }})</option>
+                                @endforeach
+                            </datalist>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">পদবী (Rank)</label>

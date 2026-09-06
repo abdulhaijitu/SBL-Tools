@@ -55,9 +55,18 @@ class BinaryTeamController extends Controller
      */
     public function update(Request $request, BinaryNode $node): RedirectResponse
     {
-        if ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
-            $request->merge(['sponsor_id' => null]);
+        if ($request->filled('sponsor_name')) {
+            $sName = trim($request->input('sponsor_name'));
+            $matchedNode = BinaryNode::where('member_name', $sName)
+                ->orWhere('member_code', $sName)
+                ->first();
+            if ($matchedNode) {
+                $request->merge(['sponsor_id' => $matchedNode->id, 'sponsor_name' => $matchedNode->member_name]);
+            }
+        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
+            $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
         }
+
         if ($request->input('user_id') === '' || $request->input('user_id') === '0') {
             $request->merge(['user_id' => null]);
         }
@@ -73,7 +82,8 @@ class BinaryTeamController extends Controller
             'point_value' => 'nullable|numeric|min:0',
             'contributions' => 'nullable',
             'rank_name' => 'nullable|string|max:50',
-            'sponsor_id' => 'nullable|exists:binary_nodes,id',
+            'sponsor_id' => 'nullable',
+            'sponsor_name' => 'nullable|string|max:150',
             'left_count' => 'nullable|integer|min:0',
             'left_target_count' => 'nullable|integer|min:0',
             'right_count' => 'nullable|integer|min:0',
@@ -122,6 +132,18 @@ class BinaryTeamController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if ($request->filled('sponsor_name')) {
+            $sName = trim($request->input('sponsor_name'));
+            $matchedNode = BinaryNode::where('member_name', $sName)
+                ->orWhere('member_code', $sName)
+                ->first();
+            if ($matchedNode) {
+                $request->merge(['sponsor_id' => $matchedNode->id, 'sponsor_name' => $matchedNode->member_name]);
+            }
+        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
+            $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
+        }
+
         $validated = $request->validate([
             'member_name' => 'required|string|max:150',
             'member_code' => 'nullable|string|max:50|unique:binary_nodes,member_code',
@@ -130,7 +152,8 @@ class BinaryTeamController extends Controller
             'password_plain' => 'nullable|string|max:100',
             'tpin' => 'nullable|string|max:20',
             'parent_id' => 'required|exists:binary_nodes,id',
-            'sponsor_id' => 'nullable|exists:binary_nodes,id',
+            'sponsor_id' => 'nullable',
+            'sponsor_name' => 'nullable|string|max:150',
             'position' => 'required|in:left,right',
             'package_name' => 'required|string|max:100',
             'user_id' => 'nullable|exists:users,id',
