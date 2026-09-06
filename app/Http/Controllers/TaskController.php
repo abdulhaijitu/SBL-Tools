@@ -47,7 +47,7 @@ class TaskController extends Controller
 
         $tasks = $query->paginate(20)->withQueryString();
 
-        $leads = Lead::activePipeline()->orderBy('name')->get();
+        $leads = Lead::select(['id', 'name', 'mobile'])->activePipeline()->orderBy('name')->get();
         $taskTypes = TaskType::cases();
         $priorities = TaskPriority::cases();
         $statuses = TaskStatus::cases();

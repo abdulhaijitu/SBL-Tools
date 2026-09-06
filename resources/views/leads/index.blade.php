@@ -50,8 +50,8 @@
             </div>
         </div>
 
-        <!-- Filter Pills -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+    <!-- Filter Pills -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
             <span class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider flex-shrink-0">Filters:</span>
             
             <a href="{{ route('leads.index', ['view' => $viewMode]) }}" 
@@ -77,9 +77,10 @@
         </div>
     </div>
 
-    <!-- Leads Table View -->
+    <!-- Leads List View: Desktop Table & Mobile Card Stack -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
+        <!-- Desktop Table (hidden on small/medium mobile) -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-left text-xs text-slate-600">
                 <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                     <tr>
@@ -117,16 +118,16 @@
                             <td class="py-3.5 px-4">
                                 <div class="font-medium text-slate-800">{{ $lead->mobile }}</div>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <a href="tel:{{ $lead->mobile }}" title="Call" class="text-slate-400 hover:text-emerald-600">
+                                    <a href="tel:{{ $lead->mobile }}" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">
                                         📞
                                     </a>
-                                    @if ($lead->whatsapp)
-                                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp) }}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600">
+                                    @if ($lead->whatsapp ?? $lead->mobile)
+                                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">
                                             💬
                                         </a>
                                     @endif
                                     @if ($lead->facebook_url)
-                                        <a href="{{ $lead->facebook_url }}" target="_blank" title="Facebook" class="text-slate-400 hover:text-blue-600">
+                                        <a href="{{ $lead->facebook_url }}" target="_blank" title="Facebook" class="text-slate-400 hover:text-blue-600 text-sm">
                                             🌐
                                         </a>
                                     @endif
@@ -211,6 +212,99 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile Card Stack (Visible on mobile/tablets < md) -->
+        <div class="block md:hidden divide-y divide-slate-100">
+            @forelse ($leads as $lead)
+                <div class="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
+                    <!-- Top Row: Avatar, Name & Stage Badge -->
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
+                                {{ substr($lead->name, 0, 1) }}
+                            </div>
+                            <div>
+                                <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
+                                    {{ $lead->name }}
+                                </a>
+                                <div class="text-[11px] text-slate-400 mt-0.5">
+                                    {{ $lead->location ?? 'No location' }} 
+                                    @if($lead->profession_or_business) • {{ $lead->profession_or_business }} @endif
+                                </div>
+                            </div>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 {{ $lead->stage->badgeClasses() }}">
+                            {{ $lead->stage->label() }}
+                        </span>
+                    </div>
+
+                    <!-- Tags & Temperature Row -->
+                    <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span class="px-2 py-0.5 rounded-full font-semibold border {{ $lead->temperature->badgeClasses() }}">
+                            {{ $lead->temperature->label() }} ({{ $lead->score }} pts)
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
+                            {{ $lead->source->name ?? 'Direct' }}
+                        </span>
+                        @if($lead->lead_tag)
+                            <span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 font-bold">
+                                {{ $lead->lead_tag }}
+                            </span>
+                        @endif
+                    </div>
+
+                    <!-- Next Action Status -->
+                    <div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100">
+                        <div class="flex items-center gap-1.5">
+                            <span>{{ $lead->is_next_action_overdue ? '🚨' : '⏰' }}</span>
+                            <div>
+                                @if ($lead->next_action_at)
+                                    <span class="font-semibold {{ $lead->is_next_action_overdue ? 'text-rose-600' : 'text-slate-700' }}">
+                                        {{ $lead->next_action_type ?? 'Action' }}
+                                    </span>
+                                    <span class="text-[11px] {{ $lead->is_next_action_overdue ? 'text-rose-500 font-bold' : 'text-slate-400' }}">
+                                        • {{ $lead->next_action_at->format('d M, h:i A') }}
+                                        @if($lead->is_next_action_overdue) (Overdue) @endif
+                                    </span>
+                                @else
+                                    <span class="text-amber-600 font-semibold text-[11px]">Needs Next Action</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thumb-Friendly Action Buttons -->
+                    <div class="grid grid-cols-3 gap-2 pt-1">
+                        <a href="tel:{{ $lead->mobile }}" 
+                           class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                            <span>📞</span>
+                            <span>Call</span>
+                        </a>
+
+                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" 
+                           target="_blank"
+                           class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">
+                            <span>💬</span>
+                            <span>WhatsApp</span>
+                        </a>
+
+                        <a href="{{ route('leads.show', $lead->id) }}" 
+                           class="py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs text-center flex items-center justify-center gap-1 active:scale-95 transition-all">
+                            <span>Details</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </a>
+                    </div>
+                </div>
+            @empty
+                <div class="p-8 text-center text-slate-400">
+                    <div class="text-base font-semibold text-slate-700">No leads found</div>
+                    <div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div>
+                    <a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
+                        + Add New Lead
+                    </a>
+                </div>
+            @endforelse
         </div>
 
         @if($leads->hasPages())

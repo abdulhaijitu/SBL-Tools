@@ -41,11 +41,17 @@ class ReportController extends Controller
         $convertedLeads = (clone $leadQuery)->where('stage', LeadStage::CONVERTED->value)->count();
         $conversionRate = $totalLeads > 0 ? round(($convertedLeads / $totalLeads) * 100, 1) : 0;
 
-        // Funnel Stages Breakdown
+        // Funnel Stages Breakdown (Optimized into 1 grouped query)
         $stages = LeadStage::cases();
+        $stageCounts = (clone $leadQuery)
+            ->selectRaw('stage, count(*) as count')
+            ->groupBy('stage')
+            ->pluck('count', 'stage')
+            ->all();
+
         $funnelData = [];
         foreach ($stages as $stage) {
-            $count = (clone $leadQuery)->where('stage', $stage->value)->count();
+            $count = $stageCounts[$stage->value] ?? 0;
             $funnelData[$stage->value] = [
                 'label' => $stage->label(),
                 'count' => $count,
@@ -54,11 +60,19 @@ class ReportController extends Controller
             ];
         }
 
-        // Lead Sources Performance
-        $sources = LeadSource::withCount(['leads'])->get()->map(function ($source) {
+        // Lead Sources Performance (Optimized via single query with conditional counts)
+        $sources = LeadSource::withCount([
+            'leads',
+            'leads as converted_count' => function ($q) {
+                $q->where('stage', LeadStage::CONVERTED->value);
+            },
+            'leads as presentations_count' => function ($q) {
+                $q->where('stage', LeadStage::PRESENTATION->value);
+            },
+        ])->get()->map(function ($source) {
             $leadsCount = $source->leads_count;
-            $converted = $source->leads()->where('stage', LeadStage::CONVERTED->value)->count();
-            $presentations = $source->leads()->where('stage', LeadStage::PRESENTATION->value)->count();
+            $converted = $source->converted_count;
+            $presentations = $source->presentations_count;
             $rate = $leadsCount > 0 ? round(($converted / $leadsCount) * 100, 1) : 0;
 
             return [

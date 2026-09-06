@@ -29,7 +29,7 @@ class LeadController extends Controller
     {
         $viewMode = $request->query('view', 'table'); // 'table' or 'kanban'
 
-        $query = Lead::with(['source', 'owner']);
+        $query = Lead::with(['source', 'owner', 'interests']);
 
         // Search
         if ($search = $request->input('search')) {

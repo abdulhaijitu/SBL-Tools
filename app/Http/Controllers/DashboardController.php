@@ -27,9 +27,10 @@ class DashboardController extends Controller
             ->orderBy('priority', 'desc')
             ->get();
 
-        $followupsDueToday = Lead::dueToday()->get();
+        $followupsDueToday = Lead::with('source')->dueToday()->get();
 
-        $overdueFollowups = Lead::overdueFollowups()
+        $overdueFollowups = Lead::with('source')
+            ->overdueFollowups()
             ->orderBy('next_action_at', 'asc')
             ->limit(10)
             ->get();
@@ -41,34 +42,42 @@ class DashboardController extends Controller
 
         $newLeadsTodayCount = Lead::whereDate('created_at', $today)->count();
 
-        // 2. Funnel Summary
+        // 2. Optimized Funnel Summary (Single Grouped Query instead of 8 queries)
+        $stageCounts = Lead::selectRaw('stage, count(*) as count')
+            ->groupBy('stage')
+            ->pluck('count', 'stage')
+            ->all();
+
         $funnelStages = [
-            LeadStage::NEW->value => Lead::where('stage', LeadStage::NEW->value)->count(),
-            LeadStage::CONTACTED->value => Lead::where('stage', LeadStage::CONTACTED->value)->count(),
-            LeadStage::INTERESTED->value => Lead::where('stage', LeadStage::INTERESTED->value)->count(),
-            LeadStage::QUALIFIED->value => Lead::where('stage', LeadStage::QUALIFIED->value)->count(),
-            LeadStage::PRESENTATION->value => Lead::where('stage', LeadStage::PRESENTATION->value)->count(),
-            LeadStage::FOLLOW_UP->value => Lead::where('stage', LeadStage::FOLLOW_UP->value)->count(),
-            LeadStage::DECISION->value => Lead::where('stage', LeadStage::DECISION->value)->count(),
-            LeadStage::CONVERTED->value => Lead::where('stage', LeadStage::CONVERTED->value)->count(),
+            LeadStage::NEW->value => $stageCounts[LeadStage::NEW->value] ?? 0,
+            LeadStage::CONTACTED->value => $stageCounts[LeadStage::CONTACTED->value] ?? 0,
+            LeadStage::INTERESTED->value => $stageCounts[LeadStage::INTERESTED->value] ?? 0,
+            LeadStage::QUALIFIED->value => $stageCounts[LeadStage::QUALIFIED->value] ?? 0,
+            LeadStage::PRESENTATION->value => $stageCounts[LeadStage::PRESENTATION->value] ?? 0,
+            LeadStage::FOLLOW_UP->value => $stageCounts[LeadStage::FOLLOW_UP->value] ?? 0,
+            LeadStage::DECISION->value => $stageCounts[LeadStage::DECISION->value] ?? 0,
+            LeadStage::CONVERTED->value => $stageCounts[LeadStage::CONVERTED->value] ?? 0,
         ];
 
-        $totalLeads = Lead::count();
+        $totalLeads = array_sum($stageCounts);
 
-        // 3. Lead Priority
-        $hotLeads = Lead::activePipeline()
+        // 3. Lead Priority with eager loading
+        $hotLeads = Lead::with('source')
+            ->activePipeline()
             ->where('temperature', LeadTemperature::HOT->value)
             ->orderBy('score', 'desc')
             ->limit(5)
             ->get();
 
-        $warmLeads = Lead::activePipeline()
+        $warmLeads = Lead::with('source')
+            ->activePipeline()
             ->where('temperature', LeadTemperature::WARM->value)
             ->orderBy('score', 'desc')
             ->limit(5)
             ->get();
 
-        $staleLeads = Lead::activePipeline()
+        $staleLeads = Lead::with('source')
+            ->activePipeline()
             ->where(function ($q) {
                 $q->where('temperature', LeadTemperature::STALE->value)
                     ->orWhere(function ($sub) {

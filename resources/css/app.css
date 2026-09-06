@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+    /* Hide scrollbar for mobile touch scroll strips */
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    /* Native tap highlight reset */
+    .tap-highlight-none {
+        -webkit-tap-highlight-color: transparent;
+    }
+}

@@ -73,13 +73,20 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             @foreach ($funnelStages as $stageKey => $count)
                 <a href="{{ route('leads.index', ['stage' => $stageKey]) }}" 
-                   class="bg-slate-50 hover:bg-orange-50/50 hover:border-orange-200 border border-slate-100 rounded-xl p-3 text-center transition-all group">
-                    <span class="text-[11px] font-semibold text-slate-500 group-hover:text-orange-700 uppercase tracking-tight block truncate">
-                        {{ ucfirst(str_replace('_', ' ', $stageKey)) }}
-                    </span>
-                    <span class="text-xl font-bold text-slate-900 group-hover:text-orange-600 mt-1 block">
-                        {{ $count }}
-                    </span>
+                   class="bg-slate-50 hover:bg-orange-50/50 hover:border-orange-200 border border-slate-100 rounded-xl p-3 text-center transition-all group active:scale-95 flex flex-col justify-between">
+                    <div>
+                        <span class="text-[11px] font-semibold text-slate-500 group-hover:text-orange-700 uppercase tracking-tight block truncate">
+                            {{ ucfirst(str_replace('_', ' ', $stageKey)) }}
+                        </span>
+                        <span class="text-xl font-bold text-slate-900 group-hover:text-orange-600 mt-1 block">
+                            {{ $count }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-200/80 h-1 rounded-full mt-2 overflow-hidden">
+                        <div class="bg-orange-500 h-full rounded-full transition-all duration-500" 
+                             style="width: {{ $totalLeads > 0 ? min(100, round(($count / $totalLeads) * 100)) : 0 }}%">
+                        </div>
+                    </div>
                 </a>
             @endforeach
         </div>

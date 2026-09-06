@@ -30,22 +30,20 @@
                         @endif
                     </div>
 
-                    <div class="text-xs text-slate-500 mt-1.5 flex flex-wrap items-center gap-3">
-                        <a href="tel:{{ $lead->mobile }}" class="font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1">
+                    <div class="text-xs text-slate-500 mt-2 flex flex-wrap items-center gap-2">
+                        <a href="tel:{{ $lead->mobile }}" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 active:scale-95 transition-all">
                             <span>📞</span> {{ $lead->mobile }}
                         </a>
-                        @if ($lead->whatsapp)
-                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp) }}" target="_blank" class="text-emerald-600 font-medium hover:underline flex items-center gap-1">
-                                <span>💬</span> WhatsApp
-                            </a>
-                        @endif
+                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all">
+                            <span>💬</span> WhatsApp
+                        </a>
                         @if ($lead->facebook_url)
-                            <a href="{{ $lead->facebook_url }}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
-                                <span>🌐</span> Facebook
+                            <a href="{{ $lead->facebook_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium text-xs flex items-center gap-1">
+                                <span>🌐</span> FB
                             </a>
                         @endif
                         @if ($lead->location)
-                            <span class="flex items-center gap-1 text-slate-500">
+                            <span class="flex items-center gap-1 text-slate-500 text-xs py-1 px-1">
                                 <span>📍</span> {{ $lead->location }}
                             </span>
                         @endif
@@ -126,27 +124,27 @@
     </div>
 
     <!-- Quick Action Bar (Section 6 & 24) -->
-    <div class="bg-slate-900 rounded-2xl p-3 shadow-md flex items-center justify-between gap-2 overflow-x-auto text-white">
+    <div class="bg-slate-900 rounded-2xl p-3 shadow-md flex items-center justify-between gap-2 overflow-x-auto text-white no-scrollbar">
         <span class="text-xs font-bold text-orange-400 uppercase tracking-wider px-2 flex-shrink-0">Quick Action:</span>
         <div class="flex items-center gap-2 flex-shrink-0">
             <button @click="modalType = 'call'; modalTitle = 'Log Phone / WhatsApp Call'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
                 <span>📞</span> Log Call
             </button>
             <button @click="modalType = 'note'; modalTitle = 'Add Interaction Note'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
                 <span>📝</span> Add Note
             </button>
             <button @click="modalType = 'presentation'; modalTitle = 'Schedule Presentation'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
                 <span>📊</span> Presentation
             </button>
             <button @click="modalType = 'task'; modalTitle = 'Schedule Task / Follow-up'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
                 <span>⏰</span> Next Follow-up
             </button>
             <a href="{{ route('toolkit.index') }}" target="_blank" 
-               class="px-3 py-1.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 text-orange-300 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 border border-orange-500/40">
+               class="px-3 py-1.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 active:scale-95 text-orange-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 border border-orange-500/40">
                 <span>📖</span> Pitch Deck & Plans
             </a>
         </div>
@@ -266,18 +264,18 @@
     <!-- Quick Action Modal -->
     <div x-show="actionModal" 
          x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
+         x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0"
+         x-transition:enter-end="opacity-100 translate-y-0"
          x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0"
+         class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>
         
-        <div @click.outside="actionModal = false" class="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 border border-slate-200">
+        <div @click.outside="actionModal = false" class="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                 <h3 class="text-base font-bold text-slate-900" x-text="modalTitle"></h3>
-                <button @click="actionModal = false" class="text-slate-400 hover:text-slate-700 text-lg font-bold">&times;</button>
+                <button @click="actionModal = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">&times;</button>
             </div>
 
             <!-- Form for Note / Call / Activity -->

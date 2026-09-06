@@ -40,10 +40,28 @@
         <span x-text="toastMessage"></span>
     </div>
 
+    <!-- Mobile Stage Quick Navigator Pills (sm/md only) -->
+    <div class="block md:hidden bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs">
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[11px]">
+            <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px] pl-1 pr-1 flex-shrink-0">Jump:</span>
+            @foreach ($kanbanColumns as $stageKey => $stageLeads)
+                <button type="button" 
+                        @click="scrollToCol('{{ $stageKey }}')"
+                        class="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-orange-50 hover:border-orange-300 font-semibold text-slate-700 flex-shrink-0 flex items-center gap-1.5 transition-colors">
+                    <span>{{ ucfirst(str_replace('_', ' ', $stageKey)) }}</span>
+                    <span class="px-1.5 py-0.2 rounded-full bg-white text-slate-900 border text-[10px] font-bold">{{ $stageLeads->count() }}</span>
+                </button>
+            @endforeach
+        </div>
+        <div class="text-[11px] text-slate-400 text-center mt-2 flex items-center justify-center gap-1">
+            <span>👈</span> <span>Swipe horizontally across pipeline stages</span> <span>👉</span>
+        </div>
+    </div>
+
     <!-- Horizontal Scrolling Kanban Board -->
-    <div class="flex items-start gap-3 overflow-x-auto pb-6 min-h-[calc(100vh-230px)]">
+    <div class="flex items-start gap-3 overflow-x-auto pb-6 min-h-[calc(100vh-230px)] no-scrollbar" id="kanban-scroll-wrapper">
         @foreach ($kanbanColumns as $stageKey => $stageLeads)
-            <div class="w-72 flex-shrink-0 bg-slate-100/80 rounded-2xl border border-slate-200/80 p-3 flex flex-col max-h-[calc(100vh-230px)]">
+            <div id="kanban-col-{{ $stageKey }}" class="w-72 flex-shrink-0 bg-slate-100/80 rounded-2xl border border-slate-200/80 p-3 flex flex-col max-h-[calc(100vh-230px)]">
                 <!-- Column Header -->
                 <div class="flex items-center justify-between mb-3 px-1">
                     <div class="flex items-center gap-2">
@@ -115,7 +133,14 @@ function kanbanBoard() {
         toastMessage: '',
         showToast(msg) {
             this.toastMessage = msg;
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: msg, type: 'success' } }));
             setTimeout(() => { this.toastMessage = ''; }, 3000);
+        },
+        scrollToCol(stageKey) {
+            const el = document.getElementById('kanban-col-' + stageKey);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
         },
         init() {
             const containers = document.querySelectorAll('.kanban-cards-container');

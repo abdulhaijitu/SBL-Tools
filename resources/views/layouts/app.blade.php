@@ -7,14 +7,53 @@
 
     <title>{{ config('app.name', 'SBL Growth Manager') }}</title>
 
-    <!-- Fonts -->
+    <!-- Fonts & Preloads -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+    <link rel="preload" as="image" href="{{ asset('images/sbl-logo.webp') }}">
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="h-full font-sans antialiased text-slate-900 selection:bg-orange-500 selection:text-white" x-data="{ sidebarOpen: false, quickActionOpen: false }">
+<body class="h-full font-sans antialiased text-slate-900 selection:bg-orange-500 selection:text-white" 
+      x-data="{ 
+        sidebarOpen: false, 
+        quickActionOpen: false,
+        toasts: [],
+        addToast(message, type = 'success') {
+            const id = Date.now() + Math.random();
+            this.toasts.push({ id, message, type });
+            setTimeout(() => this.removeToast(id), 4000);
+        },
+        removeToast(id) {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+        }
+      }"
+      x-init="@if(session('success')) addToast('{{ addslashes(session('success')) }}', 'success'); @endif @if(session('error')) addToast('{{ addslashes(session('error')) }}', 'error'); @endif"
+      @notify.window="addToast($event.detail.message, $event.detail.type || 'success')">
+
+    <!-- Global Floating Toast Notification Stack -->
+    <div class="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none px-4 sm:px-0">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-y-2 scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 -translate-y-2 scale-95"
+                 :class="toast.type === 'error' ? 'bg-rose-950/95 border-rose-700/80 text-rose-100' : 'bg-slate-950/95 border-slate-700/80 text-white'"
+                 class="pointer-events-auto p-3.5 rounded-2xl shadow-2xl border flex items-center justify-between gap-3 text-xs font-semibold backdrop-blur-md">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
+                          :class="toast.type === 'error' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'"
+                          x-text="toast.type === 'error' ? '⚠️' : '✓'"></span>
+                    <span class="truncate leading-tight" x-text="toast.message"></span>
+                </div>
+                <button @click="removeToast(toast.id)" class="text-slate-400 hover:text-white p-1 flex-shrink-0">&times;</button>
+            </div>
+        </template>
+    </div>
+
     <div class="min-h-full flex flex-col md:flex-row">
 
         <!-- Mobile Off-Canvas Backdrop -->
@@ -98,7 +137,7 @@
                     </div>
                     <div class="truncate">
                         <div class="text-xs font-semibold text-white truncate">{{ Auth::user()->name ?? 'Admin' }}</div>
-                        <div class="text-[10px] text-slate-400 truncate">{{ Auth::user()->email ?? '' }}</div>
+                        <div class="text-[10px] text-slate-400 truncate">{{ Auth::user()->email ?? 'admin@sbl.test' }}</div>
                     </div>
                 </div>
                 <form method="POST" action="{{ route('logout') }}">
@@ -111,23 +150,23 @@
         </aside>
 
         <!-- Main Body Area -->
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 pb-20 md:pb-6">
 
-            <!-- Mobile Top Bar -->
+            <!-- Mobile & Desktop Top Bar -->
             <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-30 md:px-8">
                 <div class="flex items-center gap-2.5">
-                    <button @click="sidebarOpen = true" class="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg">
+                    <button @click="sidebarOpen = true" class="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg focus:outline-none">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                     <a href="{{ route('dashboard') }}" class="md:hidden flex-shrink-0">
                         <img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" class="h-8 w-auto object-contain bg-slate-950 p-1 rounded-lg border border-slate-800">
                     </a>
                     <div>
-                        <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-none">
+                        <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">
                             @yield('page-title', 'Dashboard')
                         </h1>
                         <p class="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                            @yield('page-subtitle', 'SBL Growth Manager • Personal CRM System')
+                            @yield('page-subtitle', 'SBL Growth Management Ecosystem')
                         </p>
                     </div>
                 </div>
@@ -135,7 +174,7 @@
                 <div class="flex items-center gap-2 sm:gap-3">
                     <!-- Quick Add Lead Button (Desktop) -->
                     <a href="{{ route('leads.create') }}" 
-                       class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all">
+                       class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all active:scale-95">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         <span>New Lead (<30s)</span>
                     </a>
@@ -152,30 +191,6 @@
                 </div>
             </header>
 
-            <!-- Flash Messages -->
-            <div class="px-4 md:px-8 pt-4">
-                @if (session('success'))
-                    <div class="mb-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm flex items-center justify-between shadow-xs">
-                        <div class="flex items-center gap-2.5">
-                            <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            <span>{{ session('success') }}</span>
-                        </div>
-                        <button type="button" @click="$el.parentElement.remove()" class="text-emerald-500 hover:text-emerald-800">&times;</button>
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="mb-3 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm shadow-xs">
-                        <div class="font-semibold mb-1">Please fix the following:</div>
-                        <ul class="list-disc pl-5 space-y-0.5 text-xs">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-            </div>
-
             <!-- Page Content View -->
             <main class="flex-1 p-4 md:p-8 overflow-y-auto">
                 {{ $slot ?? '' }}
@@ -183,8 +198,48 @@
             </main>
         </div>
 
-        <!-- Floating Quick Action Button for Mobile / All Devices (Section 24) -->
-        <div class="fixed bottom-6 right-6 z-40">
+        <!-- Mobile Bottom Navigation Bar (Section 24 - Native Mobile UX) -->
+        <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1.5 flex items-center justify-around shadow-lg">
+            
+            <!-- 1. Dashboard -->
+            <a href="{{ route('dashboard') }}" 
+               class="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard') ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-900' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="text-[10px]">Dashboard</span>
+            </a>
+
+            <!-- 2. Leads CRM -->
+            <a href="{{ route('leads.index') }}" 
+               class="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all {{ request()->routeIs('leads.*') ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-900' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span class="text-[10px]">Leads</span>
+            </a>
+
+            <!-- 3. Center FAB Trigger -->
+            <button @click="quickActionOpen = !quickActionOpen" 
+                    type="button" 
+                    aria-label="Quick Action"
+                    class="-mt-5 w-12 h-12 rounded-full bg-gradient-to-tr from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 active:scale-90 text-white flex items-center justify-center shadow-lg shadow-orange-600/40 border-2 border-white focus:outline-none transition-transform">
+                <svg :class="quickActionOpen ? 'rotate-45' : 'rotate-0'" class="w-6 h-6 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v12m6-6H6"></path></svg>
+            </button>
+
+            <!-- 4. Tasks -->
+            <a href="{{ route('tasks.index') }}" 
+               class="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all {{ request()->routeIs('tasks.*') ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-900' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                <span class="text-[10px]">Tasks</span>
+            </a>
+
+            <!-- 5. Toolkit & Plans -->
+            <a href="{{ route('toolkit.index') }}" 
+               class="flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all {{ request()->routeIs('toolkit.*') ? 'text-orange-600 font-bold' : 'text-slate-500 hover:text-slate-900' }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span class="text-[10px]">Toolkit</span>
+            </a>
+        </nav>
+
+        <!-- Floating Quick Action Button for Desktop Only -->
+        <div class="hidden md:block fixed bottom-6 right-6 z-40">
             <!-- Floating Menu Popup -->
             <div x-show="quickActionOpen"
                  x-transition:enter="transition ease-out duration-150"
@@ -220,6 +275,37 @@
                     class="w-14 h-14 rounded-full bg-orange-600 hover:bg-orange-700 active:scale-95 text-white flex items-center justify-center shadow-xl shadow-orange-600/40 transition-transform duration-200 focus:outline-none focus:ring-4 focus:ring-orange-600/30">
                 <svg :class="quickActionOpen ? 'rotate-45' : 'rotate-0'" class="w-7 h-7 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v12m6-6H6"></path></svg>
             </button>
+        </div>
+
+        <!-- Mobile Quick Action Popup Menu (from center bottom bar) -->
+        <div x-show="quickActionOpen"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+             @click.outside="quickActionOpen = false"
+             class="md:hidden fixed bottom-20 inset-x-4 z-50 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2.5 text-white text-sm"
+             x-cloak>
+            <div class="px-3 py-1.5 text-[11px] font-bold text-orange-400 uppercase tracking-wider border-b border-slate-800 mb-1 flex items-center justify-between">
+                <span>Quick Actions (<30s)</span>
+                <button @click="quickActionOpen = false" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 pt-1">
+                <a href="{{ route('leads.create') }}" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 transition-colors text-center">
+                    <span class="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold text-sm mb-1">+</span>
+                    <span class="text-xs font-semibold">New Lead</span>
+                </a>
+                <a href="{{ route('tasks.index') }}" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 transition-colors text-center">
+                    <span class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm mb-1">✓</span>
+                    <span class="text-xs font-semibold">New Task</span>
+                </a>
+                <a href="{{ route('presentations.index') }}" class="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 transition-colors text-center">
+                    <span class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-sm mb-1">P</span>
+                    <span class="text-xs font-semibold">Pitch</span>
+                </a>
+            </div>
         </div>
 
     </div>

@@ -30,9 +30,10 @@
                            name="name" 
                            required 
                            autofocus
+                           autocomplete="name"
                            value="{{ old('name') }}"
                            placeholder="e.g. Rafiqul Islam" 
-                           class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
+                           class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
                 </div>
 
                 <div>
@@ -42,9 +43,11 @@
                     <input type="tel" 
                            name="mobile" 
                            required 
+                           inputmode="tel"
+                           autocomplete="tel"
                            value="{{ old('mobile') }}"
                            placeholder="017xxxxxxxx" 
-                           class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
+                           class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
                 </div>
             </div>
 
@@ -56,9 +59,10 @@
                     </label>
                     <input type="tel" 
                            name="whatsapp" 
+                           inputmode="tel"
                            value="{{ old('whatsapp') }}"
                            placeholder="01xxxxxxxxx" 
-                           class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
+                           class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
                 </div>
 
                 <div>
@@ -67,9 +71,11 @@
                     </label>
                     <input type="email" 
                            name="email" 
+                           inputmode="email"
+                           autocomplete="email"
                            value="{{ old('email') }}"
                            placeholder="name@example.com" 
-                           class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
+                           class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5">
                 </div>
             </div>
 
@@ -79,7 +85,7 @@
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                         Lead Source <span class="text-rose-500">*</span>
                     </label>
-                    <select name="lead_source_id" required class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5 bg-white">
+                    <select name="lead_source_id" required class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5 bg-white">
                         @foreach ($sources as $source)
                             <option value="{{ $source->id }}" {{ old('lead_source_id') == $source->id ? 'selected' : '' }}>
                                 {{ $source->name }}
@@ -92,7 +98,7 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">
                         Pipeline Stage
                     </label>
-                    <select name="stage" class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5 bg-white">
+                    <select name="stage" class="w-full text-base sm:text-sm rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 px-3.5 py-2.5 bg-white">
                         @foreach ($stages as $stage)
                             <option value="{{ $stage->value }}" {{ old('stage') == $stage->value ? 'selected' : '' }}>
                                 {{ $stage->label() }}
@@ -112,7 +118,7 @@
                         $availableInterests = ['Product', 'E-commerce', 'Dropshipping', 'Affiliate', 'Network', 'Investment', 'Partnership'];
                     @endphp
                     @foreach ($availableInterests as $interest)
-                        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium cursor-pointer hover:bg-orange-50/50 transition-colors has-checked:bg-orange-600 has-checked:text-white has-checked:border-orange-600">
+                        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium cursor-pointer hover:bg-orange-50/50 transition-colors has-checked:bg-orange-600 has-checked:text-white has-checked:border-orange-600 active:scale-95">
                             <input type="checkbox" name="interest_types[]" value="{{ $interest }}" class="hidden">
                             <span>{{ $interest }}</span>
                         </label>
@@ -125,31 +131,31 @@
                 <label class="block text-xs font-semibold text-slate-600 mb-1.5">
                     Quick Tag (Section 5)
                 </label>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="lead_tag" :value="quickTag">
                     <button type="button" @click="quickTag = quickTag === 'P1' ? '' : 'P1'" 
-                            :class="quickTag === 'P1' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            :class="quickTag === 'P1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
                         P1: Product
                     </button>
                     <button type="button" @click="quickTag = quickTag === 'E1' ? '' : 'E1'" 
-                            :class="quickTag === 'E1' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            :class="quickTag === 'E1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
                         E1: E-commerce
                     </button>
                     <button type="button" @click="quickTag = quickTag === 'A1' ? '' : 'A1'" 
-                            :class="quickTag === 'A1' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            :class="quickTag === 'A1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
                         A1: Affiliate/Network
                     </button>
                     <button type="button" @click="quickTag = quickTag === 'I1' ? '' : 'I1'" 
-                            :class="quickTag === 'I1' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            :class="quickTag === 'I1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
                         I1: Investment
                     </button>
                     <button type="button" @click="quickTag = quickTag === 'B1' ? '' : 'B1'" 
-                            :class="quickTag === 'B1' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            :class="quickTag === 'B1' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95">
                         B1: Partnership
                     </button>
                 </div>
