@@ -51,6 +51,9 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     // Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
+    // SBL Dropshipping Abbreviations & Glossary Resource
+    Route::get('/abbreviations', [\App\Http\Controllers\AbbreviationController::class, 'index'])->name('abbreviations.index');
+
     // SBL Plans & Toolkit (From PDF)
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
 

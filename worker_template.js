@@ -2258,6 +2258,8 @@ export default {
             html = PAGES.roles;
         } else if (path === "/ecosystem") {
             html = PAGES.ecosystem;
+        } else if (path === "/abbreviations") {
+            html = PAGES.abbreviations;
         } else if (path === "/contacts") {
             html = PAGES.contacts;
         } else if (

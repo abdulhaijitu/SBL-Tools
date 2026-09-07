@@ -48,6 +48,9 @@ $pages = [
     'ecosystem' => function () {
         return app(App\Http\Controllers\EcosystemController::class)->index(request())->render();
     },
+    'abbreviations' => function () {
+        return app(App\Http\Controllers\AbbreviationController::class)->index(request())->render();
+    },
     'contacts' => function () {
         return app(App\Http\Controllers\SblContactController::class)->index(request())->render();
     },

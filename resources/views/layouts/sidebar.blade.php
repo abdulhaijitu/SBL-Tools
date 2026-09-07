@@ -6,6 +6,7 @@
         ['Contact', 'contacts.index', 'phone', 'toolkit.view', request()->routeIs('contacts.*')],
         ['Team Explorer', 'team.index', 'tree', null, request()->routeIs('team.*', 'binary.*')],
         ['Members', 'members.index', 'users', 'leads.view', request()->routeIs('members.*') || request('stage') === 'converted'],
+        ['Abbreviation', 'abbreviations.index', 'book', null, request()->routeIs('abbreviations.*')],
         ['Roles & Permissions', 'roles.index', 'shield', 'roles.view', request()->routeIs('roles.*', 'users.*')],
     ];
 @endphp
