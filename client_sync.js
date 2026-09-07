@@ -1,6 +1,16 @@
 (function() {
   // DATA provided globally by edge
 
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   window.openUserEditById = function(userId) {
     if (!DATA || !DATA.users) return;
     const user = DATA.users.find(function(u) { return Number(u.id) === Number(userId); });
