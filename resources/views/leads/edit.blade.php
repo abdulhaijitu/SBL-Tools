@@ -9,6 +9,7 @@
         name: '{{ old('name', $lead->name) }}',
         mobile: '{{ old('mobile', $lead->mobile) }}',
         whatsapp: '{{ old('whatsapp', $lead->whatsapp) }}',
+        photoData: '{{ old('photo', $lead->photo ?? '') }}',
         sameAsMobile: false,
 
         toggleSameAsMobile() {
@@ -21,6 +22,38 @@
             if (this.sameAsMobile) {
                 this.whatsapp = this.mobile;
             }
+        },
+
+        handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 256;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h) {
+                        if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                    } else {
+                        if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    this.photoData = canvas.toDataURL('image/jpeg', 0.85);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+
+        removePhoto() {
+            this.photoData = '';
+            if (this.$refs.photoInput) this.$refs.photoInput.value = '';
         }
      }">
 
@@ -52,6 +85,32 @@
         <form id="lead-edit-form" action="{{ route('leads.update', $lead->id) }}" method="POST" class="space-y-5">
             @csrf
             @method('PUT')
+
+            <!-- Photo Upload Box -->
+            <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                <div class="relative w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/60">
+                    <template x-if="photoData">
+                        <img :src="photoData" alt="Lead Photo" class="w-full h-full object-cover">
+                    </template>
+                    <template x-if="!photoData">
+                        <span x-text="name ? name.charAt(0).toUpperCase() : '📷'"></span>
+                    </template>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <label class="block text-xs font-bold text-slate-800 mb-0.5">Lead Photo / Avatar</label>
+                    <p class="text-[11px] text-slate-500 mb-2">Upload profile picture or business card photo (optional)</p>
+                    <div class="flex items-center gap-2">
+                        <label class="cursor-pointer px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors shadow-xs">
+                            <span>Change Photo</span>
+                            <input type="file" x-ref="photoInput" @change="handlePhotoSelect($event)" accept="image/*" class="hidden">
+                        </label>
+                        <button type="button" x-show="photoData" @click="removePhoto()" class="px-2 py-1 text-xs text-rose-600 hover:text-rose-800 font-semibold transition-colors" x-cloak>
+                            Remove
+                        </button>
+                    </div>
+                    <input type="hidden" name="photo" :value="photoData">
+                </div>
+            </div>
 
             <!-- Name & Mobile -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

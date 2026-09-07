@@ -41,6 +41,7 @@ class Lead extends Model
         'last_contact_at',
         'converted_at',
         'notes',
+        'photo',
     ];
 
     protected $casts = [

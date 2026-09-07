@@ -173,16 +173,18 @@ export default {
                         const temperature =
                             score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
 
+                        const photo = formData.get("photo") || null;
                         const insRes = await db
                             .prepare(
-                                "INSERT INTO leads (name, mobile, whatsapp, email, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO leads (name, mobile, whatsapp, email, photo, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 name,
                                 mobile,
                                 whatsapp,
                                 email,
+                                photo,
                                 location,
                                 profession,
                                 sourceId,
@@ -273,25 +275,49 @@ export default {
                                 ? Number(formData.get("score"))
                                 : 30;
 
-                            await db
-                                .prepare(
-                                    "UPDATE leads SET name = ?, mobile = ?, whatsapp = ?, email = ?, location = ?, profession_or_business = ?, lead_source_id = ?, interest_types = ?, stage = ?, notes = ?, score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(
-                                    name,
-                                    mobile,
-                                    whatsapp,
-                                    email,
-                                    location,
-                                    profession,
-                                    sourceId,
-                                    interestsJson,
-                                    stage,
-                                    notes,
-                                    score,
-                                    leadId,
-                                )
-                                .run();
+                            const photo = formData.get("photo") !== null ? (formData.get("photo") || null) : undefined;
+                            if (photo !== undefined) {
+                                await db
+                                    .prepare(
+                                        "UPDATE leads SET name = ?, mobile = ?, whatsapp = ?, email = ?, photo = ?, location = ?, profession_or_business = ?, lead_source_id = ?, interest_types = ?, stage = ?, notes = ?, score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        mobile,
+                                        whatsapp,
+                                        email,
+                                        photo,
+                                        location,
+                                        profession,
+                                        sourceId,
+                                        interestsJson,
+                                        stage,
+                                        notes,
+                                        score,
+                                        leadId,
+                                    )
+                                    .run();
+                            } else {
+                                await db
+                                    .prepare(
+                                        "UPDATE leads SET name = ?, mobile = ?, whatsapp = ?, email = ?, location = ?, profession_or_business = ?, lead_source_id = ?, interest_types = ?, stage = ?, notes = ?, score = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        mobile,
+                                        whatsapp,
+                                        email,
+                                        location,
+                                        profession,
+                                        sourceId,
+                                        interestsJson,
+                                        stage,
+                                        notes,
+                                        score,
+                                        leadId,
+                                    )
+                                    .run();
+                            }
                         } catch (e) {
                             console.error("D1 Leads update error:", e);
                         }
@@ -1322,8 +1348,10 @@ export default {
                         console.error("D1 Ecosystem create error:", e);
                     }
                 }
+                const refEco = request.headers.get("Referer");
+                const ecoDest = (refEco && refEco.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
                 return Response.redirect(
-                    new URL("/ecosystem", request.url),
+                    new URL(ecoDest, request.url),
                     302,
                 );
             }
@@ -1344,8 +1372,10 @@ export default {
                             console.error("D1 Ecosystem delete error:", e);
                         }
                     }
+                    const refEcoDel = request.headers.get("Referer");
+                    const ecoDestDel = (refEcoDel && refEcoDel.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
                     return Response.redirect(
-                        new URL("/ecosystem", request.url),
+                        new URL(ecoDestDel, request.url),
                         302,
                     );
                 }
@@ -1381,8 +1411,10 @@ export default {
                             console.error("D1 Ecosystem update error:", e);
                         }
                     }
+                    const refEcoPut = request.headers.get("Referer");
+                    const ecoDestPut = (refEcoPut && refEcoPut.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
                     return Response.redirect(
-                        new URL("/ecosystem", request.url),
+                        new URL(ecoDestPut, request.url),
                         302,
                     );
                 }
@@ -2018,6 +2050,8 @@ export default {
                     .replace(/name:\s*'[^']*'/, `name: '${jsName}'`)
                     .replace(/mobile:\s*'[^']*'/, `mobile: '${jsMobile}'`)
                     .replace(/whatsapp:\s*'[^']*'/, `whatsapp: '${jsWhatsapp}'`)
+                    .replace(/photoData:\s*'[^']*'/, `photoData: '${(currentLead.photo || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`)
+                    .replace(/name="photo" :value="photoData"/, `name="photo" value="${escapeHtml(currentLead.photo || '')}" :value="photoData"`)
                     .replace(
                         /name="email" value="[^"]*"/g,
                         `name="email" value="${escapeHtml(currentLead.email || "")}"`,
@@ -2165,7 +2199,9 @@ export default {
                     )
                     .replace(
                         /<div id="lead-show-avatar"[^>]*>.*?<\/div>/,
-                        `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs">${initialLetter}</div>`,
+                        currentLead.photo
+                            ? `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50"><img src="${escapeHtml(currentLead.photo)}" alt="${escapedName}" class="w-full h-full object-cover"></div>`
+                            : `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs">${initialLetter}<\/div>`,
                     )
                     .replace(
                         /id="lead-show-stage-badge">.*?<\/span>/,

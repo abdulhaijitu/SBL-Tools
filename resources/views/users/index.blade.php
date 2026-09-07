@@ -35,8 +35,8 @@
                 💼
             </div>
             <div>
-                <div class="text-xs font-semibold text-slate-500 uppercase">Sales Team</div>
-                <div class="text-xl font-bold text-slate-900">{{ $users->filter(fn($u) => $u->hasRole(['sales-manager', 'sales-agent']))->count() }}</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase">Members</div>
+                <div class="text-xl font-bold text-slate-900">{{ $users->filter(fn($u) => $u->hasRole(['member', 'demo-member']))->count() }}</div>
             </div>
         </div>
         <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center gap-3">
@@ -132,10 +132,8 @@
                             $primaryRole = $user->primary_role;
                             $roleColors = [
                                 'super-admin' => 'bg-purple-100 text-purple-800 border-purple-200',
-                                'sales-manager' => 'bg-indigo-100 text-indigo-800 border-indigo-200',
-                                'sales-agent' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                                'marketing-officer' => 'bg-blue-100 text-blue-800 border-blue-200',
-                                'viewer' => 'bg-slate-100 text-slate-700 border-slate-200',
+                                'member' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                'demo-member' => 'bg-amber-100 text-amber-800 border-amber-200',
                             ];
                             $colorClass = $primaryRole ? ($roleColors[$primaryRole->slug] ?? 'bg-slate-100 text-slate-700 border-slate-200') : 'bg-slate-100 text-slate-700 border-slate-200';
                         @endphp

@@ -6,13 +6,25 @@
 @section('content')
 <div class="space-y-6" x-data="{ actionModal: false, modalType: 'note', modalTitle: 'Add Note' }">
 
+    <!-- Back Navigation -->
+    <div class="flex items-center justify-between">
+        <a href="{{ route('leads.index') }}" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-orange-600 transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-xs">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span>Back to Leads</span>
+        </a>
+    </div>
+
     <!-- Lead Profile Header Card (Section 6) -->
     <div id="lead-show-profile-card" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 md:p-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <!-- Left: Avatar & Primary Info -->
             <div class="flex items-start gap-4">
-                <div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs">
-                    {{ substr($lead->name, 0, 1) }}
+                <div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50">
+                    @if (!empty($lead->photo))
+                        <img src="{{ $lead->photo }}" alt="{{ $lead->name }}" class="w-full h-full object-cover">
+                    @else
+                        {{ substr($lead->name, 0, 1) }}
+                    @endif
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">

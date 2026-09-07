@@ -104,8 +104,12 @@
                             <!-- Lead Info -->
                             <td class="py-3.5 px-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0">
-                                        {{ substr($lead->name, 0, 1) }}
+                                    <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0 overflow-hidden border border-orange-200/50">
+                                        @if(!empty($lead->photo))
+                                            <img src="{{ $lead->photo }}" alt="{{ $lead->name }}" class="w-full h-full object-cover">
+                                        @else
+                                            {{ substr($lead->name, 0, 1) }}
+                                        @endif
                                     </div>
                                     <div>
                                         <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
@@ -248,8 +252,12 @@
                     <!-- Top Row: Avatar, Name & Stage Badge -->
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">
-                                {{ substr($lead->name, 0, 1) }}
+                            <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50">
+                                @if(!empty($lead->photo))
+                                    <img src="{{ $lead->photo }}" alt="{{ $lead->name }}" class="w-full h-full object-cover">
+                                @else
+                                    {{ substr($lead->name, 0, 1) }}
+                                @endif
                             </div>
                             <div>
                                 <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
