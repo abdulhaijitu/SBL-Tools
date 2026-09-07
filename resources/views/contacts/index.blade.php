@@ -25,6 +25,7 @@
     copyToClipboard(text, title) {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {
+                window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' কপি করা হয়েছে!', type: 'success' } }));
                 window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' copied to clipboard!', type: 'success' } }));
             });
         }
@@ -40,12 +41,14 @@
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2 text-sm text-slate-600">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="font-medium">সর্বমোট <strong>{{ $contacts->count() }}</strong> টি সক্রিয় যোগাযোগ হটলাইন তালিকাভুক্ত রয়েছে</span>
             <span class="font-medium">Total <strong>{{ $contacts->count() }}</strong> active contact hotlines listed</span>
         </div>
 
         <div class="relative w-full sm:w-80">
             <input type="text" 
                    x-model="searchQuery" 
+                   placeholder="বিভাগ, নাম, মোবাইল বা নম্বর খুঁজুন..." 
                    placeholder="Search department, person, or phone..." 
                    class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
             <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -102,9 +105,11 @@
                 <!-- Numbers List Display -->
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
                     <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-500 font-medium">ফোন কল:</span>
                         <span class="text-slate-500 font-medium">Phone:</span>
                         <div class="flex items-center gap-1.5">
                             <span class="font-bold text-slate-900 tracking-wide">{{ $contact->phone }}</span>
+                            <button @click="copyToClipboard('{{ $contact->phone }}', 'ফোন নম্বর')" title="নম্বর কপি করুন" class="text-slate-400 hover:text-slate-700 p-0.5">
                             <button @click="copyToClipboard('{{ $contact->phone }}', 'Phone number')" title="Copy number" class="text-slate-400 hover:text-slate-700 p-0.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             </button>
@@ -118,6 +123,7 @@
                         </span>
                         <div class="flex items-center gap-1.5">
                             <span class="font-bold text-slate-900 tracking-wide">{{ $contact->whatsapp }}</span>
+                            <button @click="copyToClipboard('{{ $contact->whatsapp }}', 'হোয়াটসঅ্যাপ নম্বর')" title="নম্বর কপি করুন" class="text-slate-400 hover:text-slate-700 p-0.5">
                             <button @click="copyToClipboard('{{ $contact->whatsapp }}', 'WhatsApp number')" title="Copy WhatsApp number" class="text-slate-400 hover:text-slate-700 p-0.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             </button>
@@ -127,6 +133,7 @@
 
                     @if($contact->email)
                     <div class="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/60">
+                        <span class="text-slate-500 font-medium">ইমেইল:</span>
                         <span class="text-slate-500 font-medium">Email:</span>
                         <a href="mailto:{{ $contact->email }}" class="font-semibold text-slate-700 hover:text-emerald-600 truncate max-w-[170px]">
                             {{ $contact->email }}
@@ -144,11 +151,13 @@
                     <a href="tel:{{ $contact->clean_phone }}" 
                        class="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">
                         <svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        <span>কল করুন</span>
                         <span>Call Now</span>
                     </a>
 
                     <!-- Direct WhatsApp Button -->
                     @if($contact->whatsapp)
+                    <a href="https://wa.me/{{ $contact->clean_whatsapp }}?text={{ urlencode('হ্যালো, আমি SBL হেল্পডেস্কে যোগাযোগ করতে চাচ্ছি।') }}" 
                     <a href="https://wa.me/{{ $contact->clean_whatsapp }}?text={{ urlencode('Hello, I would like to connect with SBL Helpdesk.') }}" 
                        target="_blank" 
                        rel="noopener noreferrer" 
@@ -168,6 +177,7 @@
                         <span>Edit Info</span>
                     </button>
 
+                    <form action="{{ route('contacts.destroy', $contact) }}" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিতভাবে এই কন্টাক্ট ডিলিট করতে চান?');">
                     <form action="{{ route('contacts.destroy', $contact) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this contact?');">
                         @csrf
                         @method('DELETE')
@@ -184,6 +194,8 @@
         @empty
         <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
             <div class="text-4xl mb-3">📞</div>
+            <h3 class="text-lg font-bold text-slate-800">কোনো কন্টাক্ট পাওয়া যায়নি</h3>
+            <p class="text-sm mt-1">অনুগ্রহ করে নতুন কন্টাক্ট নম্বর যুক্ত করুন।</p>
             <h3 class="text-lg font-bold text-slate-800">No contacts found</h3>
             <p class="text-sm mt-1">Add a new contact to get started.</p>
         </div>
@@ -214,16 +226,22 @@
                 @csrf
                 
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ডিপার্টমেন্ট / বিভাগ <span class="text-red-500">*</span></label>
+                    <input type="text" name="department" required placeholder="যেমন: কাস্টমার সাপোর্ট / মার্চেন্ট হেল্পডেস্ক" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Department <span class="text-red-500">*</span></label>
                     <input type="text" name="department" required placeholder="e.g. Customer Support / Merchant Helpdesk" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ফোন নম্বর <span class="text-red-500">*</span></label>
+                        <input type="text" name="phone" required placeholder="যেমন: 01700000000" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Phone Number <span class="text-red-500">*</span></label>
                         <input type="text" name="phone" required placeholder="e.g. +880 1700-000000" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">হোয়াটসঅ্যাপ নম্বর</label>
+                        <input type="text" name="whatsapp" placeholder="যেমন: 01700000000" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">WhatsApp Number</label>
                         <input type="text" name="whatsapp" placeholder="e.g. +880 1700-000000" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -231,10 +249,13 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">দায়িত্বপ্রাপ্ত ব্যক্তি / পদবী</label>
+                        <input type="text" name="contact_person" placeholder="যেমন: সাপোর্ট এক্সিকিউটিভ" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contact Person / Designation</label>
                         <input type="text" name="contact_person" placeholder="e.g. Support Lead" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইমেইল</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email</label>
                         <input type="email" name="email" placeholder="support@sbl.com.bd" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -242,10 +263,13 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">কার্যকর সময় (Available Hours)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Available Hours</label>
                         <input type="text" name="available_hours" value="10:00 AM - 08:00 PM" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ব্যাজ (Badge)</label>
+                        <input type="text" name="badge" placeholder="যেমন: ২৪/৭ হেল্পলাইন" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Badge</label>
                         <input type="text" name="badge" placeholder="e.g. 24/7 Helpline" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -253,22 +277,27 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">আইকন (Emoji)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Icon (Emoji)</label>
                         <input type="text" name="icon" value="📞" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">সিরিয়াল (Sort Order)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sort Order</label>
                         <input type="number" name="sort_order" value="0" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">বিবরণ (Description)</label>
+                    <textarea name="description" rows="2" placeholder="সেবা বা বিভাগের সংক্ষিপ্ত বিবরণ..." class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
                     <textarea name="description" rows="2" placeholder="Brief description of support services..." class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center gap-2 pt-1">
                     <input type="checkbox" name="is_primary" id="create_is_primary" value="1" class="rounded text-emerald-600 focus:ring-emerald-500">
+                    <label for="create_is_primary" class="text-xs font-bold text-slate-700">প্রধান হেল্পলাইন হিসেবে হাইলাইট করুন (Highlight as Primary)</label>
                     <label for="create_is_primary" class="text-xs font-bold text-slate-700">Highlight as Primary Helpline</label>
                 </div>
 
@@ -306,16 +335,19 @@
                 @method('PUT')
                 
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ডিপার্টমেন্ট / বিভাগ <span class="text-red-500">*</span></label>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Department <span class="text-red-500">*</span></label>
                     <input type="text" name="department" x-model="editingContact.department" required class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ফোন নম্বর <span class="text-red-500">*</span></label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Phone Number <span class="text-red-500">*</span></label>
                         <input type="text" name="phone" x-model="editingContact.phone" required class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">হোয়াটসঅ্যাপ নম্বর</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">WhatsApp Number</label>
                         <input type="text" name="whatsapp" x-model="editingContact.whatsapp" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -323,10 +355,12 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">দায়িত্বপ্রাপ্ত ব্যক্তি / পদবী</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contact Person / Designation</label>
                         <input type="text" name="contact_person" x-model="editingContact.contact_person" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ইমেইল</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email</label>
                         <input type="email" name="email" x-model="editingContact.email" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -334,10 +368,12 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">কার্যকর সময় (Available Hours)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Available Hours</label>
                         <input type="text" name="available_hours" x-model="editingContact.available_hours" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">ব্যাজ (Badge)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Badge</label>
                         <input type="text" name="badge" x-model="editingContact.badge" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
@@ -345,22 +381,26 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">আইকন (Emoji)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Icon (Emoji)</label>
                         <input type="text" name="icon" x-model="editingContact.icon" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">সিরিয়াল (Sort Order)</label>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Sort Order</label>
                         <input type="number" name="sort_order" x-model="editingContact.sort_order" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">বিবরণ (Description)</label>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
                     <textarea name="description" x-model="editingContact.description" rows="2" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center gap-2 pt-1">
                     <input type="checkbox" name="is_primary" id="edit_is_primary" value="1" :checked="editingContact.is_primary" class="rounded text-emerald-600 focus:ring-emerald-500">
+                    <label for="edit_is_primary" class="text-xs font-bold text-slate-700">প্রধান হেল্পলাইন হিসেবে হাইলাইট করুন (Highlight as Primary)</label>
                     <label for="edit_is_primary" class="text-xs font-bold text-slate-700">Highlight as Primary Helpline</label>
                 </div>
 

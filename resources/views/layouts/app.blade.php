@@ -2,11 +2,12 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-currency="{{ \App\Services\CurrencyService::getCurrency() }}" data-exchange-rate="{{ \App\Services\CurrencyService::BDT_RATE }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#111827">
     <title>@yield('page-title', 'Profile') · SBL Growth Manager</title>
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="preload" as="image" href="{{ asset('images/sbl-logo.webp') }}" type="image/webp" fetchpriority="high">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="app-body" x-data="appShell" :class="{'navigation-open': sidebarOpen}" @keydown.escape.window="closeMenus()" @notify.window="addToast($event.detail.message, $event.detail.type || 'success')">
@@ -14,7 +15,7 @@
     <div class="app-backdrop" x-show="sidebarOpen" x-cloak @click="closeMenus()"></div>
     <aside id="main-sidebar" class="app-sidebar" :data-open="sidebarOpen" :inert="!sidebarOpen && isMobile">
         <div class="app-brand">
-            <a href="{{ route('dashboard') }}" aria-label="SBL Growth Manager home"><img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" width="142" height="48"></a>
+            <a href="{{ route('dashboard') }}" aria-label="SBL Growth Manager home"><img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" width="142" height="48" fetchpriority="high" decoding="async"></a>
             <button type="button" class="icon-button lg:hidden" aria-label="Close navigation" @click="closeMenus()"><x-ui-icon name="close" /></button>
         </div>
         @include('layouts.sidebar')

@@ -149,6 +149,9 @@
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                         <tr>
+                            <th class="py-3 px-5">সার্ভিস / ফিচার</th>
+                            <th class="py-3 px-5 text-right">সাধারণ মার্কেটে খরচ</th>
+                            <th class="py-3 px-5 text-right">SBL প্যাকেজে খরচ</th>
                             <th class="py-3 px-5">Service / Feature</th>
                             <th class="py-3 px-5 text-right">Standard Market Cost</th>
                             <th class="py-3 px-5 text-right">SBL Package Cost</th>
@@ -159,6 +162,7 @@
                             <tr class="hover:bg-slate-50/70">
                                 <td class="py-2.5 px-5 font-medium text-slate-800">{{ $row['service'] }}</td>
                                 <td class="py-2.5 px-5 text-right text-rose-600 font-semibold">{{ $row['market'] }}</td>
+                                <td class="py-2.5 px-5 text-right text-emerald-600 font-bold">অন্তর্ভুক্ত (Included)</td>
                                 <td class="py-2.5 px-5 text-right text-emerald-600 font-bold">Included</td>
                             </tr>
                         @endforeach
@@ -170,6 +174,8 @@
         <!-- 6-Month Growth Trajectory (PDF Page 4) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-900">ন্যূনতম ১০০০ ডলার স্কেলে ৬ মাসের গ্রোথ প্রজেকশন</h3>
+                <p class="text-xs text-slate-500">পর্যায়ক্রমিক অ্যাড বাজেট, অডিয়েন্স রিচ এবং অর্ডার সংখ্যা</p>
                 <h3 class="text-sm font-bold text-slate-900">6-Month Growth Projection ($1,000 Scale)</h3>
                 <p class="text-xs text-slate-500">Progressive ad spend, audience reach and monthly order trajectory</p>
             </div>
@@ -177,6 +183,10 @@
                 <table class="w-full text-center text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-700 uppercase tracking-wider font-bold border-b border-slate-200">
                         <tr>
+                            <th class="py-3 px-4">মাস</th>
+                            <th class="py-3 px-4">অ্যাড বাজেট</th>
+                            <th class="py-3 px-4">অডিয়েন্স সাইজ</th>
+                            <th class="py-3 px-4">মাসিক অর্ডার রেকর্ড</th>
                             <th class="py-3 px-4">Month</th>
                             <th class="py-3 px-4">Ad Budget</th>
                             <th class="py-3 px-4">Audience Size</th>
@@ -265,6 +275,10 @@
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                         <tr>
+                            <th class="py-3 px-5">পদবী (Rank Code)</th>
+                            <th class="py-3 px-5">পদবীর পূর্ণ নাম</th>
+                            <th class="py-3 px-5">অর্জনের শর্ত (Requirement)</th>
+                            <th class="py-3 px-5 text-right">নগদ পুরস্কার (Cash Incentive)</th>
                             <th class="py-3 px-5">Rank Code</th>
                             <th class="py-3 px-5">Designation</th>
                             <th class="py-3 px-5">Eligibility Requirement</th>
@@ -292,6 +306,8 @@
         <!-- 10-Generation Affiliate Matrix (Page 7) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900">১০-জেনারেশন অ্যাফিলিয়েট কমিশন ম্যাট্রিক্স</h3>
+                <p class="text-xs text-slate-500">যদি প্রতি ব্যক্তি ১০ জন রেফার করে পারফেক্ট গ্রোথ হয় (১০ লেভেল হিসাব)</p>
                 <h3 class="text-base font-bold text-slate-900">10-Generation Affiliate Commission Matrix</h3>
                 <p class="text-xs text-slate-500">Projections based on 10x10 referral matrix (Levels 1 to 10)</p>
             </div>
@@ -531,7 +547,7 @@
                                 ফি বাদ দিয়ে মূল ইনভেস্ট: <strong class="text-orange-600" x-text="coreInvestment.toLocaleString('en-IN') + ' ৳'"></strong>
                             </span>
                         </div>
-                        <input type="number" x-model.number="packageAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
+                        <input type="number" inputmode="numeric" x-model.number="packageAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
                         
                         <!-- Quick Presets -->
                         <div class="flex flex-wrap gap-1.5 mt-2">
@@ -610,7 +626,7 @@
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">রেফারেন্সকৃত প্রজেক্ট অ্যামাউন্ট (টাকায়):</label>
-                        <input type="number" x-model.number="referralAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
+                        <input type="number" inputmode="numeric" x-model.number="referralAmount" step="10000" class="w-full text-base font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
                         
                         <div class="flex flex-wrap gap-1.5 mt-2">
                             <button type="button" @click="referralAmount = 10000" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium">১০,০০০ ৳</button>
@@ -691,7 +707,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">গড় প্যাকেজ / মেম্বারশিপ সাইজ (টাকায়):</label>
-                        <input type="number" x-model.number="teamPackageAmount" step="1000" class="w-full text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-2 bg-white">
+                        <input type="number" inputmode="numeric" x-model.number="teamPackageAmount" step="1000" class="w-full text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-2 bg-white">
                         <div class="flex flex-wrap gap-1 mt-1.5">
                             <button type="button" @click="teamPackageAmount = 10000" class="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium hover:border-orange-500">১০,০০০ ৳ (PDF Default)</button>
                             <button type="button" @click="teamPackageAmount = 120000" class="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded text-[11px] font-medium hover:border-orange-500">১,২০,০০০ ৳ (National)</button>
@@ -786,7 +802,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-semibold text-slate-700">প্রজেক্ট অ্যামাউন্ট:</label>
-                        <input type="number" x-model.number="referralAmount" step="10000" class="w-36 text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-1.5 bg-white">
+                        <input type="number" inputmode="numeric" x-model.number="referralAmount" step="10000" class="w-36 text-sm font-bold rounded-xl border border-slate-300 focus:border-orange-500 px-3 py-1.5 bg-white">
                     </div>
                 </div>
 

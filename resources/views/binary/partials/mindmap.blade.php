@@ -40,11 +40,11 @@
     }">
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
         <div><h2 class="font-semibold text-slate-900">Member network</h2><p class="text-xs text-slate-500">Right Side above · Left Side below · Select a member for details</p></div>
-        <div class="flex items-center gap-2 text-xs font-semibold">
-            <button type="button" aria-label="Zoom out" @click="setZoom(zoom - .1)" class="rounded-lg border border-slate-200 px-3 py-2">−</button>
-            <span class="w-12 text-center" x-text="Math.round(zoom * 100) + '%'"></span>
-            <button type="button" aria-label="Zoom in" @click="setZoom(zoom + .1)" class="rounded-lg border border-slate-200 px-3 py-2">+</button>
-            <button type="button" @click="fit()" class="rounded-lg border border-slate-200 px-3 py-2">Fit to view</button>
+        <div class="flex items-center gap-1.5 text-xs font-semibold">
+            <button type="button" aria-label="Zoom out" @click="setZoom(zoom - .1)" class="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all text-sm font-bold text-slate-700">−</button>
+            <span class="w-11 text-center font-mono text-slate-600" x-text="Math.round(zoom * 100) + '%'"></span>
+            <button type="button" aria-label="Zoom in" @click="setZoom(zoom + .1)" class="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all text-sm font-bold text-slate-700">+</button>
+            <button type="button" @click="fit()" class="min-h-[38px] px-3.5 flex items-center justify-center rounded-xl border border-slate-200 hover:bg-slate-50 active:scale-95 transition-all text-slate-700">Fit view</button>
         </div>
     </div>
     <div x-ref="viewport" class="mindmap-viewport" tabindex="0" aria-label="Scrollable team tree; drag background to pan"
