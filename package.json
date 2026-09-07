@@ -9,7 +9,8 @@
         "serve": "php artisan serve",
         "build": "vite build",
         "build:worker": "node build_worker.cjs",
-        "deploy": "php render_pages.php && node build_worker.cjs && wrangler deploy"
+        "deploy": "php render_pages.php && node build_worker.cjs && wrangler deploy",
+        "ship": "node ship.cjs"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.2",
