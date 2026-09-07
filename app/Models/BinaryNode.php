@@ -45,6 +45,7 @@ class BinaryNode extends Model
         'is_target',
         'target_date',
         'target_notes',
+        'notes',
         'joined_at',
     ];
 

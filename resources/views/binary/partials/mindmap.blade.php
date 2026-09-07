@@ -73,7 +73,7 @@
 .mindmap-row,.mindmap-branch{display:flex;align-items:center;gap:65px}
 .mindmap-sponsor{width:130px;flex-shrink:0;font-size:12px;font-weight:600;color:#333}
 .mindmap-sponsor span{display:block;font-size:10px;font-weight:400;color:#777;margin-top:4px}
-.mindmap-member{width:178px;flex-shrink:0;padding:8px 0;color:#303030;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.mindmap-member{width:195px;flex-shrink:0;padding:8px 0;color:#303030;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
 .mindmap-member.is-root{color:#ea580c}
 .mindmap-name{display:block;font-weight:700;font-size:14px;text-align:left;line-height:1.4;cursor:pointer}
 .mindmap-name:hover{text-decoration:underline}

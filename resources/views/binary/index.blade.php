@@ -31,6 +31,7 @@
         is_target: false,
         target_date: '',
         target_notes: '',
+        notes: '',
         user_id: ''
     },
     selectedParentId: null,
@@ -40,7 +41,58 @@
     selectedSlotNumber: 1,
     isTargetMember: false,
     showDetailsPass: false,
-    init() { this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; } }); },
+    isEditingNote: false,
+    noteSaving: false,
+    tempNote: '',
+    init() { 
+        this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; this.isEditingNote = false; } }); 
+        window.copyToClipboard = (text, label) => this.copyToClipboard(text, label);
+    },
+    copyToClipboard(text, label) {
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                window.dispatchEvent(new CustomEvent('notify', { detail: { message: (label || 'Item') + ' copied to clipboard!', type: 'success' } }));
+            }).catch(() => {
+                this.fallbackCopy(text, label);
+            });
+        } else {
+            this.fallbackCopy(text, label);
+        }
+    },
+    fallbackCopy(text, label) {
+        const el = document.createElement('textarea');
+        el.value = text;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        window.dispatchEvent(new CustomEvent('notify', { detail: { message: (label || 'Item') + ' copied to clipboard!', type: 'success' } }));
+    },
+    async saveMemberNote() {
+        if (!this.detailsNode.id) return;
+        this.noteSaving = true;
+        try {
+            const res = await fetch('/team/' + this.detailsNode.id + '/notes', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ notes: this.tempNote })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Could not save note');
+            this.detailsNode.notes = this.tempNote;
+            this.isEditingNote = false;
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Member note saved successfully!', type: 'success' } }));
+        } catch (e) {
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: e.message || 'Failed to save note', type: 'error' } }));
+        } finally {
+            this.noteSaving = false;
+        }
+    },
     credentials: {},
     credentialsLoading: false,
     async toggleCredentials() {
@@ -68,6 +120,8 @@
         this.showDetailsPass = false;
         this.credentials = {};
         this.activeDetailsTab = 'overview';
+        this.tempNote = this.detailsNode.notes || this.detailsNode.target_notes || '';
+        this.isEditingNote = false;
         this.detailsModalOpen = true;
     },
     openPlacementModal(parentId, parentName, parentCode, branch, slotNumber) {
@@ -133,6 +187,7 @@
             is_target: liveNode.is_target !== undefined ? Boolean(liveNode.is_target) : false,
             target_date: liveNode.target_date || '',
             target_notes: liveNode.target_notes || '',
+            notes: liveNode.notes || liveNode.target_notes || '',
             user_id: liveNode.user_id || ''
         };
         this.editModalOpen = true;
@@ -262,7 +317,22 @@
                                          @click="openDetailsModal({{ json_encode($member) }})">
                                         {{ $member->member_name }}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 font-mono">{{ $member->member_code }} @if($member->phone) • {{ $member->phone }} @endif</div>
+                                    <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                                        <span>{{ $member->member_code }}</span>
+                                        <button type="button" @click.stop="copyToClipboard('{{ $member->member_code }}', 'Member Code')" title="Copy Code" class="text-slate-300 hover:text-orange-600 p-0.5 transition-colors cursor-pointer">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
+                                        @if($member->phone)
+                                        <span>•</span>
+                                        <span>{{ $member->phone }}</span>
+                                        <button type="button" @click.stop="copyToClipboard('{{ $member->phone }}', 'Phone number')" title="Copy Phone" class="text-slate-300 hover:text-orange-600 p-0.5 transition-colors cursor-pointer">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
+                                        @endif
+                                        @if(!empty($member->notes))
+                                        <span title="{{ $member->notes }}" class="cursor-help text-amber-600">📝</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -366,8 +436,18 @@
                         <span x-text="(detailsNode.member_name || 'M').charAt(0)">M</span>
                     </div>
                     <div>
-                        <h3 class="text-lg font-black text-slate-900" x-text="detailsNode.member_name"></h3>
-                        <div class="text-xs text-slate-500 font-mono" x-text="detailsNode.username || detailsNode.member_code"></div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-lg font-black text-slate-900" x-text="detailsNode.member_name"></h3>
+                            <button type="button" @click="copyToClipboard(detailsNode.member_name, 'Member Name')" title="Copy Name" class="text-slate-400 hover:text-orange-600 p-0.5 transition-colors cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
+                            <span x-text="detailsNode.username || detailsNode.member_code"></span>
+                            <button type="button" @click="copyToClipboard(detailsNode.username || detailsNode.member_code, 'Member Code')" title="Copy Code" class="text-slate-400 hover:text-orange-600 p-0.5 transition-colors cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -411,17 +491,32 @@
                     </div>
 
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span class="text-slate-400 text-[10px] font-bold uppercase">Sponsor Name</span>
-                        <div class="font-bold text-slate-900 text-sm mt-0.5" x-text="detailsNode.sponsor_name || 'Md. Samim'"></div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-[10px] font-bold uppercase">Sponsor Name</span>
+                            <button type="button" x-show="detailsNode.sponsor_name" @click="copyToClipboard(detailsNode.sponsor_name, 'Sponsor Name')" title="Copy Sponsor" class="text-slate-400 hover:text-orange-600 p-0.5 cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
+                        <div class="font-bold text-slate-900 text-sm mt-0.5 truncate" x-text="detailsNode.sponsor_name || 'Md. Samim'"></div>
                     </div>
 
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span class="text-slate-400 text-[10px] font-bold uppercase">Phone Number</span>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-[10px] font-bold uppercase">Phone Number</span>
+                            <button type="button" x-show="detailsNode.phone" @click="copyToClipboard(detailsNode.phone, 'Phone Number')" title="Copy Phone" class="text-slate-400 hover:text-orange-600 p-0.5 cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
                         <div class="font-bold text-slate-900 mt-0.5" x-text="detailsNode.phone || 'Not provided'"></div>
                     </div>
 
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                        <span class="text-slate-400 text-[10px] font-bold uppercase">Email Address</span>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400 text-[10px] font-bold uppercase">Email Address</span>
+                            <button type="button" x-show="detailsNode.email" @click="copyToClipboard(detailsNode.email, 'Email Address')" title="Copy Email" class="text-slate-400 hover:text-orange-600 p-0.5 cursor-pointer">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                        </div>
                         <div class="font-bold text-slate-900 mt-0.5 truncate" x-text="detailsNode.email || 'N/A'"></div>
                     </div>
 
@@ -438,9 +533,62 @@
                     </div>
                     <p class="text-xs text-slate-500">Saved credentials are shown only when requested.</p>
                     <dl x-show="showDetailsPass" x-cloak class="grid grid-cols-2 gap-3 text-sm">
-                        <div><dt class="text-slate-500">Password</dt><dd class="break-all font-mono" x-text="credentials.password_plain || 'Not saved'"></dd></div>
-                        <div><dt class="text-slate-500">TPIN</dt><dd class="break-all font-mono" x-text="credentials.tpin || 'Not saved'"></dd></div>
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-500 text-xs font-semibold">Password</dt>
+                                <button type="button" x-show="credentials.password_plain" @click="copyToClipboard(credentials.password_plain, 'Password')" title="Copy Password" class="text-slate-400 hover:text-orange-600 p-0.5 cursor-pointer">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                </button>
+                            </div>
+                            <dd class="break-all font-mono font-bold text-slate-900 mt-0.5" x-text="credentials.password_plain || 'Not saved'"></dd>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                            <div class="flex items-center justify-between">
+                                <dt class="text-slate-500 text-xs font-semibold">TPIN</dt>
+                                <button type="button" x-show="credentials.tpin" @click="copyToClipboard(credentials.tpin, 'TPIN')" title="Copy TPIN" class="text-slate-400 hover:text-orange-600 p-0.5 cursor-pointer">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                </button>
+                            </div>
+                            <dd class="break-all font-mono font-bold text-slate-900 mt-0.5" x-text="credentials.tpin || 'Not saved'"></dd>
+                        </div>
                     </dl>
+                </div>
+
+                <!-- Member Notes Box (View / Add / Edit inline) -->
+                <div class="p-4 bg-amber-50/50 rounded-2xl border border-amber-200/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                            <span>📝</span> Member Notes
+                        </span>
+                        <button type="button" 
+                                @click="if(!isEditingNote) { tempNote = detailsNode.notes || detailsNode.target_notes || ''; } isEditingNote = !isEditingNote" 
+                                class="text-xs font-bold text-orange-700 hover:text-orange-800 transition-colors cursor-pointer"
+                                x-text="isEditingNote ? 'Cancel' : (detailsNode.notes ? 'Edit Note' : '+ Add Note')">
+                        </button>
+                    </div>
+
+                    <!-- Viewing Note -->
+                    <div x-show="!isEditingNote">
+                        <template x-if="detailsNode.notes || detailsNode.target_notes">
+                            <div class="text-xs text-slate-700 bg-white p-3 rounded-xl border border-amber-200 whitespace-pre-line leading-relaxed" 
+                                 x-text="detailsNode.notes || detailsNode.target_notes"></div>
+                        </template>
+                        <template x-if="!detailsNode.notes && !detailsNode.target_notes">
+                            <p class="text-xs text-slate-400 italic">No notes added for this member yet. Click '+ Add Note' to add one.</p>
+                        </template>
+                    </div>
+
+                    <!-- Editing Note Inline -->
+                    <div x-show="isEditingNote" class="space-y-2" x-cloak>
+                        <textarea x-model="tempNote" rows="3" class="w-full text-xs p-2.5 bg-white border border-amber-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none" placeholder="Write any notes, discussion summary, or goals for this member..."></textarea>
+                        <div class="flex items-center justify-end gap-2">
+                            <button type="button" @click="isEditingNote = false" class="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancel</button>
+                            <button type="button" @click="saveMemberNote()" :disabled="noteSaving" class="px-4 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer">
+                                <span x-show="noteSaving">Saving…</span>
+                                <span x-show="!noteSaving">Save Note</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Direct Team Counts -->
@@ -662,6 +810,12 @@
                     </div>
                 </div>
 
+                <!-- Member Notes -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Member Notes</label>
+                    <textarea name="notes" rows="2" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                     <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
                         Cancel
@@ -794,6 +948,12 @@
                             <button type="button" @click="removeContributionRow(idx)" class="text-rose-700 font-semibold px-2">Remove installment</button>
                         </div>
                     </template>
+                </div>
+
+                <!-- Member Notes -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Member Notes</label>
+                    <textarea name="notes" x-model="editNode.notes" rows="2.5" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
                 </div>
 
                 <div class="pt-2 flex items-center justify-between border-t border-slate-100">

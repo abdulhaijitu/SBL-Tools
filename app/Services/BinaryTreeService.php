@@ -587,6 +587,7 @@ class BinaryTreeService
                 'is_target' => $isTarget,
                 'target_date' => $data['target_date'] ?? null,
                 'target_notes' => $data['target_notes'] ?? null,
+                'notes' => $data['notes'] ?? ($data['target_notes'] ?? null),
                 'joined_at' => now(),
             ]);
 
@@ -708,6 +709,7 @@ class BinaryTreeService
                 'is_target' => isset($data['is_target']) ? (bool)$data['is_target'] : $node->is_target,
                 'target_date' => $data['target_date'] ?? $node->target_date,
                 'target_notes' => $data['target_notes'] ?? $node->target_notes,
+                'notes' => array_key_exists('notes', $data) ? $data['notes'] : $node->notes,
                 'user_id' => array_key_exists('user_id', $data) ? ($data['user_id'] ? (int)$data['user_id'] : null) : $node->user_id,
             ];
 
@@ -860,6 +862,7 @@ class BinaryTreeService
             'is_target' => (bool)$node->is_target,
             'target_date' => $node->target_date ? $node->target_date->toDateString() : null,
             'target_notes' => $node->target_notes,
+            'notes' => $node->notes ?: $node->target_notes,
             'package_name' => $node->package_name,
             'point_value' => $stats['own_pv'],
             'own_investment' => $stats['own_investment'],

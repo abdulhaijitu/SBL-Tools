@@ -73,6 +73,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     Route::post('/team/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('team.store');
     Route::post('/team/{node}/convert-target', [\App\Http\Controllers\BinaryTeamController::class, 'convertTarget'])->name('team.convert-target');
     Route::put('/team/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'update'])->name('team.update');
+    Route::patch('/team/{node}/notes', [\App\Http\Controllers\BinaryTeamController::class, 'updateNotes'])->name('team.update-notes');
     Route::delete('/team/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'destroy'])->name('team.destroy');
 
     Route::get('/binary', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('binary.index');

@@ -139,6 +139,7 @@ class BinaryTeamController extends Controller
             'is_target' => 'nullable|boolean',
             'target_date' => 'nullable|date',
             'target_notes' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:2000',
         ]);
 
         $parentNode = BinaryNode::findOrFail($validated['parent_id']);
@@ -214,6 +215,7 @@ class BinaryTeamController extends Controller
             'is_target' => 'nullable|boolean',
             'target_date' => 'nullable|date',
             'target_notes' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:2000',
             'user_id' => 'nullable|exists:users,id',
         ]);
 
@@ -293,5 +295,29 @@ class BinaryTeamController extends Controller
             : $this->treeService->getExtremeRight($node);
 
         return redirect()->route('team.show', ['memberId' => $target->id]);
+    }
+
+    /**
+     * Update notes for a team member (direct save or AJAX).
+     */
+    public function updateNotes(Request $request, BinaryNode $node)
+    {
+        $validated = $request->validate([
+            'notes' => 'nullable|string|max:2000',
+        ]);
+
+        $node->update([
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Note updated successfully.',
+                'notes' => $node->notes,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Note updated successfully.');
     }
 }

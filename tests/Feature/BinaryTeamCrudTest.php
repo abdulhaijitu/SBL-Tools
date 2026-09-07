@@ -222,4 +222,73 @@ class BinaryTeamCrudTest extends TestCase
             'id' => $grandchild->id,
         ]);
     }
+
+    public function test_admin_can_place_multiple_members_on_same_branch_different_slots(): void
+    {
+        // Place slot 1
+        $r1 = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Member Slot 1',
+            'member_code' => 'SBL-SLOT1',
+            'package_name' => 'National 120k',
+        ]);
+        $r1->assertSessionHasNoErrors();
+
+        // Place slot 2 on SAME parent and SAME branch (previously failed with UNIQUE constraint)
+        $r2 = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 2,
+            'member_name' => 'Member Slot 2',
+            'member_code' => 'SBL-SLOT2',
+            'package_name' => 'National 120k',
+        ]);
+        $r2->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('binary_nodes', [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Member Slot 1',
+        ]);
+        $this->assertDatabaseHas('binary_nodes', [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 2,
+            'member_name' => 'Member Slot 2',
+        ]);
+    }
+
+    public function test_admin_can_save_and_update_member_notes(): void
+    {
+        $response = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Note Member',
+            'member_code' => 'SBL-NOTE1',
+            'package_name' => 'National 120k',
+            'notes' => 'Important prospect discussion held on Monday.',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $member = BinaryNode::where('member_code', 'SBL-NOTE1')->firstOrFail();
+        $this->assertEquals('Important prospect discussion held on Monday.', $member->notes);
+
+        // Update note via PATCH endpoint
+        $patchResponse = $this->actingAs($this->admin)->patchJson(route('team.update-notes', $member->id), [
+            'notes' => 'Updated: Follow up confirmed for Friday.',
+        ]);
+
+        $patchResponse->assertOk();
+        $patchResponse->assertJsonFragment([
+            'success' => true,
+            'notes' => 'Updated: Follow up confirmed for Friday.',
+        ]);
+
+        $member->refresh();
+        $this->assertEquals('Updated: Follow up confirmed for Friday.', $member->notes);
+    }
 }
