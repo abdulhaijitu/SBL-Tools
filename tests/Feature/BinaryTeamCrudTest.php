@@ -336,4 +336,3 @@ class BinaryTeamCrudTest extends TestCase
         ]);
     }
 }
-

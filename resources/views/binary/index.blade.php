@@ -4,7 +4,9 @@
 @section('page-subtitle', 'Explore your member network, branches and placements')
 
 @section('content')
-<div class="space-y-6" x-data="{
+<script>
+function teamExplorerData() {
+    return {
     viewMode: '{{ $viewMode }}',
     detailsModalOpen: false,
     placementModalOpen: false,
@@ -217,7 +219,11 @@
             }
         });
     }
-}">
+};
+}
+</script>
+
+<div class="space-y-6" x-data="teamExplorerData()">
 
 @if(session('error'))
     <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-sm font-semibold flex items-center justify-between shadow-xs">
