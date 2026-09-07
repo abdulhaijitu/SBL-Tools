@@ -59,7 +59,7 @@ class BinaryTeamController extends Controller
             $nodesQuery->where('tree_owner_id', $ownerId);
         }
         $allNodes = $nodesQuery->get(['id', 'member_name', 'member_code', 'rank_name', 'branch', 'slot_number']);
-        $users = User::when(!$isSuperAdmin, fn ($query) => $query->whereKey($currentUser->id))->orderBy('name')->get(['id', 'name', 'email', 'phone']);
+        $users = User::when(!$isSuperAdmin, fn($query) => $query->whereKey($currentUser->id))->orderBy('name')->get(['id', 'name', 'email', 'phone']);
 
         $tableQuery = BinaryNode::with(['parent', 'user', 'children', 'investments'])->orderBy('id');
         if ($ownerId) {
