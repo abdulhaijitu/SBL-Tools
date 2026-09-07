@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "project": {
+    "name": "SBL-Tools",
+    "productType": null,
+    "stack": [
+      "tailwind-v3",
+      "vite"
+    ]
+  },
+  "sources": {
+    "tokens": [],
+    "components": [],
+    "assets": [
+      "public/images"
+    ],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "unknown",
+    "colors": {},
+    "typography": {},
+    "spacing": {},
+    "radius": {},
+    "shadows": {},
+    "motion": {},
+    "density": "unknown"
+  },
+  "components": {
+    "installed": [],
+    "preferredPrimitives": [],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [],
+    "avoid": []
+  },
+  "decisions": [],
+  "evidence": [
+    {
+      "fact": "project.stack:tailwind-v3",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:vite",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-09-07T11:24:22.839Z"
+}

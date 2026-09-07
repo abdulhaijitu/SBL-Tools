@@ -54,6 +54,10 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     // SBL Dropshipping Abbreviations & Glossary Resource
     Route::get('/abbreviations', [\App\Http\Controllers\AbbreviationController::class, 'index'])->name('abbreviations.index');
 
+    Route::post('/abbreviations', [\App\Http\Controllers\AbbreviationController::class, 'store'])->name('abbreviations.store');
+    Route::put('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'update'])->name('abbreviations.update');
+    Route::delete('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'destroy'])->name('abbreviations.destroy');
+
     // SBL Plans & Toolkit (From PDF)
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
 

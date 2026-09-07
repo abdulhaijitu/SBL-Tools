@@ -30,6 +30,7 @@ class EnforceApplicationAccess
             'toolkit', 'ecosystem', 'contacts' => $read ? 'toolkit.view' : 'users.manage',
             'marketing' => $read ? 'marketing.view' : 'marketing.manage',
             'reports' => 'reports.view',
+            'abbreviations' => $read ? null : 'users.manage',
             default => null,
         };
 
