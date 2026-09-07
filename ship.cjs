@@ -8,6 +8,9 @@ function run(cmd) {
 try {
     const commitMsg = process.argv.slice(2).join(' ') || `Update ${new Date().toLocaleString('en-US')}`;
 
+    console.log('\x1b[32m🎨 Step 0: Compiling CSS and JS assets with Vite...\x1b[0m');
+    run('npm run build');
+
     console.log('\x1b[32m🚀 Step 1: Pre-rendering Blade pages...\x1b[0m');
     run('php render_pages.php');
 
