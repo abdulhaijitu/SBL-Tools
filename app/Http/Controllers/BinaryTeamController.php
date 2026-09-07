@@ -101,6 +101,33 @@ class BinaryTeamController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Support connector_id or connector_code/name for placement parent
+        if ($request->filled('connector_id')) {
+            $request->merge(['parent_id' => $request->input('connector_id')]);
+        } elseif ($request->filled('connector_code') || $request->filled('connector_name')) {
+            $cVal = trim($request->input('connector_code') ?: $request->input('connector_name'));
+            $matchedParent = BinaryNode::where('member_code', $cVal)->orWhere('member_name', $cVal)->first();
+            if ($matchedParent) {
+                $request->merge(['parent_id' => $matchedParent->id]);
+            }
+        }
+
+        // Default to current tree root if parent_id is still missing
+        if (! $request->filled('parent_id')) {
+            $root = $this->treeService->getMainTeamRoot(auth()->id());
+            if ($root) {
+                $request->merge(['parent_id' => $root->id]);
+            }
+        }
+
+        if ($request->filled('sponsor_code')) {
+            $sCode = trim($request->input('sponsor_code'));
+            $matchedSponsor = BinaryNode::where('member_code', $sCode)->orWhere('member_name', $sCode)->first();
+            if ($matchedSponsor) {
+                $request->merge(['sponsor_id' => $matchedSponsor->id, 'sponsor_name' => $matchedSponsor->member_name]);
+            }
+        }
+
         if ($request->filled('sponsor_name')) {
             $sName = trim($request->input('sponsor_name'));
             $matchedNode = BinaryNode::where('member_name', $sName)
@@ -160,7 +187,7 @@ class BinaryTeamController extends Controller
             return redirect()->route('team.show', ['memberId' => $parent->id])
                 ->with('success', $msg);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
     }
 
@@ -173,7 +200,7 @@ class BinaryTeamController extends Controller
             $this->treeService->convertToActive($node);
             return redirect()->back()->with('success', "মেম্বার '{$node->member_name}' সফলভাবে টার্গেট থেকে অ্যাক্টিভ মেম্বারে রূপান্তরিত হয়েছে।");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
     }
 
@@ -230,7 +257,7 @@ class BinaryTeamController extends Controller
             return redirect()->back()
                 ->with('success', "মেম্বার '{$node->member_name}' ({$node->member_code})-এর তথ্য সফলভাবে আপডেট করা হয়েছে।");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
     }
 
@@ -252,7 +279,7 @@ class BinaryTeamController extends Controller
             return redirect($targetUrl)
                 ->with('success', "মেম্বার '{$name}' ({$code}) সফলভাবে টিম থেকে রিমুভ করা হয়েছে।");
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
     }
 

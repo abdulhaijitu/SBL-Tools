@@ -291,4 +291,49 @@ class BinaryTeamCrudTest extends TestCase
         $member->refresh();
         $this->assertEquals('Updated: Follow up confirmed for Friday.', $member->notes);
     }
+
+    public function test_admin_can_place_member_using_connector_id_and_code(): void
+    {
+        // 1. Verify view displays Member Connector option and Add Member button
+        $viewResponse = $this->actingAs($this->admin)->get(route('binary.index'));
+        $viewResponse->assertOk();
+        $viewResponse->assertSee('Member Connector');
+        $viewResponse->assertSee('Add Member');
+
+        // 2. Place a member using connector_id
+        $r1 = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'connector_id' => $this->root->id,
+            'branch' => 'RIGHT',
+            'slot_number' => 1,
+            'member_name' => 'Connector Test Member 1',
+            'member_code' => 'SBL-CONN1',
+            'package_name' => 'National 120k',
+        ]);
+        $r1->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('binary_nodes', [
+            'member_name' => 'Connector Test Member 1',
+            'parent_id' => $this->root->id,
+            'branch' => 'RIGHT',
+            'slot_number' => 1,
+        ]);
+
+        // 3. Place another member under SBL-CONN1 using connector_code
+        $r2 = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'connector_code' => 'SBL-CONN1',
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Child Under Connector',
+            'member_code' => 'SBL-CONN-CHILD',
+            'package_name' => 'National 120k',
+        ]);
+        $r2->assertSessionHasNoErrors();
+        $parentConn = BinaryNode::where('member_code', 'SBL-CONN1')->firstOrFail();
+        $this->assertDatabaseHas('binary_nodes', [
+            'member_name' => 'Child Under Connector',
+            'parent_id' => $parentConn->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+        ]);
+    }
 }
+

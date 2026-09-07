@@ -39,6 +39,7 @@
     selectedParentCode: '',
     selectedBranch: 'LEFT',
     selectedSlotNumber: 1,
+    sponsorName: '',
     isTargetMember: false,
     showDetailsPass: false,
     isEditingNote: false,
@@ -47,6 +48,23 @@
     init() { 
         this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; this.isEditingNote = false; } }); 
         window.copyToClipboard = (text, label) => this.copyToClipboard(text, label);
+        @if($errors->any())
+            this.placementModalOpen = true;
+        @endif
+    },
+    openAddMemberModal(parentId = null, parentName = '', parentCode = '') {
+        const rootId = {{ $treeData['root']->id ?? 'null' }};
+        const rootName = {{ json_encode($treeData['root']->member_name ?? '') }};
+        const rootCode = {{ json_encode($treeData['root']->member_code ?? '') }};
+
+        this.selectedParentId = parentId || rootId;
+        this.selectedParentName = parentName || rootName;
+        this.selectedParentCode = parentCode || rootCode;
+        this.selectedBranch = 'LEFT';
+        this.selectedSlotNumber = 1;
+        this.sponsorName = parentName || rootName;
+        this.isTargetMember = false;
+        this.placementModalOpen = true;
     },
     copyToClipboard(text, label) {
         if (!text) return;
@@ -130,6 +148,7 @@
         this.selectedParentCode = parentCode;
         this.selectedBranch = branch || 'LEFT';
         this.selectedSlotNumber = slotNumber || 1;
+        this.sponsorName = parentName || '';
         this.isTargetMember = false;
         this.placementModalOpen = true;
     },
@@ -210,11 +229,31 @@
     </div>
     @endif
 
+    @if($errors->any())
+    <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-sm font-semibold shadow-xs">
+        <div class="flex items-center gap-2 mb-1">
+            <span>⚠️</span>
+            <span>Validation Error: Please review the member details below.</span>
+        </div>
+        <ul class="list-disc list-inside text-xs font-normal ml-6 space-y-0.5">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <div class="app-panel space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
                 <a class="btn-secondary" href="{{ route('team.index', ['owner_id' => $ownerId]) }}">Main team</a>
                 @if(!empty($treeData['parent_node']))<a class="btn-secondary" href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => $ownerId]) }}">Parent team</a>@endif
+                <button type="button" 
+                        @click="openAddMemberModal()" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer">
+                    <span>➕</span>
+                    <span>Add Member</span>
+                </button>
             </div>
             <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
                 <a class="px-3 py-2 rounded-lg {{ $viewMode !== 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}">Explorer</a>
@@ -265,8 +304,16 @@
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden space-y-4 p-5">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-                <h3 class="text-base font-bold text-slate-900">10-Slot Member Directory</h3>
-                <p class="text-xs text-slate-500">Overview of all team members, placement positions, and network statistics.</p>
+                <div class="flex items-center gap-3">
+                    <h3 class="text-base font-bold text-slate-900">10-Slot Member Directory</h3>
+                    <button type="button" 
+                            @click="openAddMemberModal()" 
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer">
+                        <span>➕</span>
+                        <span>Add Member</span>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Overview of all team members, placement positions, and network statistics.</p>
             </div>
 
             <!-- Search Form -->
@@ -677,37 +724,90 @@
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
          x-cloak>
         <div @click.outside="placementModalOpen = false" 
-             class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+             class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span>➕</span> Add Member to Team
-                </h3>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>➕</span> Add Member to Team
+                    </h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Place a new or target member into your binary team genealogy.</p>
+                </div>
                 <button @click="placementModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <!-- Placement Slot Indicator -->
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
-                <div>
-                    <span class="text-slate-400">Upline Sponsor:</span>
-                    <div class="font-bold text-slate-900" x-text="selectedParentName + ' (' + selectedParentCode + ')'"></div>
+            @if($errors->any())
+            <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs space-y-1">
+                <div class="font-bold flex items-center gap-1.5 text-rose-800">
+                    <span>⚠️</span> <span>Please check the following:</span>
                 </div>
-                <div class="text-right">
-                    <span class="text-slate-400">Selected Slot:</span>
-                    <div>
-                        <span class="px-2.5 py-1 rounded-full font-black"
-                              :class="selectedBranch === 'LEFT' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'"
-                              x-text="(selectedBranch === 'LEFT' ? '👈 LEFT' : '👉 RIGHT') + ' Slot-' + selectedSlotNumber">
-                        </span>
-                    </div>
-                </div>
+                <ul class="list-disc list-inside space-y-0.5 text-rose-700 text-[11px]">
+                    @foreach($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
             </div>
+            @endif
 
             <form action="{{ route('binary.store') }}" method="POST" class="space-y-4">
                 @csrf
-                <input type="hidden" name="parent_id" :value="selectedParentId">
-                <input type="hidden" name="branch" :value="selectedBranch">
-                <input type="hidden" name="slot_number" :value="selectedSlotNumber">
+
+                <!-- ==================== MEMBER CONNECTOR (PLACEMENT UPLINE) ==================== -->
+                <div class="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-3">
+                    <div>
+                        <label class="block text-xs font-black text-slate-900 mb-1.5 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5 text-orange-950">
+                                <span>🔗</span>
+                                <span>Member Connector (কানেক্টর / Placement Upline) <span class="text-rose-500">*</span></span>
+                            </span>
+                            <span class="text-[10px] text-orange-700 font-semibold bg-orange-100 px-2 py-0.5 rounded-full">কার সরাসরি নিচে বসবে</span>
+                        </label>
+                        <select name="parent_id" 
+                                x-model="selectedParentId" 
+                                @change="
+                                    const opt = $el.options[$el.selectedIndex];
+                                    selectedParentName = opt.dataset.name || '';
+                                    selectedParentCode = opt.dataset.code || '';
+                                    if (!sponsorName) sponsorName = selectedParentName;
+                                "
+                                required 
+                                class="w-full text-xs bg-white border border-orange-300 rounded-xl p-2.5 focus:ring-2 focus:ring-orange-500 font-bold text-slate-800 shadow-xs">
+                            <option value="">-- Select Member Connector (কানেক্টর নির্বাচন করুন) --</option>
+                            @foreach($allNodes as $nodeOption)
+                                <option value="{{ $nodeOption->id }}" 
+                                        data-name="{{ $nodeOption->member_name }}" 
+                                        data-code="{{ $nodeOption->member_code }}"
+                                        :selected="selectedParentId == {{ $nodeOption->id }}">
+                                    {{ $nodeOption->member_code ?: 'SBL-'.$nodeOption->id }} — {{ $nodeOption->member_name }} ({{ $nodeOption->rank_name ?? 'Member' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">
+                            এই মেম্বারটির ডাউনলাইনে নির্ধারিত ব্রাঞ্চ ও স্লটে নতুন মেম্বার যুক্ত হবে।
+                        </p>
+                    </div>
+
+                    <!-- Connector Placement Slot Selector (Branch & Slot 1-5) -->
+                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-orange-200/70">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Placement Side (ব্রাঞ্চ)</label>
+                            <select name="branch" x-model="selectedBranch" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs">
+                                <option value="LEFT">👈 LEFT TEAM</option>
+                                <option value="RIGHT">👉 RIGHT TEAM</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Slot Number (স্লট ১-৫)</label>
+                            <select name="slot_number" x-model="selectedSlotNumber" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs">
+                                <option value="1">Slot-1</option>
+                                <option value="2">Slot-2</option>
+                                <option value="3">Slot-3</option>
+                                <option value="4">Slot-4</option>
+                                <option value="5">Slot-5</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Member Type Toggle (Active vs Planned Target) -->
                 <div class="p-3 rounded-xl border border-purple-200 bg-purple-50/70 space-y-2">
@@ -732,27 +832,6 @@
                                 <input type="text" name="target_notes" placeholder="e.g. Planning to join next month" class="w-full text-xs bg-white border border-purple-300 rounded-lg p-2 focus:ring-2 focus:ring-purple-500">
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Slot Selector -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Branch (Side)</label>
-                        <select name="branch" x-model="selectedBranch" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold">
-                            <option value="LEFT">👈 LEFT TEAM</option>
-                            <option value="RIGHT">👉 RIGHT TEAM</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Slot Number (1 - 5)</label>
-                        <select name="slot_number" x-model="selectedSlotNumber" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold">
-                            <option value="1">Slot-1</option>
-                            <option value="2">Slot-2</option>
-                            <option value="3">Slot-3</option>
-                            <option value="4">Slot-4</option>
-                            <option value="5">Slot-5</option>
-                        </select>
                     </div>
                 </div>
 
@@ -783,8 +862,22 @@
                 <!-- Sponsor Name & Package -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Sponsor / Upline Name</label>
-                        <input type="text" name="sponsor_name" :value="selectedParentName" placeholder="Sponsor Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                            <span>Sponsor (স্পন্সর মেম্বার)</span>
+                            <span class="text-[10px] text-slate-400 font-normal">রেফারার</span>
+                        </label>
+                        <input type="text" 
+                               name="sponsor_name" 
+                               x-model="sponsorName" 
+                               list="sponsors_datalist" 
+                               placeholder="Sponsor Name or Code" 
+                               class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <datalist id="sponsors_datalist">
+                            @foreach($allNodes as $sNode)
+                                <option value="{{ $sNode->member_name }}">{{ $sNode->member_code }}</option>
+                                <option value="{{ $sNode->member_code }}">{{ $sNode->member_name }}</option>
+                            @endforeach
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Select Package</label>
