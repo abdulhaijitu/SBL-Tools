@@ -16,6 +16,7 @@ const jsFileName = manifest['resources/js/app.js'].file;
 
 const cssContent = fs.readFileSync(path.join(__dirname, 'public', 'build', cssFileName), 'utf8');
 const jsContent = fs.readFileSync(path.join(__dirname, 'public', 'build', jsFileName), 'utf8');
+const clientSyncJs = fs.readFileSync(path.join(__dirname, 'client_sync.js'), 'utf8');
 
 // 3. Read logo base64
 const logoBase64 = fs.readFileSync(path.join(__dirname, 'storage', 'logo_base64.txt'), 'utf8').trim();
@@ -50,7 +51,8 @@ workerContent = workerContent
   .replace('__JS_CONTENT__', () => JSON.stringify(jsContent))
   .replace('__CSS_PATH__', () => JSON.stringify('/build/' + cssFileName))
   .replace('__JS_PATH__', () => JSON.stringify('/build/' + jsFileName))
-  .replace('__PAGES__', () => JSON.stringify(renderedPages));
+  .replace('__PAGES__', () => JSON.stringify(renderedPages))
+  .replace('__CLIENT_SYNC_JS__', () => JSON.stringify(clientSyncJs));
 
 fs.writeFileSync(path.join(__dirname, 'worker.js'), workerContent, 'utf8');
 console.log('worker.js generated successfully! Size: ' + fs.statSync(path.join(__dirname, 'worker.js')).size + ' bytes');
