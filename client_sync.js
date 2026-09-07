@@ -77,6 +77,12 @@
         });
       }
       if (DATA.leads && DATA.leads.length > 0) {
+        const validLeadIds = new Set(DATA.leads.map(function(l) { return String(l.id); }));
+        Array.from(select.options).forEach(function(opt) {
+          if (opt.value && !validLeadIds.has(opt.value)) {
+            opt.remove();
+          }
+        });
         DATA.leads.forEach(function(lead) {
           let opt = select.querySelector('option[value="' + lead.id + '"]');
           const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
@@ -103,6 +109,12 @@
         });
       }
       if (DATA.leads && DATA.leads.length > 0) {
+        const validLeadIds = new Set(DATA.leads.map(function(l) { return String(l.id); }));
+        Array.from(select.options).forEach(function(opt) {
+          if (opt.value && !validLeadIds.has(opt.value)) {
+            opt.remove();
+          }
+        });
         DATA.leads.forEach(function(lead) {
           let opt = select.querySelector('option[value="' + lead.id + '"]');
           const text = lead.name + ' (' + lead.mobile + ')';
