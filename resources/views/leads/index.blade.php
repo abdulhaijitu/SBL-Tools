@@ -1,19 +1,23 @@
 @extends('layouts.app')
 
-@section('page-title', 'Leads CRM')
+@section('page-title', request('stage') === 'converted' ? 'Members' : 'Leads')
 @section('page-subtitle', 'Manage Inbound & Outbound Pipeline')
 
 @section('content')
 <div class="space-y-4">
 
+    @if(request()->routeIs('members.index'))<div class="section-heading"><div><h2>Members</h2><p>Converted leads and their ongoing relationships.</p></div></div>@endif
     <!-- Top Action & Filter Bar -->
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <!-- Search -->
-            <form method="GET" action="{{ route('leads.index') }}" class="flex-1 flex items-center gap-2">
+            <form method="GET" action="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index') }}" class="flex-1 flex items-center gap-2">
                 <input type="hidden" name="view" value="{{ $viewMode }}">
+                @if(request('stage') === 'converted')
+                    <input type="hidden" name="stage" value="converted">
+                @endif
                 <div class="relative flex-1">
-                    <input type="text" 
+                    <input aria-label="Search leads by name, mobile, whatsapp, location..." type="text" 
                            name="search" 
                            value="{{ request('search') }}" 
                            placeholder="Search leads by name, mobile, whatsapp, location..." 
@@ -24,7 +28,7 @@
                     Search
                 </button>
                 @if(request()->hasAny(['search', 'stage', 'temperature', 'source_id', 'filter']))
-                    <a href="{{ route('leads.index', ['view' => $viewMode]) }}" class="px-2.5 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-200">
+                    <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode]) }}" class="px-2.5 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-200">
                         Clear
                     </a>
                 @endif
@@ -32,21 +36,23 @@
 
             <!-- View Switcher & Add Lead Button -->
             <div class="flex items-center gap-2 self-end sm:self-auto">
+                @unless(request()->routeIs('members.index'))
                 <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-                    <a href="{{ route('leads.index', array_merge(request()->query(), ['view' => 'table'])) }}" 
+                    <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', array_merge(request()->query(), ['view' => 'table'])) }}" 
                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
                         Table
                     </a>
-                    <a href="{{ route('leads.index', array_merge(request()->query(), ['view' => 'kanban'])) }}" 
+                    <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', array_merge(request()->query(), ['view' => 'kanban'])) }}" 
                        class="px-3 py-1 text-xs font-semibold rounded-lg transition-all {{ $viewMode === 'kanban' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
                         Kanban
                     </a>
                 </div>
 
-                <a href="{{ route('leads.create') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs">
+                @endunless
+                @can('leads.create')<a href="{{ route('leads.create') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     <span>Add Lead</span>
-                </a>
+                </a>@endcan
             </div>
         </div>
 
@@ -54,23 +60,23 @@
         <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
             <span class="text-slate-400 font-semibold text-[11px] uppercase tracking-wider flex-shrink-0">Filters:</span>
             
-            <a href="{{ route('leads.index', ['view' => $viewMode]) }}" 
+            <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode]) }}" 
                class="px-2.5 py-1 rounded-lg border font-medium flex-shrink-0 {{ !request()->hasAny(['filter', 'stage', 'temperature']) ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100' }}">
                 All Leads
             </a>
-            <a href="{{ route('leads.index', ['view' => $viewMode, 'filter' => 'overdue']) }}" 
+            <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode, 'filter' => 'overdue']) }}" 
                class="px-2.5 py-1 rounded-lg border font-medium flex-shrink-0 {{ request('filter') === 'overdue' ? 'bg-rose-600 text-white border-rose-600' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' }}">
                 🚨 Overdue Follow-ups
             </a>
-            <a href="{{ route('leads.index', ['view' => $viewMode, 'filter' => 'due_today']) }}" 
+            <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode, 'filter' => 'due_today']) }}" 
                class="px-2.5 py-1 rounded-lg border font-medium flex-shrink-0 {{ request('filter') === 'due_today' ? 'bg-orange-600 text-white border-orange-600' : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' }}">
                 ⏰ Due Today
             </a>
-            <a href="{{ route('leads.index', ['view' => $viewMode, 'filter' => 'needs_action']) }}" 
+            <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode, 'filter' => 'needs_action']) }}" 
                class="px-2.5 py-1 rounded-lg border font-medium flex-shrink-0 {{ request('filter') === 'needs_action' ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' }}">
                 ⚠️ Needs Next Action
             </a>
-            <a href="{{ route('leads.index', ['view' => $viewMode, 'temperature' => 'hot']) }}" 
+            <a href="{{ route(request()->routeIs('members.index') ? 'members.index' : 'leads.index', ['view' => $viewMode, 'temperature' => 'hot']) }}" 
                class="px-2.5 py-1 rounded-lg border font-medium flex-shrink-0 {{ request('temperature') === 'hot' ? 'bg-red-600 text-white border-red-600' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' }}">
                 🔥 Hot
             </a>
@@ -122,7 +128,7 @@
                                         📞
                                     </a>
                                     @if ($lead->whatsapp ?? $lead->mobile)
-                                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">
+                                        <a href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">
                                             💬
                                         </a>
                                     @endif
@@ -196,18 +202,18 @@
                                        class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs transition-colors" title="View Lead Profile">
                                         View
                                     </a>
-                                    <a href="{{ route('leads.edit', $lead->id) }}" 
+                                    @can('leads.edit')<a href="{{ route('leads.edit', $lead->id) }}" 
                                        class="px-2.5 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold text-xs transition-colors" title="Edit Lead">
                                         Edit
-                                    </a>
-                                    <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
+                                    </a>@endcan
+                                    @can('leads.delete')<form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
                                                 class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors" title="Delete Lead">
                                             Delete
                                         </button>
-                                    </form>
+                                    </form>@endcan
                                 </div>
                             </td>
                         </tr>
@@ -216,9 +222,9 @@
                             <td colspan="7" class="py-12 text-center text-slate-400">
                                 <div class="text-base font-semibold text-slate-700">No leads found</div>
                                 <div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div>
-                                <a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
+                                @can('leads.create')<a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
                                     + Add New Lead
-                                </a>
+                                </a>@endcan
                             </td>
                         </tr>
                     @endforelse
@@ -294,7 +300,7 @@
                             <span>Call</span>
                         </a>
 
-                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" 
+                        <a href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" 
                            target="_blank"
                            class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">
                             <span>💬</span>
@@ -310,12 +316,12 @@
 
                     <!-- Manage Lead (Edit & Delete) -->
                     <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                        <a href="{{ route('leads.edit', $lead->id) }}" 
+                        @can('leads.edit')<a href="{{ route('leads.edit', $lead->id) }}" 
                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold transition-colors">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             Edit
-                        </a>
-                        <form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
+                        </a>@endcan
+                        @can('leads.delete')<form action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
                             @csrf
                             @method('DELETE')
                             <button type="submit" 
@@ -323,16 +329,16 @@
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 Delete
                             </button>
-                        </form>
+                        </form>@endcan
                     </div>
                 </div>
             @empty
                 <div class="p-8 text-center text-slate-400">
                     <div class="text-base font-semibold text-slate-700">No leads found</div>
                     <div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div>
-                    <a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
+                    @can('leads.create')<a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
                         + Add New Lead
-                    </a>
+                    </a>@endcan
                 </div>
             @endforelse
         </div>

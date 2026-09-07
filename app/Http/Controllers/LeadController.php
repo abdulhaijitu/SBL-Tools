@@ -29,6 +29,9 @@ class LeadController extends Controller
      */
     public function index(Request $request): View
     {
+        if ($request->routeIs('members.index')) {
+            $request->merge(['stage' => LeadStage::CONVERTED->value, 'view' => 'table']);
+        }
         $viewMode = $request->query('view', 'table'); // 'table' or 'kanban'
 
         $query = Lead::with(['source', 'owner', 'interests']);

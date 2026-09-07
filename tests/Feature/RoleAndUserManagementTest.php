@@ -32,7 +32,7 @@ class RoleAndUserManagementTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('users.index'));
 
         $response->assertOk();
-        $response->assertSee('Team & User Management');
+        $response->assertSee('User Management');
         $response->assertSee('Total Members');
     }
 

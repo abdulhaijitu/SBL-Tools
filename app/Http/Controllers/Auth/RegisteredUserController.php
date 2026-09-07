@@ -44,6 +44,9 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
+        $role = \App\Models\Role::firstOrCreate(['slug' => 'member'], ['name' => 'Members', 'is_system' => true]);
+        $user->assignRole($role);
+
         Auth::login($user);
 
         return redirect(route('dashboard', absolute: false));

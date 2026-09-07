@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Activity extends Model
 {
+    use \App\Models\Concerns\ScopesWorkspaceRecords;
     use HasFactory;
 
     protected $fillable = [

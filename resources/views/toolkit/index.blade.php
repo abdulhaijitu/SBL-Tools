@@ -1,58 +1,44 @@
 @extends('layouts.app')
 
-@section('page-title', 'SBL Plans & Toolkit')
+@section('page-title', 'Plans & Toolkit')
 @section('page-subtitle', 'Official Business Packages, Compensation Models & Counseling Cheatsheet')
 
 @section('content')
-<div class="space-y-6" x-data="{ activeTab: (new URLSearchParams(window.location.search)).get('tab') || '{{ request('tab', 'packages') }}' }">
+<div class="space-y-6" x-data="{ activeTab: @js(in_array(request('tab'), ['packages','compensation','counseling','calculator','ecosystem']) ? request('tab') : 'packages'), init() { this.$watch('activeTab', value => history.replaceState(null, '', '?tab=' + value)); } }">
 
     <!-- Navigation Tabs -->
     <div class="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-xs flex items-center gap-2 overflow-x-auto text-xs font-semibold">
-        <button @click="activeTab = 'packages'" 
+        <button :aria-pressed="activeTab === 'packages'" @click="activeTab = 'packages'" 
                 :class="activeTab === 'packages' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>📦</span> Dropshipping Packages
+            <span>📦</span> Packages
         </button>
-        <button @click="activeTab = 'compensation'" 
+        <button :aria-pressed="activeTab === 'compensation'" @click="activeTab = 'compensation'" 
                 :class="activeTab === 'compensation' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>💰</span> Compensation & Ranks
+            <span>💰</span> Ranks
         </button>
-        <button @click="activeTab = 'counseling'" 
+        <button :aria-pressed="activeTab === 'counseling'" @click="activeTab = 'counseling'" 
                 :class="activeTab === 'counseling' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>🎯</span> Counseling Guide (কাউন্সেলিং-১)
+            <span>🎯</span> Counseling Guide
         </button>
-        <button @click="activeTab = 'calculator'" 
+        <button :aria-pressed="activeTab === 'calculator'" @click="activeTab = 'calculator'" 
                 :class="activeTab === 'calculator' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>🧮</span> Live ROI & Commission Calculator
+            <span>🧮</span> Commission Calculator
         </button>
-        <button @click="activeTab = 'ecosystem'" 
+        <button :aria-pressed="activeTab === 'ecosystem'" @click="activeTab = 'ecosystem'" 
                 :class="activeTab === 'ecosystem' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
                 class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>🌐</span> Ecosystem Websites
+            <span>🌐</span> Websites
         </button>
     </div>
 
     <!-- TAB 1: DROPSHIPPING PACKAGES (PDF Page 1, 3 & 4) -->
     <div x-show="activeTab === 'packages'" class="space-y-6" x-cloak>
         
-        <!-- Header Banner -->
-        <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-orange-950 text-white p-6 md:p-8 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="space-y-2">
-                <span class="px-3 py-1 bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
-                    Official SBL Business Model
-                </span>
-                <h2 class="text-2xl font-bold tracking-tight">অনলাইনে আপনার নিজের একটা ব্যবসা হোক</h2>
-                <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                    SBL ড্রপশিপিং মডেলে কোনো অভিজ্ঞতা এবং নিজের কোনো পণ্য স্টক করা ছাড়াই আধুনিক ইকমার্স বিজনেস পরিচালনা করুন।
-                </p>
-            </div>
-            <div class="flex-shrink-0">
-                <img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" class="h-16 w-auto object-contain bg-black/40 p-2 rounded-xl border border-orange-500/30">
-            </div>
-        </div>
+        <div class="section-heading"><div><h2>Business packages</h2><p>Compare package features, eligibility and terms.</p></div></div>
 
         <!-- National & International Package Cards (Page 1 & 3) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -96,7 +82,7 @@
                     <!-- Example Box -->
                     <div class="mt-6 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
                         <span class="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">উদাহরণ হিসাব:</span>
-                        <p>১,২০,০০০ টাকা বিনিয়োগে প্রতি সপ্তাহে <strong>১,৭৫০ টাকা</strong> করে ১০০ সপ্তাহে মোট মূলধনসহ <strong>১,৭৫,০০০ টাকা</strong> রিটার্ন নিশ্চিত।</p>
+                        <p>১,২০,০০০ টাকা বিনিয়োগে প্রতি সপ্তাহে <strong>১,৭৫০ টাকা</strong> করে ১০০ সপ্তাহে মোট মূলধনসহ <strong>১,৭৫,০০০ টাকা</strong> রিটার্নের উদাহরণ।</p>
                     </div>
                 </div>
             </div>
@@ -140,7 +126,7 @@
                     <!-- Example Box -->
                     <div class="mt-6 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
                         <span class="font-bold text-slate-900 block text-[11px] uppercase tracking-wider">উদাহরণ হিসাব:</span>
-                        <p>৫,৫০,০০০ টাকা বিনিয়োগে প্রতি সপ্তাহে <strong>১০,০০০ টাকা</strong> করে ১০০ সপ্তাহে মোট মূলধনসহ <strong>১০,০০,০০০ টাকা</strong> রিটার্ন নিশ্চিত।</p>
+                        <p>৫,৫০,০০০ টাকা বিনিয়োগে প্রতি সপ্তাহে <strong>১০,০০০ টাকা</strong> করে ১০০ সপ্তাহে মোট মূলধনসহ <strong>১০,০০,০০০ টাকা</strong> রিটার্নের উদাহরণ।</p>
                     </div>
                 </div>
             </div>
@@ -163,9 +149,9 @@
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                         <tr>
-                            <th class="py-3 px-5">সার্ভিস / ফিচার</th>
-                            <th class="py-3 px-5 text-right">সাধারণ মার্কেটে খরচ</th>
-                            <th class="py-3 px-5 text-right">SBL প্যাকেজে খরচ</th>
+                            <th class="py-3 px-5">Service / Feature</th>
+                            <th class="py-3 px-5 text-right">Standard Market Cost</th>
+                            <th class="py-3 px-5 text-right">SBL Package Cost</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -173,7 +159,7 @@
                             <tr class="hover:bg-slate-50/70">
                                 <td class="py-2.5 px-5 font-medium text-slate-800">{{ $row['service'] }}</td>
                                 <td class="py-2.5 px-5 text-right text-rose-600 font-semibold">{{ $row['market'] }}</td>
-                                <td class="py-2.5 px-5 text-right text-emerald-600 font-bold">অন্তর্ভুক্ত (Included)</td>
+                                <td class="py-2.5 px-5 text-right text-emerald-600 font-bold">Included</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -184,17 +170,17 @@
         <!-- 6-Month Growth Trajectory (PDF Page 4) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
-                <h3 class="text-sm font-bold text-slate-900">ন্যূনতম ১০০০ ডলার স্কেলে ৬ মাসের গ্রোথ প্রজেকশন</h3>
-                <p class="text-xs text-slate-500">পর্যায়ক্রমিক অ্যাড বাজেট, অডিয়েন্স রিচ এবং অর্ডার সংখ্যা</p>
+                <h3 class="text-sm font-bold text-slate-900">6-Month Growth Projection ($1,000 Scale)</h3>
+                <p class="text-xs text-slate-500">Progressive ad spend, audience reach and monthly order trajectory</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-center text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-700 uppercase tracking-wider font-bold border-b border-slate-200">
                         <tr>
-                            <th class="py-3 px-4">মাস</th>
-                            <th class="py-3 px-4">অ্যাড বাজেট</th>
-                            <th class="py-3 px-4">অডিয়েন্স সাইজ</th>
-                            <th class="py-3 px-4">মাসিক অর্ডার রেকর্ড</th>
+                            <th class="py-3 px-4">Month</th>
+                            <th class="py-3 px-4">Ad Budget</th>
+                            <th class="py-3 px-4">Audience Size</th>
+                            <th class="py-3 px-4">Monthly Orders</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -279,10 +265,10 @@
                 <table class="w-full text-left text-xs text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                         <tr>
-                            <th class="py-3 px-5">পদবী (Rank Code)</th>
-                            <th class="py-3 px-5">পদবীর পূর্ণ নাম</th>
-                            <th class="py-3 px-5">অর্জনের শর্ত (Requirement)</th>
-                            <th class="py-3 px-5 text-right">নগদ পুরস্কার (Cash Incentive)</th>
+                            <th class="py-3 px-5">Rank Code</th>
+                            <th class="py-3 px-5">Designation</th>
+                            <th class="py-3 px-5">Eligibility Requirement</th>
+                            <th class="py-3 px-5 text-right">Cash Incentive</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -306,8 +292,8 @@
         <!-- 10-Generation Affiliate Matrix (Page 7) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100">
-                <h3 class="text-base font-bold text-slate-900">১০-জেনারেশন অ্যাফিলিয়েট কমিশন ম্যাট্রিক্স</h3>
-                <p class="text-xs text-slate-500">যদি প্রতি ব্যক্তি ১০ জন রেফার করে পারফেক্ট গ্রোথ হয় (১০ লেভেল হিসাব)</p>
+                <h3 class="text-base font-bold text-slate-900">10-Generation Affiliate Commission Matrix</h3>
+                <p class="text-xs text-slate-500">Projections based on 10x10 referral matrix (Levels 1 to 10)</p>
             </div>
 
             <div class="overflow-x-auto">
@@ -602,7 +588,7 @@
                     <div class="border-t border-slate-800 pt-2 flex items-center justify-between">
                         <div>
                             <span class="text-slate-200 font-bold block">১০০ সপ্তাহে মোট রিটার্ন:</span>
-                            <span class="text-[10px] text-slate-400">২৪ মাস মেয়াদে নিশ্চিত প্রাপ্তি</span>
+                            <span class="text-[10px] text-slate-400">প্রদত্ত হার অনুযায়ী আনুমানিক হিসাব</span>
                         </div>
                         <span class="font-black text-emerald-400 text-xl" x-text="totalReturn100Weeks.toLocaleString('en-IN') + ' ৳'"></span>
                     </div>

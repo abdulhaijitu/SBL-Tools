@@ -8,6 +8,7 @@ $kernel->bootstrap();
 $user = App\Models\User::first();
 if ($user) {
     Illuminate\Support\Facades\Auth::login($user);
+    request()->setUserResolver(fn() => $user);
 }
 
 Illuminate\Support\Facades\View::share('errors', new Illuminate\Support\ViewErrorBag);
@@ -71,6 +72,9 @@ $pages = [
     'leads_edit' => function () {
         $lead = App\Models\Lead::first();
         return $lead ? app(App\Http\Controllers\LeadController::class)->edit($lead)->render() : '';
+    },
+    'profile' => function () {
+        return app(App\Http\Controllers\ProfileController::class)->edit(request())->render();
     },
 ];
 

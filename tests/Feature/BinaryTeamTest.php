@@ -36,6 +36,19 @@ class BinaryTeamTest extends TestCase
         $response->assertSee('Khaled Saifulla');
     }
 
+    public function test_visual_tree_preserves_nested_descendants_and_their_ids(): void
+    {
+        $tree = app(\App\Services\BinaryTreeService::class)->getVisualTree(null, $this->admin->id, 2);
+        $root = $tree['tree'];
+        $children = array_merge($root['left_slots'], $root['right_slots']);
+        $nested = collect($children)->first(fn ($node) => empty($node['is_vacant']) && isset($node['left_slots']));
+
+        $this->assertNotNull($nested, 'The recursive tree must not be overwritten by flat direct slots.');
+        $this->assertContains($nested['id'], $tree['all_node_ids']);
+        $this->assertCount(5, $nested['left_slots']);
+        $this->assertCount(5, $nested['right_slots']);
+    }
+
     public function test_admin_can_place_new_member_in_vacant_slot(): void
     {
         $khaled = BinaryNode::where('member_code', '@khaledsaifulla')->first();

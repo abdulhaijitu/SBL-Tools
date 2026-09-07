@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
 {
+    use \App\Models\Concerns\ScopesWorkspaceRecords;
     use HasFactory, SoftDeletes;
 
     protected $fillable = [

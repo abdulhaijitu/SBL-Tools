@@ -81,10 +81,10 @@
             </a>
         </div>
 
-        <button @click="newTaskModal = true" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs transition-colors flex-shrink-0">
+        @can('tasks.manage')<button @click="newTaskModal = true" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs transition-colors flex-shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span>Schedule Task</span>
-        </button>
+        </button>@endcan
     </div>
 
     <!-- Tasks List -->
@@ -138,10 +138,10 @@
 
                 <div class="flex items-center gap-2 self-end sm:self-center">
                     @if ($task->status !== \App\Enums\TaskStatus::COMPLETED)
-                        <button @click="completeTaskId = {{ $task->id }}; completeTaskTitle = '{{ addslashes($task->title) }}'; completeModal = true"
+                        @can('tasks.manage')<button @click="completeTaskId = {{ $task->id }}; completeTaskTitle = @js($task->title); completeModal = true"
                                 class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors">
                             ✓ Complete
-                        </button>
+                        </button>@endcan
                     @endif
 
                     <button type="button"
@@ -158,13 +158,13 @@
                         Edit
                     </button>
 
-                    <form action="{{ route('tasks.destroy', $task->id) }}" method="POST" onsubmit="return confirm('Delete task?')">
+                    @can('tasks.delete')<form action="{{ route('tasks.destroy', $task->id) }}" method="POST" onsubmit="return confirm('Delete task?')">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Delete Task">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
-                    </form>
+                    </form>@endcan
                 </div>
             </div>
         @empty
@@ -181,7 +181,7 @@
     @endif
 
     <!-- Task Completion Modal (Section 9: Mandatory Outcome & Next Action) -->
-    <div x-show="completeModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="completeModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>
@@ -216,7 +216,7 @@
     </div>
 
     <!-- New Task Modal -->
-    <div x-show="newTaskModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="newTaskModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>
@@ -282,7 +282,7 @@
     </div>
 
     <!-- Edit Task Modal -->
-    <div x-show="editTaskModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editTaskModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>

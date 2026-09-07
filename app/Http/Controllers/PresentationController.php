@@ -36,15 +36,17 @@ class PresentationController extends Controller
         $validated = $request->validate([
             'lead_id' => 'required|exists:leads,id',
             'date_time' => 'required|date',
-            'type' => 'required|string',
+            'type' => ['required', \Illuminate\Validation\Rule::enum(PresentationType::class)],
             'topic' => 'nullable|string|max:255',
             'interest_focus' => 'nullable|string|max:255',
             'questions' => 'nullable|string',
             'objections' => 'nullable|string',
-            'outcome' => 'nullable|string',
+            'outcome' => ['nullable', \Illuminate\Validation\Rule::enum(PresentationOutcome::class)],
             'next_follow_up_at' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
+
+        Lead::findOrFail($validated['lead_id']);
 
         $presentation = Presentation::create([
             'lead_id' => $validated['lead_id'],

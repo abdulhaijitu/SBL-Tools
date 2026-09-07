@@ -21,9 +21,10 @@ class RoleController extends Controller
             ->orderBy('id')
             ->get();
 
-        $allPermissionsCount = Permission::count();
+        $permissions = Permission::orderBy('module')->orderBy('name')->get();
+        $allPermissionsCount = $permissions->count();
 
-        return view('roles.index', compact('roles', 'allPermissionsCount'));
+        return view('roles.index', compact('roles', 'allPermissionsCount', 'permissions'));
     }
 
     /**
@@ -36,12 +37,7 @@ class RoleController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        $slug = Str::slug($validated['name']);
-        // Ensure slug uniqueness
-        $count = Role::where('slug', 'like', "{$slug}%")->count();
-        if ($count > 0) {
-            $slug .= '-' . ($count + 1);
-        }
+        $slug = $this->uniqueSlug($validated['name']);
 
         $role = Role::create([
             'name' => $validated['name'],
@@ -58,6 +54,7 @@ class RoleController extends Controller
      */
     public function edit(Role $role): View
     {
+        abort_if($role->slug === 'super-admin' && !auth()->user()->isSuperAdmin(), 403);
         $role->load('permissions');
 
         // Group permissions by module
@@ -73,6 +70,7 @@ class RoleController extends Controller
      */
     public function update(Request $request, Role $role): RedirectResponse
     {
+        abort_if($role->slug === 'super-admin' && !$request->user()->isSuperAdmin(), 403);
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:roles,name,' . $role->id,
             'description' => 'nullable|string|max:255',
@@ -87,14 +85,19 @@ class RoleController extends Controller
         ];
 
         if (!$role->is_system) {
-            $data['slug'] = Str::slug($validated['name']);
+            $data['slug'] = $this->uniqueSlug($validated['name'], $role->id);
         }
 
-        $role->update($data);
-
-        // Sync permissions
         $permissionIds = $request->input('permissions', []);
-        $role->permissions()->sync($permissionIds);
+        if (!$request->user()->isSuperAdmin()) {
+            foreach (Permission::whereIn('id', $permissionIds)->get() as $permission) {
+                abort_unless($request->user()->hasPermission($permission->slug), 403);
+            }
+        }
+        \Illuminate\Support\Facades\DB::transaction(function () use ($role, $data, $permissionIds) {
+            $role->update($data);
+            $role->permissions()->sync($permissionIds);
+        });
 
         return redirect()->route('roles.index')->with('success', "Role '{$role->name}' permissions updated successfully.");
     }
@@ -116,5 +119,18 @@ class RoleController extends Controller
         $role->delete();
 
         return redirect()->route('roles.index')->with('success', "Role '{$roleName}' deleted successfully.");
+    }
+
+    private function uniqueSlug(string $name, ?int $ignore = null): string
+    {
+        $base = Str::slug($name) ?: 'role';
+        // The reserved super-admin slug is never generated for a custom role.
+        if ($base === 'super-admin') $base = 'custom-super-admin';
+        $slug = $base;
+        $suffix = 2;
+        while (Role::where('slug', $slug)->when($ignore, fn ($query) => $query->where('id', '!=', $ignore))->exists()) {
+            $slug = $base . '-' . $suffix++;
+        }
+        return $slug;
     }
 }

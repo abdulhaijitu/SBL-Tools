@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BinaryNode extends Model
 {
+    use \App\Models\Concerns\ScopesWorkspaceRecords;
     use HasFactory;
 
     protected $fillable = [
@@ -47,7 +48,11 @@ class BinaryNode extends Model
         'joined_at',
     ];
 
+    protected $hidden = ['password_plain', 'tpin'];
+
     protected $casts = [
+        'password_plain' => 'encrypted',
+        'tpin' => 'encrypted',
         'slot_number' => 'integer',
         'point_value' => 'decimal:2',
         'contributions' => 'array',

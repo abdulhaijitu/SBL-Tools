@@ -6,223 +6,32 @@
 @section('content')
 <div class="space-y-6">
 
-    <!-- ==================== 1. WELCOME HERO & QUICK ACTIONS ==================== -->
-    <div class="relative overflow-hidden bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-5 md:p-6 border border-slate-800 text-white shadow-xl">
-        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                        ⚡ Daily Command Center
-                    </span>
-                    <span class="text-xs text-slate-400 font-medium">
-                        {{ now()->format('l, d M Y') }}
-                    </span>
-                </div>
-                <h1 class="text-xl md:text-2xl font-black text-white tracking-tight">
-                    Welcome back, <span class="text-orange-400">{{ Auth::user()->name ?? 'Leader' }}</span> 👋
-                </h1>
-                <p class="text-xs md:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                    Here is your real-time overview of CRM follow-ups, presentations, funnel conversions, and Team Explorer direct placements.
-                </p>
-            </div>
-
-            <!-- Quick Action Shortcut Pills -->
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('leads.create') }}" 
-                   class="px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all shadow-md shadow-orange-600/30 hover:scale-105 active:scale-95 flex items-center gap-1.5">
-                    <span>+</span> <span>Add New Lead</span>
-                </a>
-                <a href="{{ route('team.index') }}" 
-                   class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-orange-300 hover:text-white border border-slate-700 text-xs font-bold transition-all shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1.5">
-                    <span>👥</span> <span>Team Explorer</span>
-                </a>
-                <a href="{{ route('presentations.index') }}" 
-                   class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white border border-slate-700 text-xs font-bold transition-all shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1.5">
-                    <span>🎤</span> <span>Presentation</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Subtle Background Glow Elements -->
-        <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-orange-600/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute right-1/3 -top-10 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="section-heading">
+        <div><p>{{ now()->format('l, j F Y') }}</p><h2>Welcome back, {{ Auth::user()->name }}</h2><p>Your leads, follow-ups and team at a glance.</p></div>
+        @can('reports.view')<a href="{{ route('reports.index') }}" class="btn-secondary">Activity reports</a>@endcan
+    </div>
+    @can('leads.view')
+    <div class="metric-grid">
+        <a href="{{ route('leads.index') }}" class="metric-card"><span>Total Active Leads</span><strong id="active-leads">{{ $totalActiveLeads }}</strong><small>{{ $newLeadsTodayCount }} added today</small></a>
+        <a href="{{ route('leads.index', ['filter' => 'due_today']) }}" class="metric-card"><span>Today Followup</span><strong id="today-followup">{{ $followupsDueToday->count() }}</strong><small>Review today's follow-ups</small></a>
+        <a href="{{ route('presentations.index') }}" class="metric-card"><span>Total Presentations</span><strong id="total-presentations">{{ $totalPresentations }}</strong><small>All presentation sessions</small></a>
     </div>
 
-    <!-- ==================== 2. KEY PERFORMANCE INDICATORS (KPIs) ==================== -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <!-- 1. Follow-ups Due Today -->
-        <a href="{{ route('tasks.index') }}" class="group bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs hover:border-orange-300 hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-                <div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Follow-ups Today</span>
-                    <span data-metric="followups-today" class="text-2xl md:text-3xl font-black text-slate-900 mt-1 block group-hover:text-orange-600 transition-colors">
-                        {{ $followupsDueToday->count() }}
-                    </span>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Scheduled for today</span>
-                <span class="text-orange-600 font-bold group-hover:translate-x-0.5 transition-transform">View Tasks →</span>
-            </div>
-            <div class="absolute top-0 inset-x-0 h-1 bg-orange-500 rounded-t-2xl"></div>
-        </a>
-
-        <!-- 2. Overdue Follow-ups (Alert) -->
-        <a href="{{ route('leads.index') }}" class="group bg-white rounded-2xl p-4 md:p-5 border {{ $overdueFollowups->count() > 0 ? 'border-rose-200 bg-rose-50/10' : 'border-slate-200/80' }} shadow-xs hover:border-rose-300 hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-                <div>
-                    <span class="text-xs font-bold {{ $overdueFollowups->count() > 0 ? 'text-rose-600' : 'text-slate-500' }} uppercase tracking-wider block">Overdue Follow-ups</span>
-                    <span data-metric="overdue-followups" class="text-2xl md:text-3xl font-black {{ $overdueFollowups->count() > 0 ? 'text-rose-700' : 'text-slate-900' }} mt-1 block">
-                        {{ $overdueFollowups->count() }}
-                    </span>
-                </div>
-                <div class="w-12 h-12 rounded-2xl {{ $overdueFollowups->count() > 0 ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-slate-100 text-slate-500' }} flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                </div>
-            </div>
-            <div class="mt-3 pt-2.5 border-t {{ $overdueFollowups->count() > 0 ? 'border-rose-100' : 'border-slate-100' }} flex items-center justify-between text-[11px] {{ $overdueFollowups->count() > 0 ? 'text-rose-600 font-semibold' : 'text-slate-500' }}">
-                <span>{{ $overdueFollowups->count() > 0 ? 'Urgent attention needed' : 'All caught up' }}</span>
-                <span class="font-bold group-hover:translate-x-0.5 transition-transform">Action list →</span>
-            </div>
-            <div class="absolute top-0 inset-x-0 h-1 {{ $overdueFollowups->count() > 0 ? 'bg-rose-500' : 'bg-slate-300' }} rounded-t-2xl"></div>
-        </a>
-
-        <!-- 3. Presentations Today -->
-        <a href="{{ route('presentations.index') }}" class="group bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs hover:border-purple-300 hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-                <div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Presentations Today</span>
-                    <span data-metric="presentations-today" class="text-2xl md:text-3xl font-black text-slate-900 mt-1 block group-hover:text-purple-600 transition-colors">
-                        {{ $presentationsToday->count() }}
-                    </span>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-                </div>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>1-on-1 & Group sessions</span>
-                <span class="text-purple-600 font-bold group-hover:translate-x-0.5 transition-transform">Pitch deck →</span>
-            </div>
-            <div class="absolute top-0 inset-x-0 h-1 bg-purple-500 rounded-t-2xl"></div>
-        </a>
-
-        <!-- 4. Total Active Leads / Pipeline Base -->
-        <a href="{{ route('leads.index') }}" class="group bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-                <div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Active Leads</span>
-                    <span data-metric="total-leads" class="text-2xl md:text-3xl font-black text-slate-900 mt-1 block group-hover:text-blue-600 transition-colors">
-                        {{ $totalLeads }}
-                    </span>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                </div>
-            </div>
-            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span><span data-metric="new-leads-today" class="font-bold text-emerald-600">+{{ $newLeadsTodayCount }}</span> added today</span>
-                <span class="text-blue-600 font-bold group-hover:translate-x-0.5 transition-transform">CRM Hub →</span>
-            </div>
-            <div class="absolute top-0 inset-x-0 h-1 bg-blue-500 rounded-t-2xl"></div>
-        </a>
-
-    </div>
-
-    <!-- ==================== 3. 5L + 5R TEAM EXPLORER SUMMARY WIDGET ==================== -->
-    @if(isset($teamRoot))
-    @php
-        $directChildren = $teamRoot->children ?? collect();
-        $directLeft = $directChildren->where('branch', 'LEFT')->where('is_target', false)->count();
-        $directRight = $directChildren->where('branch', 'RIGHT')->where('is_target', false)->count();
-        $directTotal = $directLeft + $directRight;
-        $isFmeQualified = ($directLeft >= 5 && $directRight >= 5);
-        $fmePercent = min(100, (int)(($directTotal / 10) * 100));
-    @endphp
-    <div class="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 rounded-2xl p-5 border border-slate-800 text-white shadow-xl">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-orange-600/20 text-orange-400 border border-orange-500/30 flex items-center justify-center text-xl font-bold">
-                    👥
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h3 class="text-base font-black text-white">SBL Team Placement & FME Status</h3>
-                        @if($isFmeQualified)
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                            ⭐ FME QUALIFIED
-                        </span>
-                        @else
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                            🎯 FME IN PROGRESS
-                        </span>
-                        @endif
-                    </div>
-                    <p class="text-xs text-slate-400 mt-0.5">
-                        Root Leader: <span class="text-slate-200 font-semibold">{{ $teamRoot->member_name }}</span> ({{ $teamRoot->member_code ?? 'SBL-ROOT' }}) • Sponsor: <span class="text-slate-300 font-medium">{{ $teamRoot->sponsor_name ?? 'Md. Samim' }}</span>
-                    </p>
-                </div>
-            </div>
-
-            <a href="{{ route('team.index') }}" 
-               class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-orange-600/30 hover:scale-105 active:scale-95 flex items-center gap-1.5 self-end md:self-center">
-                <span>👥 Open Team Explorer</span>
-                <span>→</span>
-            </a>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
-            <!-- Direct Team Count -->
-            <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Direct Team</span>
-                <span class="text-xl font-black text-orange-400 mt-0.5 block">{{ $directTotal }} / 10</span>
-                <span class="text-[10px] text-slate-400">Left: {{ $directLeft }}/5 • Right: {{ $directRight }}/5</span>
-            </div>
-
-            <!-- Left Team Network -->
-            <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Left Network</span>
-                <span class="text-xl font-black text-white mt-0.5 block">{{ $teamRoot->left_count ?? 0 }} Members</span>
-                <span class="text-[10px] text-slate-400">Volume: {{ number_format((float)($teamRoot->left_bv ?? 0)) }} BV</span>
-            </div>
-
-            <!-- Right Team Network -->
-            <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Right Network</span>
-                <span class="text-xl font-black text-white mt-0.5 block">{{ $teamRoot->right_count ?? 0 }} Members</span>
-                <span class="text-[10px] text-slate-400">Volume: {{ number_format((float)($teamRoot->right_bv ?? 0)) }} BV</span>
-            </div>
-
-            <!-- Matched Pairs / Rank -->
-            <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
-                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Matched Pairs</span>
-                <span class="text-xl font-black text-emerald-400 mt-0.5 block">{{ $teamRoot->matched_pairs ?? 0 }} Pairs</span>
-                <span class="text-[10px] text-slate-400">Rank: {{ $teamRoot->rank_name ?? 'Founder' }}</span>
-            </div>
-        </div>
-
-        <!-- FME Progress Bar -->
-        <div class="mt-4 pt-3 border-t border-slate-800">
-            <div class="flex items-center justify-between text-xs mb-1.5">
-                <span class="text-slate-300 font-semibold flex items-center gap-1.5">
-                    <span>🏆</span> FME Qualification Progress (5 Left + 5 Right Direct Placements)
-                </span>
-                <span class="font-bold text-orange-400">{{ $fmePercent }}% Complete</span>
-            </div>
-            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div class="bg-gradient-to-r from-orange-500 to-emerald-500 h-full rounded-full transition-all duration-700" style="width: {{ $fmePercent }}%"></div>
-            </div>
-        </div>
-    </div>
+    @endcan
+    @cannot('leads.view')
+    <div class="app-panel"><h2 class="font-semibold">Your workspace is ready</h2><p class="mt-2 text-sm text-slate-600">Explore your team below. Your administrator can enable additional tools for your role.</p><a href="{{ route('team.index') }}" class="btn-primary mt-4">Open Team Explorer</a></div>
+    @endcannot
+    @if($teamRoot)
+    <a href="{{ route('team.index') }}" class="app-panel flex flex-wrap items-center justify-between gap-3">
+        <div><span class="text-xs font-medium text-slate-500">Team Explorer</span><h2 class="font-semibold mt-1">{{ $teamRoot->member_name }}</h2><p class="text-sm text-slate-500">{{ $teamRoot->children->where('is_target', false)->count() }} of 10 direct placements filled</p></div>
+        <span class="text-sm font-semibold text-orange-700">Explore team &rarr;</span>
+    </a>
     @endif
 
+    @can('leads.view')
     <!-- ==================== 4. LEAD PIPELINE CONVERSION FUNNEL ==================== -->
     <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
                 <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>📊</span> Lead Pipeline Funnel
@@ -236,7 +45,7 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div class="grid grid-cols-4 lg:grid-cols-8 gap-2">
             @php
                 $stageColorMap = [
                     'new' => 'from-blue-500 to-blue-600',
@@ -258,7 +67,7 @@
                    data-funnel-stage="{{ $stageKey }}"
                    class="bg-slate-50 hover:bg-orange-50/50 hover:border-orange-200 border border-slate-200/60 rounded-xl p-3 text-center transition-all group active:scale-95 flex flex-col justify-between shadow-2xs hover:shadow-xs">
                     <div>
-                        <span class="text-[11px] font-bold text-slate-500 group-hover:text-orange-700 uppercase tracking-tight block truncate">
+                        <span class="text-[11px] font-bold text-slate-500 group-hover:text-orange-700 tracking-tight block whitespace-normal min-h-8">
                             {{ ucfirst(str_replace('_', ' ', $stageKey)) }}
                         </span>
                         <span data-funnel-count="{{ $stageKey }}" class="text-xl font-black text-slate-900 group-hover:text-orange-600 mt-1 block">
@@ -288,7 +97,7 @@
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <div class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 "></span>
                         <h3 class="text-sm font-bold text-slate-900">Immediate Follow-up Needed (Overdue)</h3>
                     </div>
                     <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
@@ -305,7 +114,7 @@
                     <div class="divide-y divide-slate-100">
                         @foreach ($overdueFollowups as $lead)
                             @php
-                                $cleanWa = preg_replace('/[^0-9]/', '', $lead->whatsapp ?: $lead->mobile);
+                                $cleanWa = \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile);
                             @endphp
                             <div data-lead-id="{{ $lead->id }}" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors">
                                 <div class="flex items-start gap-3 min-w-0">
@@ -508,5 +317,6 @@
 
     </div>
 
+    @endcan
 </div>
 @endsection

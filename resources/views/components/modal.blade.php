@@ -15,6 +15,7 @@ $maxWidth = [
 @endphp
 
 <div
+    role="dialog" aria-modal="true" tabindex="-1"
     x-data="{
         show: @js($show),
         focusables() {

@@ -26,6 +26,9 @@ class LeadsCrudTest extends TestCase
             'name' => 'Admin User',
         ]);
 
+        $role = \App\Models\Role::firstOrCreate(['slug' => 'super-admin'], ['name' => 'Super Admin', 'is_system' => true]);
+        $this->user->roles()->attach($role);
+
         $this->source = LeadSource::create([
             'name' => 'Facebook Page',
             'is_active' => true,

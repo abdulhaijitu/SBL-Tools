@@ -66,12 +66,14 @@ class TaskController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string',
+            'type' => ['required', \Illuminate\Validation\Rule::enum(TaskType::class)],
             'related_lead_id' => 'nullable|exists:leads,id',
             'due_at' => 'required|date',
-            'priority' => 'required|string',
+            'priority' => ['required', \Illuminate\Validation\Rule::enum(TaskPriority::class)],
             'notes' => 'nullable|string',
         ]);
+
+        if (!empty($validated['related_lead_id'])) Lead::findOrFail($validated['related_lead_id']);
 
         $task = Task::create([
             'title' => $validated['title'],
@@ -113,12 +115,14 @@ class TaskController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|string',
+            'type' => ['required', \Illuminate\Validation\Rule::enum(TaskType::class)],
             'related_lead_id' => 'nullable|exists:leads,id',
             'due_at' => 'required|date',
-            'priority' => 'required|string',
+            'priority' => ['required', \Illuminate\Validation\Rule::enum(TaskPriority::class)],
             'notes' => 'nullable|string',
         ]);
+
+        if (!empty($validated['related_lead_id'])) Lead::findOrFail($validated['related_lead_id']);
 
         $task->update([
             'title' => $validated['title'],
@@ -152,54 +156,61 @@ class TaskController extends Controller
             'next_action_at' => 'nullable|date',
         ]);
 
-        $task->status = TaskStatus::COMPLETED;
-        $task->completed_at = now();
-        $task->outcome = $validated['outcome'];
-        $task->next_action = $validated['next_action'] ?? null;
-        $task->next_action_at = $validated['next_action_at'] ?? null;
-        $task->save();
-
-        // If related to a lead, log activity and update lead next action
-        if ($task->related_lead_id) {
-            $lead = Lead::find($task->related_lead_id);
-            if ($lead) {
-                $lead->last_contact_at = now();
-
-                if (! empty($validated['next_action_at'])) {
-                    $lead->next_action_type = $validated['next_action'] ?? 'Follow-up';
-                    $lead->next_action_at = $validated['next_action_at'];
-
-                    // Auto-create next task so follow-up chain is unbroken
-                    Task::create([
-                        'title' => ($validated['next_action'] ?? 'Follow-up') . ' with ' . $lead->name,
-                        'type' => TaskType::FOLLOW_UP,
-                        'related_lead_id' => $lead->id,
-                        'user_id' => Auth::id() ?? 1,
-                        'due_at' => $validated['next_action_at'],
-                        'priority' => TaskPriority::HIGH,
-                        'status' => TaskStatus::PENDING,
-                        'notes' => 'Generated from previous outcome: ' . $validated['outcome'],
-                    ]);
-                } else {
-                    $lead->next_action_type = null;
-                    $lead->next_action_at = null;
-                }
-
-                $lead->calculateScoreAndTemperature();
-                $lead->save();
-
-                Activity::create([
-                    'lead_id' => $lead->id,
-                    'user_id' => Auth::id() ?? 1,
-                    'type' => 'task_completed',
-                    'title' => "Task Completed: {$task->title}",
-                    'description' => "Outcome: {$validated['outcome']}" . (! empty($validated['next_action']) ? " | Next: {$validated['next_action']}" : ''),
-                    'performed_at' => now(),
-                ]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($task, $validated) {
+            $task = Task::lockForUpdate()->findOrFail($task->id);
+            if ($task->status === TaskStatus::COMPLETED) {
+                return back()->with('success', 'This task is already completed.');
             }
-        }
-
-        return back()->with('success', 'Task marked as completed with outcome recorded!');
+    
+            $task->status = TaskStatus::COMPLETED;
+            $task->completed_at = now();
+            $task->outcome = $validated['outcome'];
+            $task->next_action = $validated['next_action'] ?? null;
+            $task->next_action_at = $validated['next_action_at'] ?? null;
+            $task->save();
+    
+            // If related to a lead, log activity and update lead next action
+            if ($task->related_lead_id) {
+                $lead = Lead::find($task->related_lead_id);
+                if ($lead) {
+                    $lead->last_contact_at = now();
+    
+                    if (! empty($validated['next_action_at'])) {
+                        $lead->next_action_type = $validated['next_action'] ?? 'Follow-up';
+                        $lead->next_action_at = $validated['next_action_at'];
+    
+                        // Auto-create next task so follow-up chain is unbroken
+                        Task::create([
+                            'title' => ($validated['next_action'] ?? 'Follow-up') . ' with ' . $lead->name,
+                            'type' => TaskType::FOLLOW_UP,
+                            'related_lead_id' => $lead->id,
+                            'user_id' => Auth::id() ?? 1,
+                            'due_at' => $validated['next_action_at'],
+                            'priority' => TaskPriority::HIGH,
+                            'status' => TaskStatus::PENDING,
+                            'notes' => 'Generated from previous outcome: ' . $validated['outcome'],
+                        ]);
+                    } else {
+                        $lead->next_action_type = null;
+                        $lead->next_action_at = null;
+                    }
+    
+                    $lead->calculateScoreAndTemperature();
+                    $lead->save();
+    
+                    Activity::create([
+                        'lead_id' => $lead->id,
+                        'user_id' => Auth::id() ?? 1,
+                        'type' => 'task_completed',
+                        'title' => "Task Completed: {$task->title}",
+                        'description' => "Outcome: {$validated['outcome']}" . (! empty($validated['next_action']) ? " | Next: {$validated['next_action']}" : ''),
+                        'performed_at' => now(),
+                    ]);
+                }
+            }
+    
+            return back()->with('success', 'Task marked as completed with outcome recorded!');
+        }, 3);
     }
 
     public function destroy(Task $task): RedirectResponse

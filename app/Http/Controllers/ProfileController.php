@@ -48,6 +48,10 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        if ($user->isSuperAdmin() && !\App\Models\User::where('id', '!=', $user->id)->where('status', 'active')->whereHas('roles', fn ($query) => $query->where('slug', 'super-admin'))->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['password' => 'Assign another active Super Admin before deleting your account.']);
+        }
+
         Auth::logout();
 
         $user->delete();

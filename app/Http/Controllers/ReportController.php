@@ -61,13 +61,14 @@ class ReportController extends Controller
         }
 
         // Lead Sources Performance (Optimized via single query with conditional counts)
+        $periodLeadIds = (clone $leadQuery)->select('leads.id');
         $sources = LeadSource::withCount([
-            'leads',
-            'leads as converted_count' => function ($q) {
-                $q->where('stage', LeadStage::CONVERTED->value);
+            'leads' => fn ($q) => $q->whereIn('leads.id', clone $periodLeadIds),
+            'leads as converted_count' => function ($q) use ($periodLeadIds) {
+                $q->whereIn('leads.id', clone $periodLeadIds)->where('stage', LeadStage::CONVERTED->value);
             },
-            'leads as presentations_count' => function ($q) {
-                $q->where('stage', LeadStage::PRESENTATION->value);
+            'leads as presentations_count' => function ($q) use ($periodLeadIds) {
+                $q->whereIn('leads.id', clone $periodLeadIds)->where('stage', LeadStage::PRESENTATION->value);
             },
         ])->get()->map(function ($source) {
             $leadsCount = $source->leads_count;
@@ -84,16 +85,20 @@ class ReportController extends Controller
             ];
         })->sortByDesc('total_leads');
 
+        $presentationQuery = Presentation::query();
+        if ($period === 'today') $presentationQuery->whereDate('date_time', Carbon::today());
+        elseif ($period === 'week') $presentationQuery->whereBetween('date_time', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
+        elseif ($period === 'month') $presentationQuery->whereBetween('date_time', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);
+
         // Activities Summary
         $activityStats = [
             'total_activities' => $activityQuery->count(),
             'calls' => (clone $activityQuery)->where('type', 'call')->count(),
             'meetings' => (clone $activityQuery)->where('type', 'meeting')->count(),
-            'presentations' => Presentation::count(),
-            'completed_tasks' => Task::where('status', TaskStatus::COMPLETED->value)->count(),
+            'presentations' => $presentationQuery->count(),
+            'completed_tasks' => (clone $taskQuery)->where('status', TaskStatus::COMPLETED->value)->count(),
         ];
 
         return view('reports.index', compact('totalLeads', 'convertedLeads', 'conversionRate', 'funnelData', 'sources', 'activityStats', 'period'));
     }
 }
-

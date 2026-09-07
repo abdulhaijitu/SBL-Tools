@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Task extends Model
 {
+    use \App\Models\Concerns\ScopesWorkspaceRecords;
     use HasFactory;
 
     protected $fillable = [

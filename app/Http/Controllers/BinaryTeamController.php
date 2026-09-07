@@ -24,7 +24,7 @@ class BinaryTeamController extends Controller
     public function index(Request $request, $memberId = null): View
     {
         $currentUser = auth()->user();
-        $isSuperAdmin = $currentUser ? ($currentUser->is_super_admin ?? ($currentUser->role === 'superadmin' || $currentUser->id === 1)) : true;
+        $isSuperAdmin = $currentUser?->isSuperAdmin() ?? false;
 
         // Determine active workspace tree owner
         $ownerId = null;
@@ -41,6 +41,11 @@ class BinaryTeamController extends Controller
 
         $viewMode = $request->query('view', 'tree');
         $nodeId = $memberId ?: ($request->query('node_id') ?: $request->query('member_id'));
+        if ($nodeId) {
+            $requestedNode = BinaryNode::findOrFail($nodeId);
+            if ($isSuperAdmin && !$request->filled('owner_id')) $ownerId = $requestedNode->tree_owner_id;
+            abort_unless((int)$requestedNode->tree_owner_id === (int)$ownerId, 404);
+        }
         $treeData = $this->treeService->getVisualTree($nodeId ? (int)$nodeId : null, $ownerId, 2);
 
         $packages = [
@@ -54,7 +59,7 @@ class BinaryTeamController extends Controller
             $nodesQuery->where('tree_owner_id', $ownerId);
         }
         $allNodes = $nodesQuery->get(['id', 'member_name', 'member_code', 'rank_name', 'branch', 'slot_number']);
-        $users = User::orderBy('name')->get(['id', 'name', 'email', 'phone']);
+        $users = User::when(!$isSuperAdmin, fn ($query) => $query->whereKey($currentUser->id))->orderBy('name')->get(['id', 'name', 'email', 'phone']);
 
         $tableQuery = BinaryNode::with(['parent', 'user', 'children', 'investments'])->orderBy('id');
         if ($ownerId) {
@@ -80,6 +85,15 @@ class BinaryTeamController extends Controller
     public function show(Request $request, $memberId): View
     {
         return $this->index($request, (int)$memberId);
+    }
+
+    public function credentials(BinaryNode $node): \Illuminate\Http\JsonResponse
+    {
+        // Scoped model binding guarantees the member belongs to the caller's tree.
+        return response()->json([
+            'password_plain' => $node->password_plain,
+            'tpin' => $node->tpin,
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     /**
@@ -115,7 +129,7 @@ class BinaryTeamController extends Controller
             'password_plain' => 'nullable|string|max:100',
             'tpin' => 'nullable|string|max:20',
             'parent_id' => 'required|exists:binary_nodes,id',
-            'sponsor_id' => 'nullable',
+            'sponsor_id' => 'nullable|integer|exists:binary_nodes,id',
             'sponsor_name' => 'nullable|string|max:150',
             'branch' => 'required|in:LEFT,RIGHT',
             'slot_number' => 'required|integer|between:1,5',
@@ -127,6 +141,9 @@ class BinaryTeamController extends Controller
             'target_notes' => 'nullable|string|max:500',
         ]);
 
+        $parentNode = BinaryNode::findOrFail($validated['parent_id']);
+        if (!empty($validated['sponsor_id'])) BinaryNode::where('tree_owner_id', $parentNode->tree_owner_id)->findOrFail($validated['sponsor_id']);
+        if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
         $validated['is_target'] = $request->boolean('is_target');
 
         try {
@@ -191,7 +208,7 @@ class BinaryTeamController extends Controller
             'point_value' => 'nullable|numeric|min:0',
             'contributions' => 'nullable',
             'rank_name' => 'nullable|string|max:50',
-            'sponsor_id' => 'nullable',
+            'sponsor_id' => 'nullable|integer|exists:binary_nodes,id',
             'sponsor_name' => 'nullable|string|max:150',
             'is_active' => 'nullable|boolean',
             'is_target' => 'nullable|boolean',
@@ -201,6 +218,8 @@ class BinaryTeamController extends Controller
         ]);
 
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->input('is_active') : true;
+        if (!empty($validated['sponsor_id'])) BinaryNode::where('tree_owner_id', $node->tree_owner_id)->findOrFail($validated['sponsor_id']);
+        if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
         $validated['is_target'] = $request->boolean('is_target');
 
         try {
@@ -247,10 +266,14 @@ class BinaryTeamController extends Controller
 
         $cleanQuery = ltrim($query, '@');
 
-        $node = BinaryNode::where('member_code', 'like', "%{$query}%")
-            ->orWhere('member_code', 'like', "%{$cleanQuery}%")
-            ->orWhere('member_name', 'like', "%{$query}%")
-            ->orWhere('phone', 'like', "%{$query}%")
+        $ownerId = auth()->user()->isSuperAdmin() ? ($request->integer('owner_id') ?: auth()->id()) : auth()->id();
+        $node = BinaryNode::where('tree_owner_id', $ownerId)
+            ->where(function ($builder) use ($query, $cleanQuery) {
+                $builder->where('member_code', 'like', "%{$query}%")
+                    ->orWhere('member_code', 'like', "%{$cleanQuery}%")
+                    ->orWhere('member_name', 'like', "%{$query}%")
+                    ->orWhere('phone', 'like', "%{$query}%");
+            })
             ->first();
 
         if ($node) {

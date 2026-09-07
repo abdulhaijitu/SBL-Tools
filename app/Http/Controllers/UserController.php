@@ -59,8 +59,10 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:20',
             'designation' => 'nullable|string|max:100',
             'role_id' => 'required|exists:roles,id',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
         ]);
+
+        $this->authorizeRole(Role::findOrFail($validated['role_id']));
 
         $user = User::create([
             'name' => $validated['name'],
@@ -89,8 +91,14 @@ class UserController extends Controller
             'designation' => 'nullable|string|max:100',
             'status' => 'required|in:active,inactive',
             'role_id' => 'required|exists:roles,id',
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:8',
         ]);
+
+        $role = Role::findOrFail($validated['role_id']);
+        $this->authorizeRole($role, $user);
+        if ($user->id === $request->user()->id && ($validated['status'] !== 'active' || ($user->isSuperAdmin() && $role->slug !== 'super-admin'))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['role_id' => 'Ask another administrator to change your administrative access.']);
+        }
 
         $data = [
             'name' => $validated['name'],
@@ -115,6 +123,7 @@ class UserController extends Controller
      */
     public function destroy(User $user): RedirectResponse
     {
+        abort_if($user->isSuperAdmin() && !auth()->user()->isSuperAdmin(), 403);
         if ($user->id === auth()->id()) {
             return redirect()->route('users.index')->with('error', 'You cannot delete your own account.');
         }
@@ -127,5 +136,15 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('users.index')->with('success', "Team member '{$userName}' deleted successfully.");
+    }
+
+    private function authorizeRole(Role $role, ?User $target = null): void
+    {
+        if (auth()->user()->isSuperAdmin()) return;
+        abort_if($role->slug === 'super-admin' || $target?->isSuperAdmin(), 403);
+        // Delegated managers may only assign permissions they themselves hold.
+        foreach ($role->permissions as $permission) {
+            abort_unless(auth()->user()->hasPermission($permission->slug), 403);
+        }
     }
 }

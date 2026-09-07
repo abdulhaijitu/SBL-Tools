@@ -13,7 +13,7 @@
     copyToClipboard(text, title) {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {
-                window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' লিঙ্ক কপি করা হয়েছে!', type: 'success' } }));
+                window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' link copied to clipboard!', type: 'success' } }));
             });
         }
     }
@@ -25,9 +25,9 @@
             <div class="inline-flex items-center gap-2 px-3 py-1 bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
                 <span>🌐</span> The Complete Ecommerce Ecosystem
             </div>
-            <h2 class="text-2xl md:text-3xl font-bold tracking-tight">SBL Ecosystem অফিসিয়াল লিঙ্ক ও পোর্টাল</h2>
+            <h2 class="text-2xl md:text-3xl font-bold tracking-tight">SBL Ecosystem Portals & Links</h2>
             <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                ড্রপশিপিং মার্কেটপ্লেস, ক্রাউডফান্ডিং ও ইনভেস্টর ড্যাশবোর্ড, মেম্বার ব্যাকঅফিস, ট্রেনিং একাডেমি এবং কমিউনিটি চ্যানেল—সবকিছু এক ক্লিকেই সহজে ভিজিট করুন।
+                Instant one-click access to Dropshipping marketplaces, Investor dashboards, Member backoffice, Training academy, and Official channels.
             </p>
         </div>
 
@@ -166,7 +166,7 @@
     </div>
 
     <!-- CREATE LINK MODAL -->
-    <div x-show="createModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="createModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
          x-transition
          x-cloak>
@@ -214,8 +214,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bengali Description</label>
-                    <textarea name="description" rows="2" placeholder="সংক্ষেপে এই প্ল্যাটফর্মের কাজ বা সুবিধা উল্লেখ করুন..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
+                    <textarea name="description" rows="2" placeholder="Brief description of this platform or service..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
@@ -227,7 +227,7 @@
     </div>
 
     <!-- EDIT LINK MODAL -->
-    <div x-show="editModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
          x-transition
          x-cloak>
@@ -276,7 +276,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bengali Description</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
                     <textarea name="description" x-model="editingLink.description" rows="2" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"></textarea>
                 </div>
 

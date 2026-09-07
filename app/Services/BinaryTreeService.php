@@ -65,17 +65,17 @@ class BinaryTreeService
             'user_id' => $user->id,
             'member_name' => $user->name,
             'member_code' => $code,
-            'phone' => $user->phone ?? '01700000000',
+            'phone' => $user->phone,
             'email' => $user->email,
-            'password_plain' => 'sbl123456',
-            'tpin' => '1234',
+            'password_plain' => null,
+            'tpin' => null,
             'package_name' => 'National 120k',
             'point_value' => 100.00,
             'contributions' => [
                 ['amount' => 100.00, 'date' => now()->toDateString(), 'note' => 'Initial Plan 100 BV']
             ],
             'rank_name' => 'Member',
-            'sponsor_name' => 'Md. Samim',
+            'sponsor_name' => null,
             'left_target_count' => 5,
             'right_target_count' => 5,
             'is_active' => true,
@@ -388,12 +388,10 @@ class BinaryTreeService
             'all_node_ids' => $allNodeIds,
             'left_slots' => $leftSlots,
             'right_slots' => $rightSlots,
-            'tree' => $formattedRoot,
-            'all_node_ids' => [$root->id],
             'stats' => [
                 'root_name' => $root->member_name,
                 'root_code' => $root->member_code ?: ('SBL-' . $root->id),
-                'sponsor_name' => $root->sponsor_name ?: ($root->sponsor?->member_name ?? ($root->parent_id === null ? 'Md. Samim' : 'Md. Abdul Hai')),
+                'sponsor_name' => $root->sponsor_name ?: ($root->sponsor?->member_name ?? 'Not assigned'),
                 'direct_left_count' => $rootStats['direct_left_count'],
                 'direct_right_count' => $rootStats['direct_right_count'],
                 'direct_total_count' => $rootStats['direct_left_count'] + $rootStats['direct_right_count'],
@@ -571,8 +569,8 @@ class BinaryTreeService
                 'member_code' => $memberCode,
                 'phone' => $data['phone'] ?? null,
                 'email' => $data['email'] ?? null,
-                'password_plain' => $data['password_plain'] ?? 'sbl123456',
-                'tpin' => $data['tpin'] ?? '1234',
+                'password_plain' => $data['password_plain'] ?? null,
+                'tpin' => $data['tpin'] ?? null,
                 'parent_id' => $parentId,
                 'sponsor_id' => $data['sponsor_id'] ?? $parentId,
                 'sponsor_name' => $data['sponsor_name'] ?? null,
@@ -825,7 +823,7 @@ class BinaryTreeService
         $stats = $stats ?: $this->calculateDynamicStats($node);
         $node->loadMissing(['sponsor', 'parent', 'investments']);
 
-        $sponsorName = $node->sponsor_name ?: ($node->sponsor?->member_name ?? ($node->parent_id === null ? 'Md. Samim' : ($node->parent?->member_name ?? 'Md. Abdul Hai')));
+        $sponsorName = $node->sponsor_name ?: ($node->sponsor?->member_name ?? ($node->parent?->member_name ?? 'Not assigned'));
         $code = $node->member_code ?: ('SBL-' . $node->id);
         $username = str_starts_with($code, '@') ? $code : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $code)));
 
@@ -853,10 +851,8 @@ class BinaryTreeService
             'member_name' => $node->member_name,
             'member_code' => $node->member_code,
             'username' => $username,
-            'phone' => $node->phone ?: '01700000000',
-            'email' => $node->email ?: 'member' . $node->id . '@sbl.test',
-            'password_plain' => $node->password_plain ?: 'sbl123456',
-            'tpin' => $node->tpin ?: '1234',
+            'phone' => $node->phone,
+            'email' => $node->email,
             'sponsor_id' => $node->sponsor_id,
             'sponsor_name' => $sponsorName,
             'user_id' => $node->user_id,

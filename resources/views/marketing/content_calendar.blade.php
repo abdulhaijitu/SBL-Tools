@@ -156,7 +156,7 @@
     @endif
 
     <!-- New Content Item Modal -->
-    <div x-show="newContentModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="newContentModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>
@@ -222,7 +222,7 @@
     </div>
 
     <!-- Edit Content Modal -->
-    <div x-show="editModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>

@@ -4,28 +4,37 @@
 @section('page-subtitle', 'Control granular access levels, authorization rules, and administrative roles')
 
 @section('content')
-<div class="space-y-6" x-data="{ createModalOpen: false }">
+<div class="space-y-6" x-data="{ createModalOpen: false, activeTab: new URLSearchParams(location.search).get('tab') === 'permissions' || location.hash === '#permissions' ? 'permissions' : 'roles' }">
+    <nav aria-label="Roles and permissions sections" class="section-tabs">
+        <template x-for="tabName in ['roles', 'permissions']">
+            <button type="button" @click="activeTab = tabName; history.replaceState(null, '', '?tab=' + tabName)" :aria-pressed="activeTab === tabName" :class="activeTab === tabName ? 'bg-orange-600 text-white' : 'text-slate-600 hover:bg-slate-100'" class="rounded-xl px-4 py-2 text-sm font-semibold capitalize" x-text="tabName"></button>
+        </template>
+    </nav>
+    <nav x-show="activeTab === 'roles'" aria-label="Role member groups" class="flex flex-wrap gap-2">
+        @foreach(['super-admin' => 'Super Admin', 'member' => 'Members', 'demo-member' => 'Demo Members'] as $slug => $label)
+            <a href="{{ route('users.index', ['role' => $slug]) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-orange-400">{{ $label }}</a>
+        @endforeach
+    </nav>
+    <div style="display: contents">
 
-    <!-- Top Banner & Security Summary -->
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
-        <div class="space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
-                <span>🛡️</span> Role-Based Access Control (RBAC)
-            </div>
-            <h2 class="text-xl md:text-2xl font-bold tracking-tight">Security & Permission System</h2>
-            <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                Configure what each team member can view, create, edit, or delete across Leads, Tasks, Presentations, Marketing, and Financial Reports.
-            </p>
+    <div class="section-heading"><div><h2>Access management</h2><p>Choose what each role can view and change.</p></div>@can('roles.manage')<button type="button" @click="createModalOpen = true" class="btn-primary"><x-ui-icon name="plus" />Create role</button>@endcan</div>
+    <section x-show="activeTab === 'permissions'" x-cloak id="permissions" class="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+        <h2 class="text-lg font-bold text-slate-900">Permissions</h2>
+        <p class="text-sm text-slate-500">Choose a role below to manage its permissions.</p>
+        <div class="flex flex-wrap gap-2">
+            @foreach($permissions as $permission)
+                <span class="rounded-lg bg-slate-100 px-3 py-1 text-xs text-slate-700">{{ $permission->name }}</span>
+            @endforeach
         </div>
-
-        <button @click="createModalOpen = true" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-2 flex-shrink-0">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>Create Custom Role</span>
-        </button>
-    </div>
+        <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+            @foreach($roles as $role)
+                @can('roles.manage')<a href="{{ route('roles.edit', $role) }}" class="rounded-xl bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100">Edit {{ $role->name }} permissions</a>@endcan
+            @endforeach
+        </div>
+    </section>
 
     <!-- Roles Grid Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div x-show="activeTab === 'roles'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @foreach($roles as $role)
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div class="space-y-4">
@@ -88,19 +97,19 @@
 
             <!-- Card Bottom Actions -->
             <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                <a href="{{ route('roles.edit', $role) }}" class="px-3.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5">
+                @can('roles.manage')<a href="{{ route('roles.edit', $role) }}" class="px-3.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                     <span>Edit Permissions</span>
-                </a>
+                </a>@endcan
 
                 @if(!$role->is_system)
-                    <form action="{{ route('roles.destroy', $role) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete role {{ addslashes($role->name) }}?');">
+                    @can('roles.manage')<form action="{{ route('roles.destroy', $role) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete role {{ addslashes($role->name) }}?');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 transition-colors">
                             Delete Role
                         </button>
-                    </form>
+                    </form>@endcan
                 @endif
             </div>
         </div>
@@ -108,7 +117,7 @@
     </div>
 
     <!-- CREATE ROLE MODAL -->
-    <div x-show="createModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="createModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
          x-transition
          x-cloak>
@@ -142,5 +151,6 @@
         </div>
     </div>
 
+</div>
 </div>
 @endsection

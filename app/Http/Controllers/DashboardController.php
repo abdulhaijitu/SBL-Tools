@@ -60,6 +60,8 @@ class DashboardController extends Controller
         ];
 
         $totalLeads = array_sum($stageCounts);
+        $totalActiveLeads = Lead::activePipeline()->count();
+        $totalPresentations = Presentation::count();
 
         // 3. Lead Priority with eager loading
         $hotLeads = Lead::with('source')
@@ -118,6 +120,8 @@ class DashboardController extends Controller
             'newLeadsTodayCount',
             'funnelStages',
             'totalLeads',
+            'totalActiveLeads',
+            'totalPresentations',
             'hotLeads',
             'warmLeads',
             'staleLeads',

@@ -4,4 +4,14 @@
 .env
 .git
 .phpunit.result.cache
-
+/storage/app/audit
+/storage/*.png
+/storage/rendered_pages.json
+/storage/logs/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/cache/data/*
+/database/*.sqlite*
+/.env.*
+!/.env.example
+/Info.txt

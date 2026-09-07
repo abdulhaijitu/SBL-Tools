@@ -48,12 +48,12 @@ class ContentCalendarController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'platform' => 'required|string',
+            'platform' => ['required', \Illuminate\Validation\Rule::enum(ContentPlatform::class)],
             'content_type' => 'nullable|string|max:100',
             'topic' => 'nullable|string|max:255',
             'caption' => 'nullable|string',
             'scheduled_at' => 'required|date',
-            'status' => 'required|string',
+            'status' => ['required', \Illuminate\Validation\Rule::enum(ContentStatus::class)],
             'cta' => 'nullable|string|max:255',
             'campaign_id' => 'nullable|exists:campaigns,id',
             'notes' => 'nullable|string',
@@ -80,17 +80,17 @@ class ContentCalendarController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'platform' => 'required|string',
-            'status' => 'required|string',
+            'platform' => ['required', \Illuminate\Validation\Rule::enum(ContentPlatform::class)],
+            'status' => ['required', \Illuminate\Validation\Rule::enum(ContentStatus::class)],
             'scheduled_at' => 'required|date',
             'topic' => 'nullable|string|max:255',
             'caption' => 'nullable|string',
             'cta' => 'nullable|string|max:255',
-            'reach' => 'nullable|integer',
-            'engagement' => 'nullable|integer',
-            'inbox_count' => 'nullable|integer',
-            'leads_generated' => 'nullable|integer',
-            'conversions' => 'nullable|integer',
+            'reach' => 'nullable|integer|min:0',
+            'engagement' => 'nullable|integer|min:0',
+            'inbox_count' => 'nullable|integer|min:0',
+            'leads_generated' => 'nullable|integer|min:0',
+            'conversions' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
         ]);
 

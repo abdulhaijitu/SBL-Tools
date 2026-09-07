@@ -29,7 +29,7 @@ class SblContactTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('contacts.index'));
 
         $response->assertOk();
-        $response->assertSee('SBL Contacts & WhatsApp Directory');
+        $response->assertSee('Contact directory');
         $response->assertSee('কাস্টমার কেয়ার ও সাপোর্ট সেল');
         $response->assertSee('01700000000');
         $response->assertSee('tel:01700000000');

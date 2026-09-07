@@ -1,59 +1,50 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SBL Growth Manager
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel CRM for leads, follow-ups, presentations, package tools, contacts and private team trees. Primary navigation: Dashboard, Leads, Plans & Toolkit, Contact, Team Explorer, Members, Roles & Permissions. Reports remain available from Dashboard; the existing marketing calendar is retained at `/marketing/content-calendar`.
 
-## About Laravel
+## Run locally
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Requires PHP 8.2+ (8.3 verified), Composer, Node 20.19+ or 22.12+, and SQLite or MySQL. On a **new checkout**:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+php artisan migrate
+npm.cmd ci
+npm.cmd run build
+php artisan serve --host=127.0.0.1 --port=8000
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Open http://localhost:8000. For frontend development, run `npm.cmd run dev` in another terminal. Use `npm.cmd` on Windows if PowerShell execution policy blocks `npm.ps1`.
 
-## Learning Laravel
+For a **new local demo database only**, `php artisan db:seed` creates sample users, contacts, leads and trees. Do not reseed an existing working database to start the server. Seeded accounts have development passwords and must not be deployed as production accounts.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Access and data
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Server middleware enforces role permissions and blocks inactive accounts.
+- CRM records are scoped to their owner. Users with `leads.assign` can manage shared CRM data. Super Admin has access across workspaces.
+- Team trees are private, including for CRM managers. Only Super Admin can switch tree owners.
+- Members lists converted CRM leads. Team Explorer's Directory lists placement-tree members. User Management administers application login accounts.
+- Registration assigns the Members role; an administrator configures its permissions. Members and Demo Members have no administrative access by default.
+- Member passwords and TPINs use encrypted casts, are excluded from serialization, and load through an authorized, non-cacheable endpoint only after selecting Show.
+- Preserve `APP_KEY` with database backups. **Do not regenerate it for an existing database**; stored member credentials depend on it. The encryption migration intentionally does not restore plaintext on rollback.
+- Currency conversion uses a fixed demonstration rate of 1 USD = 120 BDT, not a live feed. Package calculators retain BDT inputs and model-based projections.
 
-## Laravel Sponsors
+## Verify
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```powershell
+php artisan test --compact
+php artisan view:cache
+npm.cmd run build
+```
 
-### Premium Partners
+Audit result, 2026-09-07: **95 tests / 342 assertions passed**. Chrome checks covered 320, 390, 768 and 1440px widths. See [PROJECT_AUDIT.md](PROJECT_AUDIT.md) for evidence and limits.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Deployment
 
-## Contributing
+Laravel is the backend. Serve its `public` directory through a production PHP host; configure database, mail, HTTPS and sessions; set `APP_ENV=production` and `APP_DEBUG=false`; run migrations and compile assets. The existing Dockerfile runs `artisan serve` and is a preview runner, not a validated production server configuration.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+The old Cloudflare Worker, generated authenticated HTML, D1 data export and duplicate CRUD backend were retired because they bypassed Laravel's security model. Original files are preserved in a private local archive under `storage/app/audit`, excluded from Docker context. **No remote deployment was changed.** Do not republish the retired Worker.
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Online dependency advisory scans were blocked by automatic approval review because they transmit dependency metadata to a public registry. Dependency vulnerability status therefore remains unverified. Production load, external mail delivery, current financial package terms and formal accessibility compliance were not certified.

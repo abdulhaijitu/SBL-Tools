@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page-title', 'Team & User Management')
+@section('page-title', 'User Management')
 @section('page-subtitle', 'Manage team members, roles, and administrative access')
 
 @section('content')
@@ -54,9 +54,9 @@
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         
         <!-- Search & Role Dropdown Filters -->
-        <form method="GET" action="{{ route('users.index') }}" class="w-full md:w-auto flex-1 flex flex-wrap items-center gap-3">
-            <div class="relative flex-1 min-w-[220px]">
-                <input type="text" 
+        <form aria-label="Filter users" method="GET" action="{{ route('users.index') }}" class="w-full md:w-auto flex-1 flex flex-wrap items-center gap-3">
+            <div class="relative flex-1 min-w-0 w-full">
+                <input aria-label="Search by name, email, phone..." type="text" 
                        name="search" 
                        value="{{ request('search') }}" 
                        placeholder="Search by name, email, phone..." 
@@ -80,6 +80,7 @@
             @if(request()->hasAny(['search', 'role', 'status']))
                 <a href="{{ route('users.index') }}" class="text-xs text-orange-600 hover:text-orange-700 font-semibold px-2 py-1">Reset</a>
             @endif
+            <button type="submit" class="btn-secondary">Search</button>
         </form>
 
         <!-- Add Member Button -->
@@ -302,7 +303,7 @@
     </div>
 
     <!-- ADD MEMBER MODAL -->
-    <div x-show="createModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="createModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
          x-transition
          x-cloak>
@@ -352,7 +353,7 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Initial Password *</label>
-                    <input type="password" name="password" required minlength="6" placeholder="Minimum 6 characters" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    <input type="password" name="password" required minlength="8" placeholder="Minimum 8 characters" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
@@ -364,7 +365,7 @@
     </div>
 
     <!-- EDIT MEMBER MODAL -->
-    <div x-show="editModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModalOpen" 
          class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
          x-transition
          x-cloak>
@@ -422,7 +423,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Change Password</label>
-                        <input type="password" name="password" minlength="6" placeholder="Leave blank to keep current" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <input type="password" name="password" minlength="8" placeholder="Leave blank to keep current" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                     </div>
                 </div>
 

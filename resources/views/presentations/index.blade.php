@@ -13,10 +13,10 @@
             <p class="text-xs text-slate-500">Track 1-on-1 and group presentations across all lead stages.</p>
         </div>
 
-        <button @click="newPresModal = true" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs">
+        @can('presentations.manage')<button @click="newPresModal = true" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-xs">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span>Record Presentation</span>
-        </button>
+        </button>@endcan
     </div>
 
     <!-- Presentations Grid / Cards -->
@@ -69,13 +69,13 @@
                     <span>{{ $pres->date_time->format('d M, Y h:i A') }}</span>
                     <div class="flex items-center gap-2">
                         <span>By {{ $pres->user->name ?? 'Admin' }}</span>
-                        <form action="{{ route('presentations.destroy', $pres->id) }}" method="POST" onsubmit="return confirm('Delete presentation record?')">
+                        @can('presentations.manage')<form action="{{ route('presentations.destroy', $pres->id) }}" method="POST" onsubmit="return confirm('Delete presentation record?')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="p-1 text-slate-400 hover:text-rose-600" title="Delete Presentation">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
-                        </form>
+                        </form>@endcan
                     </div>
                 </div>
             </div>
@@ -93,7 +93,7 @@
     @endif
 
     <!-- New Presentation Modal -->
-    <div x-show="newPresModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="newPresModal" 
          x-transition 
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs"
          x-cloak>

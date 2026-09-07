@@ -13,12 +13,13 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Leads CRM
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+    Route::get('/members', [LeadController::class, 'index'])->name('members.index');
     Route::get('/leads/create', [LeadController::class, 'create'])->name('leads.create');
     Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
     Route::get('/leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
@@ -68,13 +69,14 @@ Route::middleware(['auth'])->group(function () {
     // SBL Team Explorer & 10-Slot Placement Engine
     Route::get('/team', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('team.index');
     Route::get('/team/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->name('team.show');
+    Route::get('/team/{node}/credentials', [\App\Http\Controllers\BinaryTeamController::class, 'credentials'])->middleware('throttle:20,1')->name('team.credentials');
     Route::post('/team/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('team.store');
     Route::post('/team/{node}/convert-target', [\App\Http\Controllers\BinaryTeamController::class, 'convertTarget'])->name('team.convert-target');
     Route::put('/team/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'update'])->name('team.update');
     Route::delete('/team/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'destroy'])->name('team.destroy');
 
     Route::get('/binary', [\App\Http\Controllers\BinaryTeamController::class, 'index'])->name('binary.index');
-    Route::get('/binary/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->name('binary.show');
+    Route::get('/binary/{memberId}', [\App\Http\Controllers\BinaryTeamController::class, 'show'])->whereNumber('memberId')->name('binary.show');
     Route::post('/binary/place', [\App\Http\Controllers\BinaryTeamController::class, 'store'])->name('binary.store');
     Route::post('/binary/{node}/convert-target', [\App\Http\Controllers\BinaryTeamController::class, 'convertTarget'])->name('binary.convert-target');
     Route::put('/binary/{node}', [\App\Http\Controllers\BinaryTeamController::class, 'update'])->name('binary.update');

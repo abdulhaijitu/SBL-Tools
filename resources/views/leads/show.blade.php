@@ -34,7 +34,7 @@
                         <a id="lead-show-mobile-btn" href="tel:{{ $lead->mobile }}" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 active:scale-95 transition-all">
                             <span>📞</span> <span id="lead-show-mobile-text">{{ $lead->mobile }}</span>
                         </a>
-                        <a id="lead-show-wa-btn" href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $lead->whatsapp ?? $lead->mobile) }}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all">
+                        <a id="lead-show-wa-btn" href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all">
                             <span>💬</span> WhatsApp
                         </a>
                         @if ($lead->facebook_url)
@@ -64,25 +64,25 @@
                 </form>
 
                 @if ($lead->stage !== \App\Enums\LeadStage::CONVERTED)
-                    <form id="lead-show-convert-form" action="{{ route('leads.convert', $lead->id) }}" method="POST" onsubmit="return confirm('Convert this lead to Customer/Member?')">
+                    @can('leads.convert')<form id="lead-show-convert-form" action="{{ route('leads.convert', $lead->id) }}" method="POST" onsubmit="return confirm('Convert this lead to Customer/Member?')">
                         @csrf
                         <button type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition-colors">
                             ✓ Convert Lead
                         </button>
-                    </form>
+                    </form>@endcan
                 @endif
 
-                <a id="lead-show-edit-link" href="{{ route('leads.edit', $lead->id) }}" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900" title="Edit Lead">
+                @can('leads.edit')<a id="lead-show-edit-link" href="{{ route('leads.edit', $lead->id) }}" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900" title="Edit Lead">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                </a>
+                </a>@endcan
 
-                <form id="lead-show-delete-form" action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
+                @can('leads.delete')<form id="lead-show-delete-form" action="{{ route('leads.destroy', $lead->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this lead?');" class="inline">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="p-2 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-600 hover:text-rose-700" title="Delete Lead">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
-                </form>
+                </form>@endcan
             </div>
         </div>
 
@@ -268,7 +268,7 @@
     </div>
 
     <!-- Quick Action Modal -->
-    <div x-show="actionModal" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="actionModal" 
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0"
          x-transition:enter-end="opacity-100 translate-y-0"

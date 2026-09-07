@@ -32,6 +32,9 @@ class SblGrowthManagerTest extends TestCase
             'name' => 'Admin User',
         ]);
 
+        $role = \App\Models\Role::firstOrCreate(['slug' => 'super-admin'], ['name' => 'Super Admin', 'is_system' => true]);
+        $this->user->roles()->attach($role);
+
         $this->source = LeadSource::create([
             'name' => 'Facebook Page',
             'is_active' => true,
@@ -45,7 +48,9 @@ class SblGrowthManagerTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Lead Pipeline Funnel');
-        $response->assertSee('Follow-ups Today');
+        $response->assertSee('Today Followup');
+        $response->assertSee('Total Active Leads');
+        $response->assertSee('Total Presentations');
     }
 
     public function test_user_can_create_lead_and_auto_schedule_next_action(): void
@@ -335,10 +340,10 @@ class SblGrowthManagerTest extends TestCase
 
         $response = $this->actingAs($this->user)->get('/toolkit');
         $response->assertStatus(200);
-        $response->assertSee('SBL Plans &amp; Toolkit', false);
+        $response->assertSee('Plans &amp; Toolkit', false);
         $response->assertSee('National Package');
         $response->assertSee('Field Marketing Executive');
         $response->assertSee('Counseling Guide');
-        $response->assertSee('Live ROI & Commission Calculator', false);
+        $response->assertSee('Commission Calculator');
     }
 }

@@ -2192,9 +2192,11 @@ export default {
                     );
             }
             html = pageHtml;
-        } else if (path === "/leads") {
+        } else if (path === "/leads" || path === "/members") {
             const viewMode = url.searchParams.get("view");
             html = viewMode === "kanban" ? PAGES.kanban : PAGES.leads;
+        } else if (path === "/profile") {
+            html = PAGES.profile || PAGES.dashboard;
         } else if (path === "/presentations") {
             html = PAGES.presentations;
         } else if (path === "/toolkit") {

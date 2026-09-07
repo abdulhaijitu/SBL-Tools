@@ -65,6 +65,18 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 2. Define System Roles
         $roles = [
+            'member' => [
+                'name' => 'Members',
+                'description' => 'Member access, configured through the permissions editor.',
+                'is_system' => true,
+                'permissions' => [],
+            ],
+            'demo-member' => [
+                'name' => 'Demo Members',
+                'description' => 'Demo member access, configured through the permissions editor.',
+                'is_system' => true,
+                'permissions' => [],
+            ],
             'super-admin' => [
                 'name' => 'Super Admin',
                 'description' => 'Unrestricted access to all tools, settings, users, and data across the system.',

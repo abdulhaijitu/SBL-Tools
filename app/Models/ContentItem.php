@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentItem extends Model
 {
+    use \App\Models\Concerns\ScopesWorkspaceRecords;
     use HasFactory;
 
     protected $fillable = [

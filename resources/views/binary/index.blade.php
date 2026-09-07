@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('page-title', 'Team Explorer')
-@section('page-subtitle', 'Hierarchical 5 Left + 5 Right Direct Placement Dashboard & Team Management')
+@section('page-subtitle', 'Explore your member network, branches and placements')
 
 @section('content')
 <div class="space-y-6" x-data="{
@@ -17,8 +17,8 @@
         member_code: '',
         phone: '',
         email: '',
-        password_plain: 'sbl123456',
-        tpin: '1234',
+        password_plain: '',
+        tpin: '',
         package_name: 'National 120k',
         point_value: 100,
         contributions: [],
@@ -40,56 +40,33 @@
     selectedSlotNumber: 1,
     isTargetMember: false,
     showDetailsPass: false,
+    init() { this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; } }); },
+    credentials: {},
+    credentialsLoading: false,
+    async toggleCredentials() {
+        if (this.showDetailsPass) { this.showDetailsPass = false; this.credentials = {}; return; }
+        this.credentialsLoading = true;
+        const memberId = this.detailsNode.id;
+        try {
+            const response = await fetch('/team/' + memberId + '/credentials', {headers: {Accept: 'application/json'}, cache: 'no-store'});
+            if (!response.ok) throw new Error('Could not load credentials. Please try again.');
+            const credentials = await response.json();
+            if (this.detailsModalOpen && this.detailsNode.id === memberId) {
+                this.credentials = credentials;
+                this.showDetailsPass = true;
+            }
+        } catch (error) { this.$dispatch('notify', {message: error.message, type: 'error'}); }
+        finally { this.credentialsLoading = false; }
+    },
     getNodeData(node) {
         if (!node) return {};
         const id = (typeof node === 'object' && node !== null) ? node.id : node;
-        if (window.DATA && window.DATA.nodes && Array.isArray(window.DATA.nodes)) {
-            const live = window.DATA.nodes.find(n => Number(n.id) === Number(id));
-            if (live) {
-                let contribs = [];
-                try {
-                    contribs = typeof live.contributions === 'string' ? JSON.parse(live.contributions) : (live.contributions || []);
-                } catch(e) {}
-                let pv = Number(live.point_value) || 0;
-                if (Array.isArray(contribs) && contribs.length > 0) {
-                    pv = contribs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-                }
-                const code = live.member_code || ('SBL-' + live.id);
-                const username = live.username || (code.startsWith('@') ? code : ('@' + code.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()));
-                return {
-                    ...live,
-                    id: live.id,
-                    member_name: live.member_name,
-                    member_code: live.member_code,
-                    username: username,
-                    phone: live.phone || '',
-                    email: live.email || '',
-                    password_plain: live.password_plain || 'sbl123456',
-                    tpin: live.tpin || '1234',
-                    sponsor_id: live.sponsor_id,
-                    sponsor_name: live.sponsor_name || 'Md. Samim',
-                    user_id: live.user_id,
-                    point_value: pv,
-                    total_investment: pv,
-                    own_investment: pv,
-                    contributions: contribs,
-                    rank_name: live.rank_name || 'Member',
-                    is_active: live.is_active !== undefined ? Boolean(Number(live.is_active)) : true,
-                    is_target: Boolean(Number(live.is_target)),
-                    target_date: live.target_date || '',
-                    target_notes: live.target_notes || '',
-                    branch: live.branch || (live.position === 'left' ? 'LEFT' : 'RIGHT'),
-                    slot_number: Number(live.slot_number) || 1,
-                    direct_left_count: Number(live.left_count) || 0,
-                    direct_right_count: Number(live.right_count) || 0
-                };
-            }
-        }
         return (typeof node === 'object' && node !== null) ? node : { id: node };
     },
     openDetailsModal(node) {
         this.detailsNode = this.getNodeData(node);
         this.showDetailsPass = false;
+        this.credentials = {};
         this.activeDetailsTab = 'overview';
         this.detailsModalOpen = true;
     },
@@ -142,8 +119,8 @@
             member_code: liveNode.member_code || '',
             phone: liveNode.phone || '',
             email: liveNode.email || '',
-            password_plain: liveNode.password_plain || 'sbl123456',
-            tpin: liveNode.tpin || '1234',
+            password_plain: '',
+            tpin: '',
             package_name: liveNode.package_name || 'National 120k',
             point_value: liveNode.point_value !== undefined ? liveNode.point_value : 100,
             contributions: contribs,
@@ -168,17 +145,7 @@
     }
 }">
 
-    @if(session('success'))
-    <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-sm font-semibold flex items-center justify-between shadow-xs">
-        <div class="flex items-center gap-2">
-            <span>✅</span>
-            <span>{{ session('success') }}</span>
-        </div>
-        <button @click="$el.parentElement.remove()" class="text-emerald-700 hover:text-emerald-900 font-bold cursor-pointer">&times;</button>
-    </div>
-    @endif
-
-    @if(session('error'))
+@if(session('error'))
     <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-700 text-sm font-semibold flex items-center justify-between shadow-xs">
         <div class="flex items-center gap-2">
             <span>⚠️</span>
@@ -188,92 +155,31 @@
     </div>
     @endif
 
-    <!-- ==================== 1. TOP NAVIGATION & CONTROLS TOOLBAR ==================== -->
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl p-4 md:p-5 border border-slate-800 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        
-        <!-- Left Title & Navigation Action Buttons -->
-        <div class="flex flex-wrap items-center gap-2.5">
-            <div class="flex items-center gap-2 pr-2 border-r border-slate-800">
-                <span class="text-base font-black text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>👥</span> Team Explorer
-                </span>
+    <div class="app-panel space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <a class="btn-secondary" href="{{ route('team.index', ['owner_id' => $ownerId]) }}">Main team</a>
+                @if(!empty($treeData['parent_node']))<a class="btn-secondary" href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => $ownerId]) }}">Parent team</a>@endif
             </div>
-
-            <!-- Home / Main Team Root -->
-            <a href="{{ route('team.index', ['owner_id' => request('owner_id')]) }}" 
-               class="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5" 
-               title="Return to Main Root (Md. Abdul Hai)">
-                <span>🏠</span> <span>Home / Main Team</span>
-            </a>
-
-            <!-- Back Button (Browser history or parent fallback) -->
-            <button type="button" 
-                    onclick="window.history.length > 1 ? window.history.back() : window.location.href='{{ route('team.index') }}'"
-                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-                    title="Go Back">
-                <span>◀</span> <span>Back</span>
-            </button>
-
-            <!-- Parent Member Button (if current member has parent) -->
-            @if(!empty($treeData['parent_node']))
-            <a href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => request('owner_id')]) }}" 
-               class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95" 
-               title="Go to Parent ({{ $treeData['parent_node']->member_name }})">
-                <span>⬆️</span> <span>Parent ({{ $treeData['parent_node']->member_name }})</span>
-            </a>
-            @endif
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                <a class="px-3 py-2 rounded-lg {{ $viewMode !== 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}">Explorer</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}">Directory</a>
+            </div>
         </div>
-
-        <!-- Right Search & View Switcher -->
-        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-            <!-- Search Member Form -->
-            <form action="{{ route('team.search') }}" method="GET" class="flex-1 md:w-72 flex items-center gap-1.5">
-                @if(request('owner_id'))
-                <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
-                @endif
-                <div class="relative w-full">
-                    <input type="text" 
-                           name="search" 
-                           list="team_search_datalist"
-                           placeholder="Search member (name, code, phone)..." 
-                           class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                    <datalist id="team_search_datalist">
-                        @foreach($allNodes as $an)
-                        <option value="{{ $an->member_code }}">{{ $an->member_name }} ({{ $an->member_code }})</option>
-                        @endforeach
-                    </datalist>
-                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
-                <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors shrink-0 cursor-pointer">
-                    Search
-                </button>
+        <div class="flex flex-col sm:flex-row gap-3">
+            <form action="{{ route('team.search') }}" method="GET" class="flex flex-1 min-w-0 gap-2">
+                <input type="hidden" name="owner_id" value="{{ $ownerId }}">
+                <input type="search" name="search" aria-label="Search members" placeholder="Name, member code or phone" list="team_search_datalist" class="min-w-0 w-full rounded-xl border-slate-200 text-sm" required>
+                <datalist id="team_search_datalist">@foreach($allNodes as $an)<option value="{{ $an->member_code }}">{{ $an->member_name }}</option>@endforeach</datalist>
+                <button class="btn-primary">Search</button>
             </form>
-
-            <!-- Super Admin User Workspace Switcher -->
-            @if(!empty($isSuperAdmin) && count($users) > 0)
-            <form action="{{ route('team.index') }}" method="GET" class="flex items-center gap-1 bg-slate-800/90 rounded-xl px-2 py-1 border border-slate-700">
-                <span class="text-[11px] text-slate-400 font-bold">👤</span>
-                <select name="owner_id" onchange="this.form.submit()" class="bg-transparent text-xs font-bold text-orange-300 border-none focus:ring-0 cursor-pointer pr-4 py-0.5">
-                    @foreach($users as $u)
-                    <option value="{{ $u->id }}" {{ (isset($ownerId) && (int)$ownerId === (int)$u->id) ? 'selected' : '' }} class="bg-slate-900 text-white">
-                        {{ $u->name }}
-                    </option>
-                    @endforeach
+            @if($isSuperAdmin && count($users))
+            <form action="{{ route('team.index') }}" method="GET" class="sm:max-w-56">
+                <select name="owner_id" aria-label="Team workspace" onchange="this.form.submit()" class="w-full rounded-xl border-slate-200 text-sm">
+                    @foreach($users as $u)<option value="{{ $u->id }}" @selected((int)$ownerId === (int)$u->id)>{{ $u->name }}</option>@endforeach
                 </select>
             </form>
             @endif
-
-            <!-- View Switcher -->
-            <div class="inline-flex rounded-xl bg-slate-800 p-0.5 border border-slate-700">
-                <a href="{{ route('team.index', ['view' => 'tree', 'node_id' => request('node_id') ?? request('memberId'), 'owner_id' => request('owner_id')]) }}" 
-                    class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode !== 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                    👥 Explorer
-                </a>
-                <a href="{{ route('team.index', ['view' => 'table', 'owner_id' => request('owner_id')]) }}" 
-                    class="px-3 py-1 text-xs font-bold rounded-lg transition-all {{ $viewMode === 'table' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-300 hover:text-white' }}">
-                    📋 Directory
-                </a>
-            </div>
         </div>
     </div>
 
@@ -315,7 +221,7 @@
                 <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
                 @endif
                 <div class="relative flex-1">
-                    <input type="text" 
+                    <input aria-label="Search name, code, phone..." type="text" 
                            name="search" 
                            value="{{ request('search') }}"
                            placeholder="Search name, code, phone..." 
@@ -442,214 +348,11 @@
     </div>
 
     @else
-    <!-- ==================== 3. CURRENT MEMBER SUMMARY CARD (AT TOP) ==================== -->
-    @php
-        $curr = $treeData['current_member'] ?? [];
-        $directL = (int)($treeData['stats']['direct_left_count'] ?? 0);
-        $directR = (int)($treeData['stats']['direct_right_count'] ?? 0);
-        $directTotal = (int)($treeData['stats']['direct_total_count'] ?? ($directL + $directR));
-        $isFme = !empty($treeData['stats']['is_fme']);
-        $ownInv = (float)($treeData['stats']['own_investment'] ?? 0);
-        $sponsorName = $treeData['stats']['sponsor_name'] ?? 'Md. Samim';
-        $currCode = $treeData['stats']['root_code'] ?? 'SBL-1001';
-        $currUsername = $curr['username'] ?? (str_starts_with($currCode, '@') ? $currCode : ('@' . strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $currCode))));
-    @endphp
-
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-6 border-2 border-slate-800 text-white shadow-2xl space-y-5 relative overflow-hidden">
-        <!-- Subtle Glow Effect in Background -->
-        <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-orange-500/10 blur-3xl pointer-events-none"></div>
-
-        <!-- Top Profile Row: Name, Rank, Sponsor & Action Buttons -->
-        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/90">
-            <div class="flex items-center gap-4">
-                <!-- Avatar / Initial -->
-                <div data-current-member-initial class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 text-slate-950 font-black text-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                    {{ substr($treeData['stats']['root_name'] ?? 'M', 0, 1) }}
-                </div>
-
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                        <h2 data-current-member-name class="text-xl md:text-2xl font-black text-white tracking-tight">
-                            {{ $treeData['stats']['root_name'] ?? 'Md. Abdul Hai' }}
-                        </h2>
-                        
-                        <!-- Rank Badge -->
-                        <span data-current-member-rank class="px-3 py-0.5 rounded-full text-xs font-black {{ $isFme ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30' : 'bg-slate-800 text-amber-300 border border-amber-400/40' }}">
-                            {{ $treeData['stats']['rank_name'] ?? 'Member' }}
-                        </span>
-
-                        @if(!empty($treeData['is_main_root']))
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                            ★ Main Team Root
-                        </span>
-                        @endif
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                        <span class="font-mono text-slate-300 font-bold flex items-center gap-1">
-                            <span data-current-member-username>{{ $currUsername }}</span>
-                            <button type="button" @click="navigator.clipboard.writeText('{{ $currUsername }}'); alert('Username copied: {{ $currUsername }}');" class="hover:text-white cursor-pointer" title="Copy username">
-                                <svg class="w-3.5 h-3.5 inline opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                            </button>
-                        </span>
-                        <span>•</span>
-                        <span>Sponsor / Upline: <strong data-current-member-sponsor class="text-orange-300">{{ $sponsorName }}</strong></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Header Quick Actions -->
-            <div class="flex items-center gap-2">
-                <button type="button" 
-                        data-btn-full-details
-                        @click="openDetailsModal({{ json_encode($curr) }})"
-                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                    <span>ℹ️</span> <span>Full Details</span>
-                </button>
-
-                <button type="button" 
-                        data-btn-edit-member
-                        @click="openEditModal({{ json_encode($curr) }})"
-                        class="px-4 py-2 bg-orange-600/90 hover:bg-orange-600 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                    <span>✏️</span> <span>Edit Member</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Metrics Grid: Direct Team, Own Investment & FME Progress -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            <!-- 1. Direct Team Count -->
-            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
-                <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Direct Team</span>
-                    <span data-current-direct-total class="text-white font-black">{{ $directTotal }}/10</span>
-                </div>
-                <div class="text-2xl font-black text-white flex items-baseline gap-2">
-                    <span data-current-direct-sub>{{ $directTotal }}</span>
-                    <span class="text-xs font-semibold text-slate-400">/ 10 Direct Slots</span>
-                </div>
-                <div data-current-direct-split class="text-xs text-slate-300 font-bold flex items-center gap-3 pt-1">
-                    <span class="text-emerald-400">👈 Left: {{ $directL }}/5</span>
-                    <span class="text-slate-600">|</span>
-                    <span class="text-blue-400">👉 Right: {{ $directR }}/5</span>
-                </div>
-            </div>
-
-            <!-- 2. Own Investment -->
-            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1">
-                <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Own Investment</span>
-                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                </div>
-                <div data-current-own-investment class="text-2xl font-black text-amber-300 truncate">
-                    <span x-text="$store.currency ? $store.currency.format({{ $ownInv }}) : '{{ \App\Services\CurrencyService::format($ownInv) }}'">{{ \App\Services\CurrencyService::format($ownInv) }}</span>
-                </div>
-                <div data-current-investment-count class="text-[11px] text-slate-400 truncate">
-                    {{ count($curr['contributions'] ?? []) }} Investment Records
-                </div>
-            </div>
-
-            <!-- 3. FME Progress -->
-            <div class="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div class="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center justify-between">
-                    <span>FME Status & Progress</span>
-                    @if($isFme)
-                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">
-                        Achieved
-                    </span>
-                    @else
-                    <span class="text-slate-400 text-[10px] font-bold">5L + 5R Target</span>
-                    @endif
-                </div>
-
-                @if($isFme)
-                <div class="text-base font-black text-emerald-400 flex items-center gap-1.5 pt-1">
-                    <span>★</span> <span>FME Qualified (5/5 L + 5/5 R)</span>
-                </div>
-                <div class="text-[11px] text-slate-400">
-                    All 10 direct placement slots have been completed.
-                </div>
-                @else
-                <div class="space-y-1.5 pt-0.5">
-                    <div class="flex items-center justify-between text-xs font-bold">
-                        <span class="text-emerald-400">Left: {{ $directL }}/5</span>
-                        <span class="text-blue-400">Right: {{ $directR }}/5</span>
-                    </div>
-                    <!-- Dual progress bar -->
-                    <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
-                        <div class="h-full bg-emerald-500 transition-all duration-300" style="width: {{ ($directL / 10) * 100 }}%"></div>
-                        <div class="h-full bg-blue-500 transition-all duration-300" style="width: {{ ($directR / 10) * 100 }}%"></div>
-                    </div>
-                </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== 4. DIRECT TEAM SECTIONS (5 LEFT + 5 RIGHT) ==================== -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        
-        <!-- ==================== LEFT DIRECT TEAM (5 POSITIONS) ==================== -->
-        <div class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 border-2 border-emerald-500/40 shadow-2xl space-y-4">
-            <!-- Section Header -->
-            <div class="flex items-center justify-between border-b border-emerald-500/30 pb-3.5">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/60 animate-pulse"></span>
-                    <h3 class="font-black text-base text-emerald-300 uppercase tracking-wider">
-                        👈 LEFT DIRECT TEAM
-                    </h3>
-                </div>
-                <div data-left-header-count class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
-                    {{ $directL }}/5 Positions Filled
-                </div>
-            </div>
-
-            <!-- 5 Left Slot Cards (L1 through L5) -->
-            <div data-left-slots-container class="space-y-3">
-                @for($s = 1; $s <= 5; $s++)
-                    @php
-                        $slotNode = $treeData['left_slots'][$s] ?? null;
-                    @endphp
-                    @if($slotNode)
-                        @include('binary.partials.node_card', ['node' => $slotNode, 'depth' => 2])
-                    @endif
-                @endfor
-            </div>
-        </div>
-
-        <!-- ==================== RIGHT DIRECT TEAM (5 POSITIONS) ==================== -->
-        <div class="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-3xl p-5 md:p-6 border-2 border-blue-500/40 shadow-2xl space-y-4">
-            <!-- Section Header -->
-            <div class="flex items-center justify-between border-b border-blue-500/30 pb-3.5">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-3.5 h-3.5 rounded-full bg-blue-400 shadow-md shadow-blue-400/60 animate-pulse"></span>
-                    <h3 class="font-black text-base text-blue-300 uppercase tracking-wider">
-                        RIGHT DIRECT TEAM 👉
-                    </h3>
-                </div>
-                <div data-right-header-count class="px-3 py-1 rounded-xl bg-blue-500/20 text-blue-300 font-black text-xs border border-blue-500/40">
-                    {{ $directR }}/5 Positions Filled
-                </div>
-            </div>
-
-            <!-- 5 Right Slot Cards (R1 through R5) -->
-            <div data-right-slots-container class="space-y-3">
-                @for($s = 1; $s <= 5; $s++)
-                    @php
-                        $slotNode = $treeData['right_slots'][$s] ?? null;
-                    @endphp
-                    @if($slotNode)
-                        @include('binary.partials.node_card', ['node' => $slotNode, 'depth' => 2])
-                    @endif
-                @endfor
-            </div>
-        </div>
-
-    </div>
+    @include('binary.partials.mindmap')
     @endif
 
     <!-- ==================== 5. MEMBER DETAILS MODAL / DRAWER ==================== -->
-    <div x-show="detailsModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="detailsModalOpen" 
          x-transition.opacity
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
          x-cloak>
@@ -714,7 +417,7 @@
 
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                         <span class="text-slate-400 text-[10px] font-bold uppercase">Phone Number</span>
-                        <div class="font-bold text-slate-900 mt-0.5" x-text="detailsNode.phone || '01700000000'"></div>
+                        <div class="font-bold text-slate-900 mt-0.5" x-text="detailsNode.phone || 'Not provided'"></div>
                     </div>
 
                     <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
@@ -728,39 +431,16 @@
                     </div>
                 </div>
 
-                <!-- SBL Ecosystem Credentials Box -->
-                <div class="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
-                    <div class="text-[11px] font-bold text-orange-300 uppercase tracking-wider flex items-center justify-between">
-                        <span>🔐 SBL Ecosystem Login Credentials</span>
-                        <span class="text-[10px] text-slate-400 font-normal">Official Portal Login</span>
+                <div class="rounded-xl border border-slate-200 p-4 space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3 class="text-sm font-semibold">Member credentials</h3>
+                        <button type="button" class="btn-secondary" :disabled="credentialsLoading" @click="toggleCredentials()" x-text="credentialsLoading ? 'Loading…' : (showDetailsPass ? 'Hide' : 'Show')"></button>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-                        <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                            <div>
-                                <span class="text-slate-400 text-[10px] font-medium">SBL Password:</span>
-                                <div class="font-mono font-bold text-white text-sm" x-text="showDetailsPass ? (detailsNode.password_plain || 'sbl123456') : '••••••••'"></div>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <button type="button" @click="showDetailsPass = !showDetailsPass" class="p-1 text-slate-400 hover:text-white" :title="showDetailsPass ? 'Hide' : 'Show'">
-                                    <span x-text="showDetailsPass ? '🙈' : '👁️'">👁️</span>
-                                </button>
-                                <button type="button" @click="navigator.clipboard.writeText(detailsNode.password_plain || 'sbl123456'); alert('SBL Password copied!');" class="p-1 text-slate-400 hover:text-white" title="Copy">
-                                    📋
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                            <div>
-                                <span class="text-slate-400 text-[10px] font-medium">SBL TPIN:</span>
-                                <div class="font-mono font-bold text-white text-sm" x-text="detailsNode.tpin || '1234'"></div>
-                            </div>
-                            <button type="button" @click="navigator.clipboard.writeText(detailsNode.tpin || '1234'); alert('TPIN copied!');" class="p-1 text-slate-400 hover:text-white" title="Copy">
-                                📋
-                            </button>
-                        </div>
-                    </div>
+                    <p class="text-xs text-slate-500">Saved credentials are shown only when requested.</p>
+                    <dl x-show="showDetailsPass" x-cloak class="grid grid-cols-2 gap-3 text-sm">
+                        <div><dt class="text-slate-500">Password</dt><dd class="break-all font-mono" x-text="credentials.password_plain || 'Not saved'"></dd></div>
+                        <div><dt class="text-slate-500">TPIN</dt><dd class="break-all font-mono" x-text="credentials.tpin || 'Not saved'"></dd></div>
+                    </dl>
                 </div>
 
                 <!-- Direct Team Counts -->
@@ -844,7 +524,7 @@
     </div>
 
     <!-- ==================== 6. PLACEMENT MODAL (+ ADD MEMBER) ==================== -->
-    <div x-show="placementModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="placementModalOpen" 
          x-transition.opacity
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
          x-cloak>
@@ -972,12 +652,12 @@
                 <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
                     <div>
                         <label class="block text-xs font-bold text-slate-800 mb-1">SBL Ecosystem Password</label>
-                        <input type="text" name="password_plain" value="sbl123456" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="SBL Ecosystem Pass">
+                        <input type="password" autocomplete="new-password" name="password_plain" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="SBL Ecosystem Pass">
                         <span class="text-[10px] text-slate-500 font-medium">Official SBL Portal login password</span>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-800 mb-1">SBL TPIN (Security PIN)</label>
-                        <input type="text" name="tpin" value="1234" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="1234">
+                        <input type="password" autocomplete="off" name="tpin" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="1234">
                         <span class="text-[10px] text-slate-500 font-medium">Account transaction security PIN</span>
                     </div>
                 </div>
@@ -995,7 +675,7 @@
     </div>
 
     <!-- ==================== 7. EDIT MEMBER MODAL ==================== -->
-    <div x-show="editModalOpen" 
+    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModalOpen" 
          x-transition.opacity
          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
          x-cloak>
@@ -1065,12 +745,12 @@
                 <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
                     <div>
                         <label class="block text-xs font-bold text-slate-800 mb-1">SBL Ecosystem Password</label>
-                        <input type="text" name="password_plain" x-model="editNode.password_plain" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <input type="password" autocomplete="new-password" placeholder="Leave blank to keep saved value" name="password_plain" x-model="editNode.password_plain" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
                         <span class="text-[10px] text-slate-500 font-medium">SBL Portal login password</span>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-800 mb-1">SBL TPIN</label>
-                        <input type="text" name="tpin" x-model="editNode.tpin" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
+                        <input type="password" autocomplete="new-password" placeholder="Leave blank to keep saved value" name="tpin" x-model="editNode.tpin" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-mono">
                         <span class="text-[10px] text-slate-500 font-medium">Transaction security PIN</span>
                     </div>
                 </div>
@@ -1107,11 +787,11 @@
                     <input type="hidden" name="contributions" :value="JSON.stringify(editNode.contributions)">
 
                     <template x-for="(c, idx) in editNode.contributions" :key="idx">
-                        <div class="flex items-center gap-2 text-xs bg-white p-2 rounded-lg border border-slate-200">
-                            <input type="number" x-model="c.amount" @input="recalcTotalContribution()" placeholder="Amount" class="w-24 p-1 text-xs border rounded font-mono font-bold">
-                            <input type="date" x-model="c.date" class="w-32 p-1 text-xs border rounded">
-                            <input type="text" x-model="c.note" placeholder="Note / Description" class="flex-1 p-1 text-xs border rounded">
-                            <button type="button" @click="removeContributionRow(idx)" class="text-rose-600 hover:text-rose-800 font-bold px-1 cursor-pointer">&times;</button>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white p-2 rounded-lg border border-slate-200">
+                            <input type="number" min="0" step="0.01" aria-label="Installment amount" x-model="c.amount" @input="recalcTotalContribution()" placeholder="Amount" class="w-full min-w-0 p-2 text-xs border rounded font-mono font-bold">
+                            <input type="date" aria-label="Installment date" x-model="c.date" class="w-full min-w-0 p-2 text-xs border rounded">
+                            <input type="text" aria-label="Installment note" x-model="c.note" placeholder="Note / Description" class="w-full min-w-0 p-2 text-xs border rounded">
+                            <button type="button" @click="removeContributionRow(idx)" class="text-rose-700 font-semibold px-2">Remove installment</button>
                         </div>
                     </template>
                 </div>
