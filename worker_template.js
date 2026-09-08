@@ -2638,10 +2638,12 @@ export default {
                 ]);
 
                 if (leadsRes?.results) liveLeads = leadsRes.results;
-                if (delLeadsRes?.results)
-                    deletedLeadIds = delLeadsRes.results.map((r) =>
-                        Number(r.id),
-                    );
+                if (delLeadsRes?.results) {
+                    const activeLeadIds = new Set((liveLeads || []).map((l) => Number(l.id)));
+                    deletedLeadIds = delLeadsRes.results
+                        .map((r) => Number(r.id))
+                        .filter((id) => !activeLeadIds.has(id));
+                }
                 if (nodesRes?.results) {
                     liveNodes = nodesRes.results;
                     for (const node of liveNodes) {

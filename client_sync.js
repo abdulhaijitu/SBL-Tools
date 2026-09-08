@@ -688,54 +688,72 @@
                       " Facebook</a>"
                     : "";
 
+            function renderMobileCard(lead) {
+                const initialLetter = escapeHtml(
+                    (lead.name || "?").charAt(0).toUpperCase(),
+                );
+                const stageClass = getStageBadgeClass(lead.stage || "new");
+                const stageLabel = (lead.stage || "new")
+                    .replace(/_/g, " ")
+                    .toUpperCase();
+                const tempClass = getTempBadgeClass(lead.temperature || "warm");
+                const tempLabel = (lead.temperature || "warm").toUpperCase();
+                const sourceName =
+                    (DATA.sources && DATA.sources[lead.lead_source_id]) || "Direct";
+                const cleanMobile = (lead.mobile || "").replace(/[^\d+]/g, "");
+                const cleanWhatsapp = (lead.whatsapp || lead.mobile || "").replace(/[^\d]/g, "");
+
+                const callBtn = cleanMobile
+                    ? '<a href="tel:' + cleanMobile + '" class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 transition-all">' +
+                      callIconSvg + '<span>Call</span></a>'
+                    : '';
+
+                const waBtn = cleanWhatsapp
+                    ? '<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" rel="noopener noreferrer" class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">' +
+                      waIconSvg + '<span>WhatsApp</span></a>'
+                    : '';
+
+                const detailsBtn = '<a href="/leads/' + lead.id + '" class="py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs text-center flex items-center justify-center gap-1 active:scale-95 transition-all"><span>Details</span><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></a>';
+
+                const nextActionHtml = lead.next_action_at
+                    ? '<div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100"><div class="flex items-center gap-1.5"><span>⏰</span><div><span class="font-semibold text-slate-700">' + escapeHtml(lead.next_action_type || 'Action') + '</span><span class="text-[11px] text-slate-400"> • ' + escapeHtml(lead.next_action_at) + '</span></div></div></div>'
+                    : '<div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100"><div class="flex items-center gap-1.5"><span>⏰</span><span class="text-amber-600 font-semibold text-[11px]">Needs Next Action</span></div></div>';
+
                 return (
                     '<div class="flex items-start justify-between gap-2">' +
                     '<div class="flex items-center gap-3">' +
                     (lead.photo
-                        ? '<div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-orange-200/50"><img src="' +
-                          escapeHtml(lead.photo) +
-                          '" class="w-full h-full object-cover"></div>'
-                        : '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' +
-                          initialLetter +
-                          "</div>") +
-                    "<div>" +
-                    '<a href="/leads/' +
-                    lead.id +
-                    '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' +
-                    escapeHtml(lead.name) +
-                    "</a>" +
-                    '<div class="text-xs text-slate-500">' +
-                    escapeHtml(lead.mobile) +
-                    "</div>" +
-                    "</div>" +
-                    "</div>" +
-                    '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ' +
-                    stageClass +
-                    '">' +
-                    stageLabel +
-                    "</span>" +
-                    "</div>" +
-                    '<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">' +
-                    '<div class="flex items-center gap-3">' +
+                        ? '<div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-orange-200/50"><img src="' + escapeHtml(lead.photo) + '" class="w-full h-full object-cover"></div>'
+                        : '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs border border-orange-200/50">' + initialLetter + '</div>') +
+                    '<div>' +
+                    '<a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + escapeHtml(lead.name) + '</a>' +
+                    '<div class="text-[11px] text-slate-400 mt-0.5">' + escapeHtml(lead.location || 'No location') + (lead.profession_or_business ? ' • ' + escapeHtml(lead.profession_or_business) : '') + '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ' + stageClass + '">' + stageLabel + '</span>' +
+                    '</div>' +
+
+                    '<div class="flex flex-wrap items-center gap-1.5 text-[11px]">' +
+                    '<span class="px-2 py-0.5 rounded-full font-semibold border ' + tempClass + '">' + tempLabel + (lead.score ? ' (' + lead.score + ' pts)' : '') + '</span>' +
+                    '<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">' + escapeHtml(sourceName) + '</span>' +
+                    (lead.lead_tag ? '<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 font-bold">' + escapeHtml(lead.lead_tag) + '</span>' : '') +
+                    '</div>' +
+
+                    nextActionHtml +
+
+                    '<div class="grid grid-cols-3 gap-2 pt-1">' +
                     callBtn +
                     waBtn +
-                    fbBtn +
-                    "</div>" +
-                    '<div class="flex items-center gap-1.5">' +
-                    '<a href="/leads/' +
-                    lead.id +
-                    '" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a>' +
-                    '<a href="/leads/' +
-                    lead.id +
-                    '/edit" class="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 font-semibold text-xs">Edit</a>' +
-                    '<form action="/leads/' +
-                    lead.id +
-                    '" method="POST" onsubmit="return confirm(\'Are you sure you want to delete this lead?\');" class="inline">' +
+                    detailsBtn +
+                    '</div>' +
+
+                    '<div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">' +
+                    '<a href="/leads/' + lead.id + '/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>Edit</a>' +
+                    '<form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(\'Are you sure you want to delete this lead?\');" class="inline">' +
                     '<input type="hidden" name="_method" value="DELETE">' +
-                    '<button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold text-xs">Delete</button>' +
-                    "</form>" +
-                    "</div>" +
-                    "</div>"
+                    '<button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Delete</button>' +
+                    '</form>' +
+                    '</div>'
                 );
             }
 
