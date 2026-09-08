@@ -121,9 +121,11 @@
                                         <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-bold uppercase">You</span>
                                     @endif
                                 </div>
-                                <div class="text-xs text-slate-400">{{ $user->email }}</div>
+                                <div class="text-xs text-slate-500 font-mono">📱 Login: <span class="font-bold text-slate-700">{{ $user->phone ?: 'None' }}</span></div>
+                                @if($user->email && !str_ends_with($user->email, '@sbl.test'))
+                                    <div class="text-[11px] text-slate-400">{{ $user->email }}</div>
+                                @endif
                             </div>
-                        </div>
                     </td>
 
                     <!-- Role Badge -->
@@ -309,8 +311,11 @@
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl">👤</span>
-                    <h3 class="text-base font-bold text-slate-900">Add New Team Member</h3>
+                    <span class="text-xl">🔐</span>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Add New System Auth User</h3>
+                        <p class="text-[11px] text-slate-500">মোবাইল নম্বর ও পাসওয়ার্ড সেট করুন (লগইনের জন্য ব্যবহার হবে)</p>
+                    </div>
                 </div>
                 <button @click="createModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
             </div>
@@ -324,20 +329,16 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address *</label>
-                        <input type="email" name="email" required placeholder="mahfuz@sbl.test" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number (লগইন আইডি) *</label>
+                        <input type="text" name="phone" required placeholder="017XXXXXXXX" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number</label>
-                        <input type="text" name="phone" placeholder="017xxxxxxxx" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Login Password (পাসওয়ার্ড) *</label>
+                        <input type="password" name="password" required minlength="6" placeholder="কমপক্ষে ৬ ক্যারেক্টার" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Designation</label>
-                        <input type="text" name="designation" placeholder="e.g. Senior Sales Agent" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                    </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assign Role *</label>
                         <select name="role_id" required class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
@@ -347,16 +348,29 @@
                             @endforeach
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Account Status</label>
+                        <select name="status" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                            <option value="active" selected>🟢 Active (লগইন করতে পারবে)</option>
+                            <option value="inactive">🔴 Inactive (লগইন ব্লক থাকবে)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Initial Password *</label>
-                    <input type="password" name="password" required minlength="8" placeholder="Minimum 8 characters" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Designation (পদবী)</label>
+                        <input type="text" name="designation" placeholder="e.g. Sales Executive" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email (ঐচ্ছিক / Optional)</label>
+                        <input type="email" name="email" placeholder="ফাঁকা রাখলে অটো সেট হবে" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
                     <button type="button" @click="createModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
-                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-sm transition-colors">Create Member</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-sm transition-colors">Create Auth User</button>
                 </div>
             </form>
         </div>
@@ -372,7 +386,10 @@
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xl">✏️</span>
-                    <h3 class="text-base font-bold text-slate-900">Edit Member: <span class="text-orange-600" x-text="editingUser.name"></span></h3>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Edit User & Login: <span class="text-orange-600" x-text="editingUser.name"></span></h3>
+                        <p class="text-[11px] text-slate-500">ইউজার নিয়ন্ত্রণ, মোবাইল নম্বর বা পাসওয়ার্ড পরিবর্তন</p>
+                    </div>
                 </div>
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold">&times;</button>
             </div>
@@ -387,19 +404,22 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address *</label>
-                        <input type="email" name="email" x-model="editingUser.email" required class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number (লগইন আইডি) *</label>
+                        <input type="text" name="phone" x-model="editingUser.phone" required class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number</label>
-                        <input type="text" name="phone" x-model="editingUser.phone" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Set New Password (নতুন পাসওয়ার্ড)</label>
+                        <input type="password" name="password" minlength="6" placeholder="পরিবর্তন না করতে চাইলে ফাঁকা রাখুন" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Designation</label>
-                        <input type="text" name="designation" x-model="editingUser.designation" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Account Status (ইউজার কন্ট্রোল)</label>
+                        <select name="status" x-model="editingUser.status" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-semibold">
+                            <option value="active">🟢 Active (অনুমোদিত - লগইন করতে পারবে)</option>
+                            <option value="inactive">🔴 Inactive (নিষ্ক্রিয় - লগইন ব্লক থাকবে)</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Role *</label>
@@ -413,21 +433,18 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Account Status</label>
-                        <select name="status" x-model="editingUser.status" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="active">🟢 Active</option>
-                            <option value="inactive">🔴 Inactive</option>
-                        </select>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Designation</label>
+                        <input type="text" name="designation" x-model="editingUser.designation" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Change Password</label>
-                        <input type="password" name="password" minlength="8" placeholder="Leave blank to keep current" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
+                        <input type="email" name="email" x-model="editingUser.email" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
                     <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800">Cancel</button>
-                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-sm transition-colors">Update Member</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-sm transition-colors">Update User</button>
                 </div>
             </form>
         </div>

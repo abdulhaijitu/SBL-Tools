@@ -512,11 +512,17 @@
                 const stageLabel = (lead.stage || "new")
                     .replace("_", " ")
                     .toUpperCase();
-                const cleanWhatsapp = (
+                let cleanWhatsapp = (
                     lead.whatsapp ||
                     lead.mobile ||
                     ""
                 ).replace(/[^0-9]/g, "");
+                if (
+                    cleanWhatsapp.startsWith("01") &&
+                    cleanWhatsapp.length === 11
+                ) {
+                    cleanWhatsapp = "88" + cleanWhatsapp;
+                }
                 const stageClass = getStageBadgeClass(lead.stage || "new");
                 const fbUrl = lead.facebook_url || "";
 
@@ -1524,6 +1530,31 @@
                     );
                     if (userEl) userEl.textContent = username;
 
+                    const codeEl = document.querySelector(
+                        "[data-current-member-code]",
+                    );
+                    if (codeEl)
+                        codeEl.textContent =
+                            currentMember.member_code ||
+                            "SBL-" + currentMember.id;
+
+                    const phoneEl = document.querySelector(
+                        "[data-current-member-phone]",
+                    );
+                    const phoneSepEl = document.querySelector(
+                        "[data-current-member-phone-sep]",
+                    );
+                    if (phoneEl) {
+                        phoneEl.textContent = currentMember.phone || "";
+                        if (phoneSepEl)
+                            phoneSepEl.style.display = currentMember.phone
+                                ? ""
+                                : "none";
+                        phoneEl.style.display = currentMember.phone
+                            ? ""
+                            : "none";
+                    }
+
                     const sponEl = document.querySelector(
                         "[data-current-member-sponsor]",
                     );
@@ -1570,16 +1601,16 @@
                     );
                     if (lHdrCount)
                         lHdrCount.textContent =
-                            currentMember.direct_left_count +
-                            "/5 Positions Filled";
+                            (currentMember.direct_left_count || 0) +
+                            " Active / 5 Max";
 
                     const rHdrCount = document.querySelector(
                         "[data-right-header-count]",
                     );
                     if (rHdrCount)
                         rHdrCount.textContent =
-                            currentMember.direct_right_count +
-                            "/5 Positions Filled";
+                            (currentMember.direct_right_count || 0) +
+                            " Active / 5 Max";
 
                     const btnDetails = document.querySelector(
                         "[data-btn-full-details]",
@@ -1589,7 +1620,7 @@
                             var c = document.querySelector("[x-data]");
                             if (c && c._x_dataStack)
                                 c._x_dataStack[0].openDetailsModal(
-                                    currentMember,
+                                    currentMember.id,
                                 );
                         };
                     }
@@ -1614,33 +1645,28 @@
                         parentCode,
                     ) {
                         const isLeft = branch === "LEFT";
-                        const slotLabel = branch + "-" + slotNumber;
+                        const slotLabel = (isLeft ? "L-" : "R-") + slotNumber;
                         if (!node || node.is_vacant) {
                             return (
-                                '<div class="w-full p-4 rounded-2xl border-2 border-dashed ' +
+                                '<div class="p-4 rounded-2xl border-2 border-dashed ' +
                                 (isLeft
-                                    ? "border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-900/30"
-                                    : "border-blue-500/30 bg-blue-950/20 hover:bg-blue-900/30") +
-                                ' transition-all flex flex-col justify-between space-y-3 text-white shadow-md group relative">' +
-                                '<div class="flex items-center justify-between">' +
-                                '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ' +
+                                    ? "border-emerald-300/80 bg-emerald-50/20 hover:bg-emerald-50/60"
+                                    : "border-blue-300/80 bg-blue-50/20 hover:bg-blue-50/60") +
+                                ' transition-all flex items-center justify-between gap-3 group">' +
+                                '<div class="flex items-center gap-3">' +
+                                '<div class="w-10 h-10 rounded-xl ' +
                                 (isLeft
-                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                                    : "bg-blue-500/20 text-blue-300 border border-blue-500/40") +
-                                '">' +
+                                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                    : "bg-blue-100 text-blue-700 border-blue-200") +
+                                ' font-bold flex items-center justify-center text-xs border">' +
                                 slotLabel +
-                                "</span>" +
-                                '<span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Vacant Slot</span>' +
                                 "</div>" +
-                                '<div class="py-2 text-center">' +
-                                '<div class="w-10 h-10 mx-auto rounded-full ' +
-                                (isLeft
-                                    ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950"
-                                    : "bg-blue-500/20 text-blue-400 group-hover:bg-blue-500 group-hover:text-slate-950") +
-                                ' flex items-center justify-center text-xl font-black transition-all">+</div>' +
-                                '<div class="text-xs font-bold text-slate-300 mt-1">' +
+                                "<div>" +
+                                '<div class="text-xs font-bold text-slate-700">Slot ' +
                                 slotLabel +
-                                " is Available</div>" +
+                                " (খালি রয়েছে)</div>" +
+                                '<div class="text-[11px] text-slate-400">নতুন মেম্বারকে এই পজিশনে বসান</div>' +
+                                "</div>" +
                                 "</div>" +
                                 '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openPlacementModal(' +
                                 parentId +
@@ -1652,130 +1678,129 @@
                                 branch +
                                 "', " +
                                 slotNumber +
-                                '); } })() : null" class="w-full py-2 px-3 rounded-xl ' +
+                                '); } })() : null" class="px-3.5 py-2 rounded-xl ' +
                                 (isLeft
-                                    ? "bg-emerald-600 hover:bg-emerald-500"
-                                    : "bg-blue-600 hover:bg-blue-500") +
-                                ' text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">' +
-                                "<span>+</span> <span>Add Member</span>" +
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-blue-600 hover:bg-blue-700") +
+                                ' text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer">' +
+                                "<span>➕</span> <span>Place Member</span>" +
                                 "</button>" +
                                 "</div>"
                             );
                         }
 
                         const isTarget = Boolean(Number(node.is_target));
-                        let cardBorder = "";
-                        let slotBadge = "";
-                        if (isTarget) {
-                            cardBorder =
-                                "border-purple-500/40 bg-gradient-to-b from-purple-950/70 via-slate-900/90 to-purple-950/60";
-                            slotBadge =
-                                "bg-purple-500/30 text-purple-300 border-purple-400/40";
-                        } else if (isLeft) {
-                            cardBorder =
-                                "border-emerald-500/35 bg-gradient-to-b from-emerald-950/50 via-slate-900/95 to-slate-950";
-                            slotBadge =
-                                "bg-emerald-500/25 text-emerald-300 border-emerald-500/40";
-                        } else {
-                            cardBorder =
-                                "border-blue-500/35 bg-gradient-to-b from-blue-950/50 via-slate-900/95 to-slate-950";
-                            slotBadge =
-                                "bg-blue-500/25 text-blue-300 border-blue-500/40";
+                        const cCode = node.member_code || "SBL-" + node.id;
+                        let cPv = Number(node.point_value) || 100;
+                        let cleanPhone = (node.phone || "").replace(
+                            /[^0-9]/g,
+                            "",
+                        );
+                        let waNum = cleanPhone;
+                        if (waNum.startsWith("01") && waNum.length === 11) {
+                            waNum = "88" + waNum;
                         }
 
-                        const cCode = node.member_code || "SBL-" + node.id;
-                        const cUser =
-                            node.username ||
-                            (cCode.startsWith("@")
-                                ? cCode
-                                : "@" +
-                                  cCode
-                                      .replace(/[^a-zA-Z0-9_]/g, "")
-                                      .toLowerCase());
-                        const dL = Number(node.direct_left_count) || 0;
-                        const dR = Number(node.direct_right_count) || 0;
-                        const dTot = dL + dR;
-                        let cContribs = [];
-                        try {
-                            cContribs =
-                                typeof node.contributions === "string"
-                                    ? JSON.parse(node.contributions)
-                                    : node.contributions || [];
-                        } catch (e) {}
-                        let cPv = Number(node.point_value) || 0;
-                        if (Array.isArray(cContribs) && cContribs.length > 0) {
-                            cPv = cContribs.reduce(function (sum, c) {
-                                return sum + (Number(c.amount) || 0);
-                            }, 0);
+                        let phoneIconsHtml = "";
+                        if (node.phone) {
+                            phoneIconsHtml +=
+                                '<a href="tel:' +
+                                escapeHtml(node.phone) +
+                                '" title="Call ' +
+                                escapeHtml(node.phone) +
+                                '" class="w-7 h-7 rounded-lg ' +
+                                (isLeft
+                                    ? "bg-emerald-50 hover:bg-emerald-600 text-emerald-600"
+                                    : "bg-blue-50 hover:bg-blue-600 text-blue-600") +
+                                ' hover:text-white flex items-center justify-center transition-all shadow-2xs">' +
+                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>' +
+                                "</a>";
+                            if (waNum) {
+                                phoneIconsHtml +=
+                                    '<a href="https://wa.me/' +
+                                    waNum +
+                                    '" target="_blank" title="WhatsApp" class="w-7 h-7 rounded-lg ' +
+                                    (isLeft
+                                        ? "bg-emerald-50 hover:bg-emerald-600 text-emerald-600"
+                                        : "bg-blue-50 hover:bg-blue-600 text-blue-600") +
+                                    ' hover:text-white flex items-center justify-center transition-all shadow-2xs">' +
+                                    '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>' +
+                                    "</a>";
+                            }
                         }
 
                         return (
                             '<div data-node-id="' +
                             node.id +
-                            '" class="w-full rounded-2xl border ' +
-                            cardBorder +
-                            ' shadow-xl p-4 flex flex-col justify-between space-y-3.5 text-white select-none transition-all duration-200 hover:shadow-2xl hover:border-orange-500/50">' +
-                            '<div class="flex items-center justify-between gap-1">' +
-                            '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ' +
-                            slotBadge +
-                            ' border">' +
+                            '" class="p-4 rounded-2xl bg-white border border-slate-200 hover:' +
+                            (isLeft
+                                ? "border-emerald-400/80"
+                                : "border-blue-400/80") +
+                            ' shadow-xs hover:shadow-md transition-all space-y-3">' +
+                            '<div class="flex items-start justify-between gap-3">' +
+                            '<div class="flex items-center gap-3">' +
+                            '<div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-orange-400 font-black text-sm flex items-center justify-center shadow-xs flex-shrink-0 border border-slate-700">' +
+                            escapeHtml(
+                                (node.member_name || "M")
+                                    .charAt(0)
+                                    .toUpperCase(),
+                            ) +
+                            "</div>" +
+                            "<div>" +
+                            '<div class="flex items-center gap-2">' +
+                            '<span class="px-2 py-0.5 rounded-md ' +
+                            (isLeft
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-blue-100 text-blue-800") +
+                            ' font-black text-[10px]">' +
+                            "SLOT " +
                             slotLabel +
                             "</span>" +
-                            '<div class="flex items-center gap-1.5">' +
+                            '<span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">GEN 1</span>' +
                             (isTarget
-                                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/30 text-purple-200 border border-purple-400/40">🎯 Target</span>'
+                                ? '<span class="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">🎯 Target</span>'
                                 : "") +
-                            '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black ' +
-                            (node.is_fme
-                                ? "bg-amber-400 text-slate-950 font-black shadow-xs"
-                                : "bg-slate-800 text-slate-200 border border-slate-700") +
-                            '">' +
-                            escapeHtml(node.rank_name || "Member") +
-                            "</span>" +
                             "</div>" +
-                            "</div>" +
-                            '<div class="space-y-1">' +
-                            '<h4 class="font-black text-base text-white leading-tight tracking-tight hover:text-orange-400 transition-colors cursor-pointer" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
+                            '<div class="font-black text-slate-900 text-sm mt-0.5 hover:text-orange-600 cursor-pointer" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
                             node.id +
                             '); } })() : null">' +
                             escapeHtml(node.member_name) +
-                            "</h4>" +
-                            '<div class="text-xs text-slate-400 font-mono flex items-center gap-1.5">' +
+                            "</div>" +
+                            '<div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">' +
                             "<span>" +
-                            escapeHtml(cUser) +
+                            escapeHtml(cCode) +
                             "</span>" +
-                            (node.phone
-                                ? '<span class="text-slate-600">•</span><span class="text-slate-300 font-sans">' +
-                                  escapeHtml(node.phone) +
-                                  "</span>"
-                                : "") +
                             "</div>" +
                             "</div>" +
-                            '<div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">' +
-                            '<div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800 space-y-0.5">' +
-                            '<div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Own Inv</div>' +
-                            '<div class="font-black text-amber-300 truncate"><span>' +
-                            fmtMoney(cPv) +
-                            "</span></div>" +
                             "</div>" +
-                            '<div class="p-2 rounded-xl bg-slate-950/70 border border-slate-800 space-y-0.5">' +
-                            '<div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Direct Team</div>' +
-                            '<div class="font-black text-white flex items-center justify-between"><span>' +
-                            dTot +
-                            '/10</span><span class="text-[10px] text-slate-400 font-normal">(' +
-                            dL +
-                            "L | " +
-                            dR +
-                            "R)</span></div>" +
+                            '<div class="flex items-center gap-1">' +
+                            phoneIconsHtml +
                             "</div>" +
                             "</div>" +
-                            '<div class="pt-1 flex items-center gap-2">' +
+                            '<div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">' +
+                            '<div class="flex items-center gap-2">' +
+                            '<span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">' +
+                            escapeHtml(node.rank_name || "Member") +
+                            "</span>" +
+                            '<span class="font-black ' +
+                            (isLeft
+                                ? "text-emerald-700 bg-emerald-50 border-emerald-200/80"
+                                : "text-blue-700 bg-blue-50 border-blue-200/80") +
+                            ' px-2 py-0.5 rounded border text-[11px]">' +
+                            cPv +
+                            " BV</span>" +
+                            '<span class="text-slate-400 text-[11px]">' +
+                            escapeHtml(node.package_name || "National") +
+                            "</span>" +
+                            "</div>" +
+                            '<div class="flex items-center gap-1.5">' +
                             '<a href="/team/' +
                             node.id +
-                            '" class="flex-1 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5" title="Explore this member\'s 10-slot team"><span>👥</span> <span>View Team</span></a>' +
+                            '" class="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-600 text-orange-700 hover:text-white font-bold text-xs transition-all flex items-center gap-1 border border-orange-200/60 shadow-2xs"><span>👥</span> <span>Explore Team</span></a>' +
                             '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
                             node.id +
-                            '); } })() : null" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer" title="View member details"><span>ℹ️</span> <span>Details</span></button>' +
+                            '); } })() : null" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer" title="View Details">👁️</button>' +
+                            "</div>" +
                             "</div>" +
                             "</div>"
                         );
@@ -1853,13 +1878,36 @@
                             const nameDiv = existingRow.querySelector(
                                 ".font-bold.text-slate-900",
                             );
-                            if (nameDiv) nameDiv.textContent = node.member_name;
+                            if (nameDiv) {
+                                nameDiv.textContent = node.member_name;
+                                nameDiv.onclick = function () {
+                                    var c = document.querySelector("[x-data]");
+                                    if (c && c._x_dataStack)
+                                        c._x_dataStack[0].openDetailsModal(
+                                            node.id,
+                                        );
+                                };
+                            }
                             const codeDiv =
                                 existingRow.querySelector(".font-mono");
-                            if (codeDiv)
-                                codeDiv.textContent =
-                                    (node.member_code || "SBL-" + node.id) +
-                                    (node.phone ? " • " + node.phone : "");
+                            if (codeDiv) {
+                                codeDiv.innerHTML =
+                                    "<span>" +
+                                    escapeHtml(
+                                        node.member_code || "SBL-" + node.id,
+                                    ) +
+                                    "</span>" +
+                                    (node.phone
+                                        ? "<span> • </span><span>" +
+                                          escapeHtml(node.phone) +
+                                          "</span>"
+                                        : "") +
+                                    (node.notes
+                                        ? ' <span title="' +
+                                          escapeHtml(node.notes) +
+                                          '" class="cursor-help text-amber-600">📝</span>'
+                                        : "");
+                            }
                         } else {
                             const tr = document.createElement("tr");
                             tr.setAttribute("data-node-id", node.id);
@@ -2512,6 +2560,74 @@
                         calContainer.prepend(cCard);
                     });
                 }
+            }
+        // 10. AUTH USERS SYNC - ONLY on /users!
+        if (curPath === "/users" || curPath.startsWith("/users?")) {
+            if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
+                DATA.deletedUsers.forEach(function (id) {
+                    document.querySelectorAll('[data-user-id="' + id + '"]').forEach(function (el) {
+                        el.remove();
+                    });
+                });
+            }
+            if (DATA.users && DATA.users.length > 0) {
+                const tbody = document.querySelector("table tbody.divide-y");
+                DATA.users.forEach(function (u) {
+                    const row = document.querySelector('tr[data-user-id="' + u.id + '"]');
+                    if (row) {
+                        const statusCell = row.children[5];
+                        if (statusCell) {
+                            const isAct = u.status === "active";
+                            statusCell.innerHTML = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' +
+                                (isAct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' +
+                                (isAct ? 'Active' : 'Inactive') + '</span>';
+                        }
+                        const phoneSpan = row.querySelector('.font-mono span');
+                        if (phoneSpan && u.phone) {
+                            phoneSpan.textContent = u.phone;
+                        }
+                    } else if (tbody) {
+                        const tr = document.createElement("tr");
+                        tr.setAttribute("data-user-id", u.id);
+                        tr.className = "hover:bg-slate-50/60 transition-colors";
+                        const isAct = u.status === "active";
+                        const initial = (u.name || "U").charAt(0).toUpperCase();
+
+                        tr.innerHTML = '<td class="py-3 px-4"><div class="flex items-center gap-3">' +
+                            '<div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">' +
+                            initial + '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' +
+                            (u.name || "User") + '</span></div><div class="text-xs text-slate-500 font-mono">📱 Login: <span class="font-bold text-slate-700">' +
+                            (u.phone || "None") + '</span></div></div></div></td>' +
+                            '<td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold border bg-emerald-100 text-emerald-800 border-emerald-200">Member</span></td>' +
+                            '<td class="py-3 px-4 text-slate-700 font-medium">' + (u.designation || "Affiliate Partner") + '</td>' +
+                            '<td class="py-3 px-4 text-xs font-mono text-slate-600">' + (u.phone || '<span class="text-slate-400 italic">No phone set</span>') + '</td>' +
+                            '<td class="py-3 px-4 text-center"><div class="inline-flex items-center gap-2 text-xs"><span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span></div></td>' +
+                            '<td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' +
+                            (isAct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isAct ? 'Active' : 'Inactive') + '</span></td>' +
+                            '<td class="py-3 px-4 text-right space-x-2"><button type="button" class="text-orange-600 hover:text-orange-800 font-semibold text-xs px-2 py-1 rounded hover:bg-orange-50 transition-colors">Edit</button>' +
+                            '<form action="/users/' + u.id + '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
+
+                        const editBtn = tr.querySelector("button");
+                        if (editBtn) {
+                            editBtn.addEventListener("click", function () {
+                                const alpine = document.querySelector("[x-data]");
+                                if (alpine && alpine._x_dataStack) {
+                                    alpine._x_dataStack[0].editingUser = {
+                                        id: u.id,
+                                        name: u.name || "",
+                                        email: u.email || "",
+                                        phone: u.phone || "",
+                                        designation: u.designation || "",
+                                        role_id: u.role_id || "2",
+                                        status: u.status || "active"
+                                    };
+                                    alpine._x_dataStack[0].editModalOpen = true;
+                                }
+                            });
+                        }
+                        tbody.prepend(tr);
+                    }
+                });
             }
         }
     }

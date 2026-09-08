@@ -13,29 +13,29 @@
         <!-- Top Banner: Active Root Info -->
         <div class="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-orange-950 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black text-2xl flex items-center justify-center shadow-lg border-2 border-white/20 flex-shrink-0">
+                <div data-current-member-initial class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black text-2xl flex items-center justify-center shadow-lg border-2 border-white/20 flex-shrink-0">
                     {{ substr($root->member_name ?? 'M', 0, 1) }}
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="text-xl font-black text-white tracking-tight">{{ $root->member_name ?? 'Team Root' }}</h2>
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-orange-500/30 text-orange-200 border border-orange-400/40">
+                        <h2 data-current-member-name class="text-xl font-black text-white tracking-tight">{{ $root->member_name ?? 'Team Root' }}</h2>
+                        <span data-current-member-rank class="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-orange-500/30 text-orange-200 border border-orange-400/40">
                             {{ $root->rank_name ?? 'Member' }}
                         </span>
                         @if(!empty($stats['is_fme']))
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                            <span data-current-member-fme class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
                                 FME QUALIFIED
                             </span>
                         @endif
                     </div>
                     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300 font-mono mt-1">
-                        <span class="text-orange-300 font-bold">{{ $root->member_code ?? ('SBL-' . $root->id) }}</span>
+                        <span data-current-member-code class="text-orange-300 font-bold">{{ $root->member_code ?? ('SBL-' . $root->id) }}</span>
                         @if($root->phone)
-                            <span>•</span>
-                            <span>{{ $root->phone }}</span>
+                            <span data-current-member-phone-sep>•</span>
+                            <span data-current-member-phone>{{ $root->phone }}</span>
                         @endif
                         <span>•</span>
-                        <span class="text-slate-400 font-sans">Sponsor: <strong>{{ $stats['sponsor_name'] ?? 'Not assigned' }}</strong></span>
+                        <span class="text-slate-400 font-sans">Sponsor: <strong data-current-member-sponsor>{{ $stats['sponsor_name'] ?? 'Not assigned' }}</strong></span>
                     </div>
                 </div>
             </div>
@@ -50,7 +50,8 @@
                     </a>
                 @endif
                 <button type="button" 
-                        @click="openDetailsModal({{ json_encode(\Illuminate\Support\Arr::except($treeData['current_member'], ['left_slots', 'right_slots'])) }})" 
+                        data-btn-full-details
+                        @click="openDetailsModal({{ $root->id }})" 
                         class="px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
                     <span>👁️</span>
                     <span>Full Profile</span>
@@ -198,7 +199,7 @@
                     <h3 class="text-sm font-black text-slate-900">LEFT TEAM (৫টি স্লট)</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
+                    <span data-left-header-count class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/80">
                         {{ $leftFilledCount }} Active / 5 Max
                     </span>
                     @if($firstVacantLeft)
@@ -211,7 +212,7 @@
                 </div>
             </div>
 
-            <div class="space-y-3">
+            <div data-left-slots-container class="space-y-3">
                 @for($slot = 1; $slot <= 5; $slot++)
                     @php $slotData = $leftSlots[$slot] ?? ['is_vacant' => true, 'slot_number' => $slot, 'branch' => 'LEFT']; @endphp
                     
@@ -255,7 +256,7 @@
                                             @endif
                                         </div>
                                         <div class="font-black text-slate-900 text-sm mt-0.5 hover:text-orange-600 cursor-pointer"
-                                             @click="openDetailsModal({{ json_encode(\Illuminate\Support\Arr::except($slotData, ['left_slots', 'right_slots'])) }})">
+                                             @click="openDetailsModal({{ $slotData['id'] }})">
                                             {{ $slotData['member_name'] }}
                                         </div>
                                         <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
@@ -310,7 +311,7 @@
                                         <span>Explore Team</span>
                                     </a>
                                     <button type="button" 
-                                            @click="openDetailsModal({{ json_encode(\Illuminate\Support\Arr::except($slotData, ['left_slots', 'right_slots'])) }})"
+                                            @click="openDetailsModal({{ $slotData['id'] }})"
                                             class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
                                             title="View Details">
                                         👁️
@@ -331,7 +332,7 @@
                     <h3 class="text-sm font-black text-slate-900">RIGHT TEAM (৫টি স্লট)</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/80">
+                    <span data-right-header-count class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/80">
                         {{ $rightFilledCount }} Active / 5 Max
                     </span>
                     @if($firstVacantRight)
@@ -344,7 +345,7 @@
                 </div>
             </div>
 
-            <div class="space-y-3">
+            <div data-right-slots-container class="space-y-3">
                 @for($slot = 1; $slot <= 5; $slot++)
                     @php $slotData = $rightSlots[$slot] ?? ['is_vacant' => true, 'slot_number' => $slot, 'branch' => 'RIGHT']; @endphp
                     
@@ -388,7 +389,7 @@
                                             @endif
                                         </div>
                                         <div class="font-black text-slate-900 text-sm mt-0.5 hover:text-orange-600 cursor-pointer"
-                                             @click="openDetailsModal({{ json_encode(\Illuminate\Support\Arr::except($slotData, ['left_slots', 'right_slots'])) }})">
+                                             @click="openDetailsModal({{ $slotData['id'] }})">
                                             {{ $slotData['member_name'] }}
                                         </div>
                                         <div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
@@ -443,7 +444,7 @@
                                         <span>Explore Team</span>
                                     </a>
                                     <button type="button" 
-                                            @click="openDetailsModal({{ json_encode(\Illuminate\Support\Arr::except($slotData, ['left_slots', 'right_slots'])) }})"
+                                            @click="openDetailsModal({{ $slotData['id'] }})"
                                             class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
                                             title="View Details">
                                         👁️

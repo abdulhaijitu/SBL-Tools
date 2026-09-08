@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+
 // SBL Growth Manager - Cloudflare Worker Edge Application
 // Serves the exact, 100% pixel-perfect compiled Laravel Blade views and handles real D1 CRUD on the edge.
 
@@ -8,6 +10,72 @@ const CSS_PATH = __CSS_PATH__;
 const JS_PATH = __JS_PATH__;
 const PAGES = __PAGES__;
 const CLIENT_SYNC_JS = __CLIENT_SYNC_JS__;
+const MANIFEST_CONTENT = __MANIFEST_CONTENT__;
+const SW_CONTENT = __SW_CONTENT__;
+const OFFLINE_CONTENT = __OFFLINE_CONTENT__;
+
+const APP_SECRET = "jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=";
+
+async function signSession(userId, secret = APP_SECRET) {
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+    const data = `${userId}.${expiry}`;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+    const sigHex = Array.from(new Uint8Array(sigBuf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    return `${data}.${sigHex}`;
+}
+
+async function verifySession(token, secret = APP_SECRET) {
+    if (!token || typeof token !== "string") return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [userIdStr, expiryStr, expectedSigHex] = parts;
+    const expiry = parseInt(expiryStr, 10);
+    if (isNaN(expiry) || Date.now() > expiry) return null;
+
+    const data = `${userIdStr}.${expiryStr}`;
+    const enc = new TextEncoder();
+    try {
+        const key = await crypto.subtle.importKey(
+            "raw",
+            enc.encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"],
+        );
+        const match = expectedSigHex.match(/.{1,2}/g);
+        if (!match) return null;
+        const sigBytes = new Uint8Array(
+            match.map((byte) => parseInt(byte, 16)),
+        );
+        const isValid = await crypto.subtle.verify(
+            "HMAC",
+            key,
+            sigBytes,
+            enc.encode(data),
+        );
+        return isValid ? parseInt(userIdStr, 10) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getCookie(name, cookieStr) {
+    if (!cookieStr) return null;
+    const match = cookieStr.match(
+        new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"),
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+}
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return "";
@@ -64,11 +132,181 @@ export default {
             });
         }
 
+        // 4. PWA Assets (Manifest, Service Worker, Offline HTML, Icons)
+        if (path === "/manifest.webmanifest" || path === "/manifest.json") {
+            return new Response(MANIFEST_CONTENT, {
+                headers: {
+                    "Content-Type": "application/manifest+json; charset=utf-8",
+                    "Cache-Control": "public, max-age=86400",
+                },
+            });
+        }
+
+        if (path === "/sw.js") {
+            return new Response(SW_CONTENT, {
+                headers: {
+                    "Content-Type": "application/javascript; charset=utf-8",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                },
+            });
+        }
+
+        if (path === "/offline.html") {
+            return new Response(OFFLINE_CONTENT, {
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control": "public, max-age=3600",
+                },
+            });
+        }
+
+        if (path.startsWith("/icons/")) {
+            const binaryString = atob(SBL_LOGO_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
         if (path === "/ping") {
             return new Response("pong", { status: 200 });
         }
 
         const db = env.DB || env.sbl_database;
+
+        // 5. Authentication: Logout
+        if (path === "/logout") {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/login",
+                    "Set-Cookie":
+                        "sbl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
+                },
+            });
+        }
+
+        // 6. Authentication: Login POST
+        if (path === "/login" && request.method === "POST") {
+            let formData = null;
+            const contentType = request.headers.get("content-type") || "";
+            if (
+                contentType.includes("form") ||
+                contentType.includes("multipart") ||
+                contentType.includes("urlencoded")
+            ) {
+                try {
+                    formData = await request.formData();
+                } catch (e) {}
+            } else if (contentType.includes("json")) {
+                try {
+                    const j = await request.json();
+                    formData = {
+                        get(k) {
+                            return j[k] !== undefined && j[k] !== null
+                                ? String(j[k])
+                                : null;
+                        },
+                    };
+                } catch (e) {}
+            }
+
+            const loginInput = (
+                formData
+                    ? formData.get("login") ||
+                      formData.get("email") ||
+                      formData.get("phone") ||
+                      ""
+                    : ""
+            )
+                .toString()
+                .trim();
+            const passwordInput = (
+                formData ? formData.get("password") || "" : ""
+            ).toString();
+
+            if (!loginInput || !passwordInput) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=empty" },
+                });
+            }
+
+            let user = null;
+            if (db) {
+                try {
+                    const cleanPhone = loginInput.replace(/[^0-9]/g, "");
+                    const phoneVariants = [loginInput];
+                    if (cleanPhone) {
+                        phoneVariants.push(cleanPhone);
+                        if (cleanPhone.startsWith("01")) {
+                            phoneVariants.push("88" + cleanPhone);
+                            phoneVariants.push("+88" + cleanPhone);
+                        } else if (cleanPhone.startsWith("8801")) {
+                            phoneVariants.push(cleanPhone.slice(2));
+                        }
+                    }
+
+                    const placeholders = phoneVariants
+                        .map(() => "?")
+                        .join(", ");
+                    const sql = `SELECT * FROM users WHERE email = ? OR phone IN (${placeholders}) LIMIT 1`;
+                    user = await db
+                        .prepare(sql)
+                        .bind(loginInput, ...phoneVariants)
+                        .first();
+                } catch (e) {
+                    console.error("Login user query error:", e);
+                }
+            }
+
+            if (!user) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=invalid" },
+                });
+            }
+
+            if (user.status === "inactive") {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=inactive" },
+                });
+            }
+
+            let validPass = false;
+            if (user.password) {
+                const hashCompat = user.password.replace(/^\$2y\$/, "$2a$");
+                try {
+                    validPass = bcrypt.compareSync(passwordInput, hashCompat);
+                } catch (e) {
+                    console.error("Bcrypt compare error:", e);
+                }
+            }
+
+            if (!validPass) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=invalid" },
+                });
+            }
+
+            const sessionToken = await signSession(user.id, APP_SECRET);
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/dashboard",
+                    "Set-Cookie": `sbl_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000; Secure`,
+                },
+            });
+        }
 
         // Glossary management is opt-in until an administrator password is configured.
         let abbreviationAdmin = false;
@@ -1254,18 +1492,43 @@ export default {
                 }
             }
 
-            // 4c. Team & Users Handlers (POST, PUT, DELETE)
+            // 4c. Team & Users Handlers (Auth Users - Mobile + Password)
             if (path === "/users" && effectiveMethod === "POST" && formData) {
                 if (db) {
                     try {
-                        const name = formData.get("name") || "New Team Member";
-                        const email = formData.get("email") || "";
-                        const phone = formData.get("phone") || null;
-                        const designation = formData.get("designation") || null;
-                        const roleId = Number(formData.get("role_id")) || 3;
-                        const status = formData.get("status") || "active";
-                        const passwordHash =
-                            "$2y$12$e/e8u9R52f4q4z1V0h.qgeNq4mGkLpY4o5wOQvS5c9zQvT/zKk2yC";
+                        const name = (formData.get("name") || "New User")
+                            .toString()
+                            .trim();
+                        const phone = (formData.get("phone") || "")
+                            .toString()
+                            .trim();
+                        const rawPass = (formData.get("password") || "")
+                            .toString()
+                            .trim();
+                        let email = (formData.get("email") || "")
+                            .toString()
+                            .trim();
+                        const designation = (formData.get("designation") || "")
+                            .toString()
+                            .trim();
+                        const roleId = Number(formData.get("role_id")) || 2;
+                        const status = (formData.get("status") || "active")
+                            .toString()
+                            .trim();
+
+                        if (!email) {
+                            const cleanP = phone.replace(/[^0-9]/g, "");
+                            email =
+                                (cleanP || "user_" + Date.now()) + "@sbl.test";
+                        }
+
+                        const passwordHash = rawPass
+                            ? bcrypt
+                                  .hashSync(rawPass, 10)
+                                  .replace(/^\$2a\$/, "$2y$")
+                            : bcrypt
+                                  .hashSync("password", 10)
+                                  .replace(/^\$2a\$/, "$2y$");
 
                         const insRes = await db
                             .prepare(
@@ -1283,7 +1546,7 @@ export default {
                             .run();
 
                         const newUserId = insRes?.meta?.last_row_id;
-                        if (newUserId) {
+                        if (newUserId && roleId) {
                             await db
                                 .prepare(
                                     "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
@@ -1305,8 +1568,8 @@ export default {
                 if (effectiveMethod === "DELETE" && userId) {
                     if (db) {
                         try {
-                            if (userId !== 1) {
-                                // Never delete super admin
+                            if (userId > 1) {
+                                // Never delete root admin
                                 await db
                                     .prepare(
                                         "DELETE FROM role_user WHERE user_id = ?",
@@ -1331,40 +1594,82 @@ export default {
                 if (effectiveMethod === "PUT" && userId && formData) {
                     if (db) {
                         try {
-                            const name = formData.get("name");
-                            const email = formData.get("email");
-                            const phone = formData.get("phone") || null;
-                            const designation =
-                                formData.get("designation") || null;
-                            const roleId = Number(formData.get("role_id")) || 3;
-                            const status = formData.get("status") || "active";
+                            const name = (formData.get("name") || "")
+                                .toString()
+                                .trim();
+                            let email = (formData.get("email") || "")
+                                .toString()
+                                .trim();
+                            const phone = (formData.get("phone") || "")
+                                .toString()
+                                .trim();
+                            const designation = (
+                                formData.get("designation") || ""
+                            )
+                                .toString()
+                                .trim();
+                            const roleId = Number(formData.get("role_id")) || 2;
+                            const status = (formData.get("status") || "active")
+                                .toString()
+                                .trim();
+                            const newPass = (formData.get("password") || "")
+                                .toString()
+                                .trim();
 
-                            await db
-                                .prepare(
-                                    "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(
-                                    name,
-                                    email,
-                                    phone,
-                                    designation,
-                                    status,
-                                    userId,
-                                )
-                                .run();
+                            if (!email) {
+                                const cleanP = phone.replace(/[^0-9]/g, "");
+                                email =
+                                    (cleanP || "user_" + userId) + "@sbl.test";
+                            }
 
-                            await db
-                                .prepare(
-                                    "DELETE FROM role_user WHERE user_id = ?",
-                                )
-                                .bind(userId)
-                                .run();
-                            await db
-                                .prepare(
-                                    "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
-                                )
-                                .bind(userId, roleId)
-                                .run();
+                            if (newPass) {
+                                const passwordHash = bcrypt
+                                    .hashSync(newPass, 10)
+                                    .replace(/^\$2a\$/, "$2y$");
+                                await db
+                                    .prepare(
+                                        "UPDATE users SET name = ?, email = ?, phone = ?, password = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        email,
+                                        phone,
+                                        passwordHash,
+                                        designation,
+                                        status,
+                                        userId,
+                                    )
+                                    .run();
+                            } else {
+                                await db
+                                    .prepare(
+                                        "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        email,
+                                        phone,
+                                        designation,
+                                        status,
+                                        userId,
+                                    )
+                                    .run();
+                            }
+
+                            if (roleId) {
+                                await db
+                                    .prepare(
+                                        "DELETE FROM role_user WHERE user_id = ?",
+                                    )
+                                    .bind(userId)
+                                    .run();
+                                await db
+                                    .prepare(
+                                        "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
+                                    )
+                                    .bind(userId, roleId)
+                                    .run();
+                            }
                         } catch (e) {
                             console.error("D1 User update error:", e);
                         }
@@ -2337,7 +2642,23 @@ export default {
                     deletedLeadIds = delLeadsRes.results.map((r) =>
                         Number(r.id),
                     );
-                if (nodesRes?.results) liveNodes = nodesRes.results;
+                if (nodesRes?.results) {
+                    liveNodes = nodesRes.results;
+                    for (const node of liveNodes) {
+                        const children = liveNodes.filter(
+                            (c) => Number(c.parent_id) === Number(node.id),
+                        );
+                        node.direct_left_count = children.filter(
+                            (c) => c.branch === "LEFT" || c.position === "left",
+                        ).length;
+                        node.direct_right_count = children.filter(
+                            (c) =>
+                                c.branch === "RIGHT" || c.position === "right",
+                        ).length;
+                        node.direct_total_count =
+                            node.direct_left_count + node.direct_right_count;
+                    }
+                }
                 if (contactsRes?.results) liveContacts = contactsRes.results;
                 if (tasksRes?.results) liveTasks = tasksRes.results;
                 if (ecoRes?.results) liveEcosystem = ecoRes.results;
@@ -2373,6 +2694,87 @@ export default {
             } catch (e) {
                 console.error("D1 Query error:", e);
             }
+        }
+
+        // 5b. Authenticate Session Cookie
+        const sessionCookie = getCookie(
+            "sbl_session",
+            request.headers.get("Cookie") || "",
+        );
+        const authUserId = await verifySession(sessionCookie, APP_SECRET);
+        let authUser = null;
+        if (authUserId) {
+            authUser = liveUsers.find(
+                (u) => Number(u.id) === Number(authUserId),
+            );
+            if (authUser && authUser.status === "inactive") {
+                authUser = null; // Revoke immediately
+            }
+        }
+
+        // Login Route (Public Gateway)
+        if (path === "/login") {
+            if (authUser) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/dashboard" },
+                });
+            }
+
+            let loginHtml = PAGES.login || "<h1>Login</h1>";
+            const errParam = url.searchParams.get("error");
+            if (errParam) {
+                let errMsg =
+                    "মোবাইল নম্বর অথবা পাসওয়ার্ডটি সঠিক নয়। অনুগ্রহ করে পুনরায় চেষ্টা করুন।";
+                let isInactive = false;
+                if (errParam === "inactive") {
+                    errMsg =
+                        "আপনার অ্যাকাউন্টটি নিষ্ক্রিয় (Inactive) রয়েছে। অ্যাক্সেসের জন্য অ্যাডমিনের সাথে যোগাযোগ করুন।";
+                    isInactive = true;
+                } else if (errParam === "empty") {
+                    errMsg =
+                        "মোবাইল নম্বর এবং পাসওয়ার্ড উভয়ই সঠিকভাবে প্রদান করুন।";
+                }
+
+                const alertBox = `
+                    <div class="mb-5 p-4 rounded-xl ${isInactive ? "bg-amber-500/15 border border-amber-500/30 text-amber-200" : "bg-rose-500/15 border border-rose-500/30 text-rose-200"} text-xs font-medium flex items-center gap-2.5 animate-pulse shadow-lg">
+                        <span class="text-base">${isInactive ? "⛔" : "⚠️"}</span>
+                        <span>${errMsg}</span>
+                    </div>
+                `;
+                if (loginHtml.includes("<form")) {
+                    loginHtml = loginHtml.replace("<form", alertBox + "<form");
+                }
+            }
+
+            if (loginHtml.includes("</head>")) {
+                loginHtml = loginHtml.replace(
+                    "</head>",
+                    '<style id="sbl-edge-styles">\n' +
+                        CSS_CONTENT +
+                        "\n</style>\n</head>",
+                );
+            }
+
+            return new Response(loginHtml, {
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control":
+                        "no-store, no-cache, must-revalidate, max-age=0",
+                },
+            });
+        }
+
+        // Protected Application Routes - Must be authenticated!
+        if (!authUser) {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/login",
+                    "Set-Cookie":
+                        "sbl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
+                },
+            });
         }
 
         // 6. Select Page Template
@@ -2704,6 +3106,56 @@ export default {
 
         let responseHtml = html;
 
+        if (authUser && authUser.name) {
+            responseHtml = responseHtml.replace(
+                /<strong class="block truncate text-sm text-white">.*?<\/strong>/,
+                `<strong class="block truncate text-sm text-white">${escapeHtml(authUser.name)}</strong>`,
+            );
+            const userInitial = escapeHtml(
+                authUser.name.charAt(0).toUpperCase(),
+            );
+            responseHtml = responseHtml.replace(
+                /<a href="[^"]*profile[^"]*" class="profile-avatar"[^>]*>.*?<\/a>/,
+                `<a href="/profile" class="profile-avatar" aria-label="Your profile">${userInitial}</a>`,
+            );
+        }
+
+        const safeUsers = liveUsers.map(({ password, ...u }) => u);
+
+        const syncDataPayload = {
+            authUser: authUser
+                ? {
+                      id: authUser.id,
+                      name: authUser.name,
+                      phone: authUser.phone,
+                      email: authUser.email,
+                      role_name: authUser.role_name,
+                      designation: authUser.designation,
+                  }
+                : null,
+            leads: liveLeads,
+            deletedLeads: deletedLeadIds,
+            nodes: liveNodes,
+            deletedNodes: deletedNodeIds,
+            contacts: liveContacts,
+            tasks: liveTasks,
+            ecosystem: liveEcosystem,
+            users: safeUsers,
+            deletedUsers: deletedUserIds,
+            sources: sourcesMap,
+            presentations: livePresentations,
+            deletedPresentations: deletedPresIds,
+            contentItems: liveContentItems,
+            activities: liveActivities,
+            roles: liveRoles,
+        };
+
+        const dataScript =
+            '<script id="sbl-live-d1-data">\n' +
+            "window.DATA = " +
+            JSON.stringify(syncDataPayload) +
+            ";\nconst DATA = window.DATA;\n</script>\n";
+
         // 7. Inject Edge Styles
         if (responseHtml && responseHtml.includes("</head>")) {
             let syncStyles = "";
@@ -2756,35 +3208,16 @@ export default {
                     CSS_CONTENT +
                     "\n" +
                     syncStyles +
-                    "</style>\n</head>",
+                    "</style>\n" +
+                    dataScript +
+                    "</head>",
             );
         }
 
         // 8. Inject Live Dynamic Edge Synchronization Script (STRICT PATH ISOLATION)
         if (responseHtml && responseHtml.includes("</body>")) {
-            const syncDataPayload = {
-                leads: liveLeads,
-                deletedLeads: deletedLeadIds,
-                nodes: liveNodes,
-                deletedNodes: deletedNodeIds,
-                contacts: liveContacts,
-                tasks: liveTasks,
-                ecosystem: liveEcosystem,
-                users: liveUsers,
-                deletedUsers: deletedUserIds,
-                sources: sourcesMap,
-                presentations: livePresentations,
-                deletedPresentations: deletedPresIds,
-                contentItems: liveContentItems,
-                activities: liveActivities,
-                roles: liveRoles,
-            };
-
             const syncScript =
                 '<script id="sbl-live-d1-sync">\n' +
-                "const DATA = " +
-                JSON.stringify(syncDataPayload) +
-                ";\n" +
                 CLIENT_SYNC_JS +
                 "\n" +
                 "</script>\n";
@@ -2797,7 +3230,10 @@ export default {
         return new Response(responseHtml, {
             headers: {
                 "Content-Type": "text/html; charset=utf-8",
-                "Cache-Control": "public, max-age=0, must-revalidate",
+                "Cache-Control":
+                    "no-store, no-cache, must-revalidate, max-age=0",
+                Pragma: "no-cache",
+                Expires: "0",
                 "X-Powered-By":
                     "Cloudflare Workers Edge (Laravel Pixel-Perfect Edition)",
             },

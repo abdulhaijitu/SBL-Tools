@@ -159,10 +159,11 @@ function teamExplorerData() {
         if (!node) return {};
         const id = (typeof node === 'object' && node !== null) ? node.id : node;
         let base = (typeof node === 'object' && node !== null) ? { ...node } : { id: node };
-        if (window.DATA && Array.isArray(window.DATA.nodes)) {
-            const found = window.DATA.nodes.find(n => String(n.id) === String(id));
+        const dataNodes = (window.DATA && Array.isArray(window.DATA.nodes)) ? window.DATA.nodes : (typeof DATA !== 'undefined' && Array.isArray(DATA.nodes) ? DATA.nodes : null);
+        if (dataNodes) {
+            const found = dataNodes.find(n => String(n.id) === String(id));
             if (found) {
-                base = Object.assign({}, found, base);
+                base = Object.assign({}, base, found);
             }
         }
         return base;
@@ -258,6 +259,49 @@ function teamExplorerData() {
                 form.action = '/team/' + liveNode.id;
             }
         });
+    },
+    async submitEditMember(e) {
+        e.preventDefault();
+        this.recalcTotalContribution();
+        const form = e.target;
+        const ci = form.querySelector('input[name=contributions]');
+        if (ci) ci.value = JSON.stringify(this.editNode.contributions);
+        const targetUrl = '/team/' + this.editNode.id;
+        form.action = targetUrl;
+        
+        if (window.DATA && Array.isArray(window.DATA.nodes)) {
+            const idx = window.DATA.nodes.findIndex(n => String(n.id) === String(this.editNode.id));
+            if (idx !== -1) {
+                window.DATA.nodes[idx] = Object.assign({}, window.DATA.nodes[idx], {
+                    member_name: this.editNode.member_name,
+                    member_code: this.editNode.member_code,
+                    phone: this.editNode.phone,
+                    email: this.editNode.email,
+                    package_name: this.editNode.package_name,
+                    rank_name: this.editNode.rank_name,
+                    sponsor_id: this.editNode.sponsor_id,
+                    sponsor_name: this.editNode.sponsor_name,
+                    point_value: this.editNode.point_value,
+                    is_target: this.editNode.is_target ? 1 : 0,
+                    target_date: this.editNode.target_date,
+                    target_notes: this.editNode.target_notes,
+                    notes: this.editNode.notes,
+                    contributions: JSON.stringify(this.editNode.contributions)
+                });
+            }
+        }
+        
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(targetUrl, {
+                method: 'POST',
+                body: formData
+            });
+            this.editModalOpen = false;
+            window.location.reload();
+        } catch (err) {
+            form.submit();
+        }
     }
 };
 }
@@ -397,9 +441,9 @@ function teamExplorerData() {
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                <tbody data-binary-table-body class="divide-y divide-slate-100 text-xs text-slate-700">
                     @forelse($members as $member)
-                    <tr class="hover:bg-slate-50/60 transition-colors">
+                    <tr data-node-id="{{ $member->id }}" class="hover:bg-slate-50/60 transition-colors">
                         <!-- Member Profile -->
                         <td class="py-3.5 px-4">
                             <div class="flex items-center gap-3">
@@ -408,7 +452,7 @@ function teamExplorerData() {
                                 </div>
                                 <div>
                                     <div class="font-bold text-slate-900 hover:text-orange-600 transition-colors cursor-pointer"
-                                         @click="openDetailsModal({{ json_encode($member) }})">
+                                         @click="openDetailsModal({{ $member->id }})">
                                         {{ $member->member_name }}
                                     </div>
                                     <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
@@ -485,7 +529,7 @@ function teamExplorerData() {
                                 </a>
 
                                 <button type="button" 
-                                        @click="openDetailsModal({{ json_encode($member) }})"
+                                        @click="openDetailsModal({{ $member->id }})"
                                         class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
                                         title="View member details">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -1023,7 +1067,7 @@ function teamExplorerData() {
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" @submit="recalcTotalContribution(); const ci = $el.querySelector('input[name=contributions]'); if(ci) ci.value = JSON.stringify(editNode.contributions); if(editNode.id) $el.action = '/team/' + editNode.id;" class="space-y-3.5">
+            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" @submit="submitEditMember($event)" class="space-y-3.5">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="is_active" value="1">

@@ -23,9 +23,9 @@ class UserController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('designation', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('designation', 'like', "%{$search}%");
             });
         }
 
@@ -55,28 +55,35 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'email' => 'nullable|string|email|max:255|unique:users,email',
             'designation' => 'nullable|string|max:100',
             'role_id' => 'required|exists:roles,id',
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:6',
+            'status' => 'nullable|in:active,inactive',
         ]);
 
         $this->authorizeRole(Role::findOrFail($validated['role_id']));
 
+        $email = $validated['email'] ?? null;
+        if (empty($email)) {
+            $cleanPhone = preg_replace('/[^0-9]/', '', $validated['phone']);
+            $email = ($cleanPhone ?: 'user_' . time()) . '@sbl.test';
+        }
+
         $user = User::create([
             'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
+            'email' => $email,
+            'phone' => $validated['phone'],
             'designation' => $validated['designation'] ?? null,
-            'status' => 'active',
+            'status' => $validated['status'] ?? 'active',
             'password' => Hash::make($validated['password']),
             'email_verified_at' => now(),
         ]);
 
         $user->roles()->sync([$validated['role_id']]);
 
-        return redirect()->route('users.index')->with('success', "Team member '{$user->name}' added successfully.");
+        return redirect()->route('users.index')->with('success', "সিস্টেম ইউজার '{$user->name}' সফলভাবে তৈরি হয়েছে। মোবাইল: {$user->phone}");
     }
 
     /**
@@ -86,12 +93,12 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:20|unique:users,phone,' . $user->id,
+            'email' => 'nullable|string|email|max:255|unique:users,email,' . $user->id,
             'designation' => 'nullable|string|max:100',
             'status' => 'required|in:active,inactive',
             'role_id' => 'required|exists:roles,id',
-            'password' => 'nullable|string|min:8',
+            'password' => 'nullable|string|min:6',
         ]);
 
         $role = Role::findOrFail($validated['role_id']);
@@ -100,10 +107,16 @@ class UserController extends Controller
             throw \Illuminate\Validation\ValidationException::withMessages(['role_id' => 'Ask another administrator to change your administrative access.']);
         }
 
+        $email = $validated['email'] ?? null;
+        if (empty($email)) {
+            $cleanPhone = preg_replace('/[^0-9]/', '', $validated['phone']);
+            $email = ($cleanPhone ?: 'user_' . $user->id) . '@sbl.test';
+        }
+
         $data = [
             'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
+            'email' => $email,
+            'phone' => $validated['phone'],
             'designation' => $validated['designation'] ?? null,
             'status' => $validated['status'],
         ];

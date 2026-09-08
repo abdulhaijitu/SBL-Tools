@@ -83,6 +83,9 @@ $pages = [
     'profile' => function () {
         return app(App\Http\Controllers\ProfileController::class)->edit(request())->render();
     },
+    'login' => function () {
+        return view('auth.login')->render();
+    },
 ];
 
 $rendered = [];
