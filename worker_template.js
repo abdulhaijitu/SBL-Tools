@@ -75,47 +75,184 @@ export default {
         if (/^\/abbreviations(?:\/\d+)?$/.test(path)) {
             const password = env.ABBREVIATIONS_ADMIN_PASSWORD;
             if (password) {
-                const expected = 'Basic ' + btoa('admin:' + password);
-                const supplied = request.headers.get('Authorization') || '';
-                const digest = async value => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
-                const [a, b] = await Promise.all([digest(expected), digest(supplied)]);
-                abbreviationAdmin = a.reduce((diff, value, i) => diff | (value ^ b[i]), 0) === 0;
-                if (!abbreviationAdmin) return new Response('Administrator sign-in required.', {status: 401, headers: {'WWW-Authenticate': 'Basic realm="Abbreviations", charset="UTF-8"'}});
+                const expected = "Basic " + btoa("admin:" + password);
+                const supplied = request.headers.get("Authorization") || "";
+                const digest = async (value) =>
+                    new Uint8Array(
+                        await crypto.subtle.digest(
+                            "SHA-256",
+                            new TextEncoder().encode(value),
+                        ),
+                    );
+                const [a, b] = await Promise.all([
+                    digest(expected),
+                    digest(supplied),
+                ]);
+                abbreviationAdmin =
+                    a.reduce((diff, value, i) => diff | (value ^ b[i]), 0) ===
+                    0;
+                if (!abbreviationAdmin)
+                    return new Response("Administrator sign-in required.", {
+                        status: 401,
+                        headers: {
+                            "WWW-Authenticate":
+                                'Basic realm="Abbreviations", charset="UTF-8"',
+                        },
+                    });
             }
-            if (request.method !== 'GET') {
-                if (!abbreviationAdmin) return Response.json({message: 'Abbreviation management is not configured.'}, {status: 403});
-                if (request.headers.get('Origin') !== url.origin) return Response.json({message: 'Invalid origin.'}, {status: 403});
-                if (!db) return Response.json({message: 'Database unavailable.'}, {status: 503});
+            if (request.method !== "GET") {
+                if (!abbreviationAdmin)
+                    return Response.json(
+                        {
+                            message:
+                                "Abbreviation management is not configured.",
+                        },
+                        { status: 403 },
+                    );
+                if (request.headers.get("Origin") !== url.origin)
+                    return Response.json(
+                        { message: "Invalid origin." },
+                        { status: 403 },
+                    );
+                if (!db)
+                    return Response.json(
+                        { message: "Database unavailable." },
+                        { status: 503 },
+                    );
                 const id = /^\/abbreviations\/(\d+)$/.exec(path)?.[1];
                 try {
-                    if (id && !(await db.prepare('SELECT id FROM abbreviations WHERE id = ?').bind(id).first())) return Response.json({message: 'Abbreviation not found.'}, {status: 404});
-                    if (id && request.method === 'DELETE') {
-                        await db.prepare('DELETE FROM abbreviations WHERE id = ?').bind(id).run();
-                        return new Response(null, {status: 204});
+                    if (
+                        id &&
+                        !(await db
+                            .prepare(
+                                "SELECT id FROM abbreviations WHERE id = ?",
+                            )
+                            .bind(id)
+                            .first())
+                    )
+                        return Response.json(
+                            { message: "Abbreviation not found." },
+                            { status: 404 },
+                        );
+                    if (id && request.method === "DELETE") {
+                        await db
+                            .prepare("DELETE FROM abbreviations WHERE id = ?")
+                            .bind(id)
+                            .run();
+                        return new Response(null, { status: 204 });
                     }
-                    if ((!id && request.method !== 'POST') || (id && request.method !== 'PUT')) return new Response(null, {status: 405});
+                    if (
+                        (!id && request.method !== "POST") ||
+                        (id && request.method !== "PUT")
+                    )
+                        return new Response(null, { status: 405 });
                     let data;
-                    try { data = await request.json(); } catch { return Response.json({message: 'Invalid JSON.'}, {status: 422}); }
-                    if (!data || typeof data !== 'object' || Array.isArray(data)) return Response.json({message: 'Invalid term.'}, {status: 422});
-                    const categories = {ecommerce: 'E-Commerce Core', marketing: 'Marketing & Ads', logistics: 'Logistics & Delivery', network: 'SBL Network & System', finance: 'Finance & Operations'};
-                    if (!Object.hasOwn(categories, data.category_slug)) return Response.json({message: 'Select a valid category.'}, {status: 422});
-                    for (const [key, max] of Object.entries({code: 50, name: 200, meaning_bn: 1000, description_bn: 3000, icon: 20, tag: 100})) {
-                        if (data[key] == null && ['icon', 'tag'].includes(key)) data[key] = '';
-                        if (typeof data[key] !== 'string' || [...data[key]].length > max || (!['icon', 'tag'].includes(key) && !data[key].trim())) return Response.json({message: 'Invalid ' + key + '.'}, {status: 422});
+                    try {
+                        data = await request.json();
+                    } catch {
+                        return Response.json(
+                            { message: "Invalid JSON." },
+                            { status: 422 },
+                        );
+                    }
+                    if (
+                        !data ||
+                        typeof data !== "object" ||
+                        Array.isArray(data)
+                    )
+                        return Response.json(
+                            { message: "Invalid term." },
+                            { status: 422 },
+                        );
+                    const categories = {
+                        ecommerce: "E-Commerce Core",
+                        marketing: "Marketing & Ads",
+                        logistics: "Logistics & Delivery",
+                        network: "SBL Network & System",
+                        finance: "Finance & Operations",
+                    };
+                    if (!Object.hasOwn(categories, data.category_slug))
+                        return Response.json(
+                            { message: "Select a valid category." },
+                            { status: 422 },
+                        );
+                    for (const [key, max] of Object.entries({
+                        code: 50,
+                        name: 200,
+                        meaning_bn: 1000,
+                        description_bn: 3000,
+                        icon: 20,
+                        tag: 100,
+                    })) {
+                        if (data[key] == null && ["icon", "tag"].includes(key))
+                            data[key] = "";
+                        if (
+                            typeof data[key] !== "string" ||
+                            [...data[key]].length > max ||
+                            (!["icon", "tag"].includes(key) &&
+                                !data[key].trim())
+                        )
+                            return Response.json(
+                                { message: "Invalid " + key + "." },
+                                { status: 422 },
+                            );
                         data[key] = data[key].trim();
                     }
-                    if (await db.prepare('SELECT id FROM abbreviations WHERE code = ? AND id != ?').bind(data.code, id || 0).first()) return Response.json({message: 'This short form already exists.'}, {status: 422});
-                    const values = [data.code, data.name, categories[data.category_slug], data.category_slug, data.meaning_bn, data.description_bn, data.icon || '📖', data.tag];
+                    if (
+                        await db
+                            .prepare(
+                                "SELECT id FROM abbreviations WHERE code = ? AND id != ?",
+                            )
+                            .bind(data.code, id || 0)
+                            .first()
+                    )
+                        return Response.json(
+                            { message: "This short form already exists." },
+                            { status: 422 },
+                        );
+                    const values = [
+                        data.code,
+                        data.name,
+                        categories[data.category_slug],
+                        data.category_slug,
+                        data.meaning_bn,
+                        data.description_bn,
+                        data.icon || "📖",
+                        data.tag,
+                    ];
                     let savedId = id;
-                    if (id) await db.prepare('UPDATE abbreviations SET code=?, name=?, category=?, category_slug=?, meaning_bn=?, description_bn=?, icon=?, tag=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(...values, id).run();
+                    if (id)
+                        await db
+                            .prepare(
+                                "UPDATE abbreviations SET code=?, name=?, category=?, category_slug=?, meaning_bn=?, description_bn=?, icon=?, tag=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                            )
+                            .bind(...values, id)
+                            .run();
                     else {
-                        const result = await db.prepare('INSERT INTO abbreviations (code,name,category,category_slug,meaning_bn,description_bn,icon,tag,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)').bind(...values).run();
+                        const result = await db
+                            .prepare(
+                                "INSERT INTO abbreviations (code,name,category,category_slug,meaning_bn,description_bn,icon,tag,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                            )
+                            .bind(...values)
+                            .run();
                         savedId = result.meta.last_row_id;
                     }
-                    return Response.json(await db.prepare('SELECT * FROM abbreviations WHERE id=?').bind(savedId).first(), {status: id ? 200 : 201});
+                    return Response.json(
+                        await db
+                            .prepare("SELECT * FROM abbreviations WHERE id=?")
+                            .bind(savedId)
+                            .first(),
+                        { status: id ? 200 : 201 },
+                    );
                 } catch (error) {
-                    console.error('Abbreviation write failed', error);
-                    return Response.json({message: 'Unable to save abbreviation. Check database configuration.'}, {status: 503});
+                    console.error("Abbreviation write failed", error);
+                    return Response.json(
+                        {
+                            message:
+                                "Unable to save abbreviation. Check database configuration.",
+                        },
+                        { status: 503 },
+                    );
                 }
             }
         }
@@ -296,7 +433,10 @@ export default {
                         try {
                             const refUrl = new URL(referer);
                             if (refUrl.pathname === "/leads") {
-                                refUrl.searchParams.set("deleted_lead", String(leadId));
+                                refUrl.searchParams.set(
+                                    "deleted_lead",
+                                    String(leadId),
+                                );
                                 dest = refUrl.pathname + refUrl.search;
                             }
                         } catch (e) {}
@@ -325,7 +465,10 @@ export default {
                                 ? Number(formData.get("score"))
                                 : 30;
 
-                            const photo = formData.get("photo") !== null ? (formData.get("photo") || null) : undefined;
+                            const photo =
+                                formData.get("photo") !== null
+                                    ? formData.get("photo") || null
+                                    : undefined;
                             if (photo !== undefined) {
                                 await db
                                     .prepare(
@@ -1399,11 +1542,11 @@ export default {
                     }
                 }
                 const refEco = request.headers.get("Referer");
-                const ecoDest = (refEco && refEco.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
-                return Response.redirect(
-                    new URL(ecoDest, request.url),
-                    302,
-                );
+                const ecoDest =
+                    refEco && refEco.includes("/toolkit")
+                        ? "/toolkit?tab=ecosystem"
+                        : "/ecosystem";
+                return Response.redirect(new URL(ecoDest, request.url), 302);
             }
 
             if (path.startsWith("/ecosystem/")) {
@@ -1423,7 +1566,10 @@ export default {
                         }
                     }
                     const refEcoDel = request.headers.get("Referer");
-                    const ecoDestDel = (refEcoDel && refEcoDel.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
+                    const ecoDestDel =
+                        refEcoDel && refEcoDel.includes("/toolkit")
+                            ? "/toolkit?tab=ecosystem"
+                            : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestDel, request.url),
                         302,
@@ -1462,7 +1608,10 @@ export default {
                         }
                     }
                     const refEcoPut = request.headers.get("Referer");
-                    const ecoDestPut = (refEcoPut && refEcoPut.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
+                    const ecoDestPut =
+                        refEcoPut && refEcoPut.includes("/toolkit")
+                            ? "/toolkit?tab=ecosystem"
+                            : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestPut, request.url),
                         302,
@@ -2100,8 +2249,14 @@ export default {
                     .replace(/name:\s*'[^']*'/, `name: '${jsName}'`)
                     .replace(/mobile:\s*'[^']*'/, `mobile: '${jsMobile}'`)
                     .replace(/whatsapp:\s*'[^']*'/, `whatsapp: '${jsWhatsapp}'`)
-                    .replace(/photoData:\s*'[^']*'/, `photoData: '${(currentLead.photo || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`)
-                    .replace(/name="photo" :value="photoData"/, `name="photo" value="${escapeHtml(currentLead.photo || '')}" :value="photoData"`)
+                    .replace(
+                        /photoData:\s*'[^']*'/,
+                        `photoData: '${(currentLead.photo || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`,
+                    )
+                    .replace(
+                        /name="photo" :value="photoData"/,
+                        `name="photo" value="${escapeHtml(currentLead.photo || "")}" :value="photoData"`,
+                    )
                     .replace(
                         /name="email" value="[^"]*"/g,
                         `name="email" value="${escapeHtml(currentLead.email || "")}"`,
@@ -2311,11 +2466,22 @@ export default {
         } else if (path === "/abbreviations") {
             html = PAGES.abbreviations;
             try {
-                const terms = await db.prepare('SELECT * FROM abbreviations ORDER BY id').all();
-                html = html.replace(/data-terms="[^"]*"/, () => 'data-terms="' + escapeHtml(JSON.stringify(terms.results)) + '"');
-                html = html.replace(/data-can-manage="[^"]*"/, 'data-can-manage="' + (abbreviationAdmin ? '1' : '0') + '"');
+                const terms = await db
+                    .prepare("SELECT * FROM abbreviations ORDER BY id")
+                    .all();
+                html = html.replace(
+                    /data-terms="[^"]*"/,
+                    () =>
+                        'data-terms="' +
+                        escapeHtml(JSON.stringify(terms.results)) +
+                        '"',
+                );
+                html = html.replace(
+                    /data-can-manage="[^"]*"/,
+                    'data-can-manage="' + (abbreviationAdmin ? "1" : "0") + '"',
+                );
             } catch (error) {
-                console.error('Abbreviation DB error:', error);
+                console.error("Abbreviation DB error:", error);
             }
         } else if (path === "/contacts") {
             html = PAGES.contacts;
@@ -2415,10 +2581,14 @@ export default {
                 roles: liveRoles,
             };
 
-            const syncScript = '<script id="sbl-live-d1-sync">\n' +
-                'const DATA = ' + JSON.stringify(syncDataPayload) + ';\n' +
-                CLIENT_SYNC_JS + '\n' +
-                '</script>\n'
+            const syncScript =
+                '<script id="sbl-live-d1-sync">\n' +
+                "const DATA = " +
+                JSON.stringify(syncDataPayload) +
+                ";\n" +
+                CLIENT_SYNC_JS +
+                "\n" +
+                "</script>\n";
             responseHtml = responseHtml.replace(
                 "</body>",
                 () => syncScript + "</body>",

@@ -348,16 +348,19 @@
       }
 
       function renderLeadRow(lead) {
-        let interests = [];
-        try {
-          interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
-        } catch(e) {}
-
-        const sourceName = DATA.sources[lead.lead_source_id] || 'Direct';
         const initialLetter = (lead.name || 'L').charAt(0).toUpperCase();
         const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
         const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
         const stageClass = getStageBadgeClass(lead.stage || 'new');
+        const fbUrl = lead.facebook_url || '';
+
+        const callIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>';
+        const waIconSvg = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>';
+        const fbIconSvg = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+
+        const callBtn = '<a href="tel:' + escapeHtml(lead.mobile) + '" title="Call ' + escapeHtml(lead.mobile) + '" class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all shadow-2xs active:scale-95" aria-label="Call ' + escapeHtml(lead.mobile) + '">' + callIconSvg + '</a>';
+        const waBtn = cleanWhatsapp ? ('<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" rel="noopener noreferrer" title="WhatsApp (' + escapeHtml(lead.whatsapp || lead.mobile) + ')" class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all shadow-2xs active:scale-95" aria-label="WhatsApp (' + escapeHtml(lead.whatsapp || lead.mobile) + ')">' + waIconSvg + '</a>') : ('<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-300" title="No WhatsApp">' + waIconSvg + '</span>');
+        const fbBtn = fbUrl ? ('<a href="' + escapeHtml(fbUrl) + '" target="_blank" rel="noopener noreferrer" title="Facebook Profile" class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-all shadow-2xs active:scale-95" aria-label="Facebook Profile">' + fbIconSvg + '</a>') : ('<span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-300" title="No Facebook URL">' + fbIconSvg + '</span>');
 
         return '<td class="py-3.5 px-4">' +
           '<div class="flex items-center gap-3">' +
@@ -368,23 +371,16 @@
             '</div>' +
           '</div>' +
         '</td>' +
-        '<td class="py-3.5 px-4">' +
-          '<div class="font-medium text-slate-800">' + escapeHtml(lead.mobile) + '</div>' +
-          '<div class="flex items-center gap-2 mt-1">' +
-            '<a href="tel:' + escapeHtml(lead.mobile) + '" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">📞</a>' +
-            '<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">💬</a>' +
+        '<td class="py-3.5 px-4 whitespace-nowrap">' +
+          '<div class="font-semibold text-slate-900 text-xs font-mono tracking-wide">' + escapeHtml(lead.mobile) + '</div>' +
+          '<div class="flex items-center gap-1.5 mt-1.5">' +
+            callBtn + waBtn + fbBtn +
           '</div>' +
         '</td>' +
-        '<td class="py-3.5 px-4">' +
-          '<span class="font-medium text-slate-800 block">' + escapeHtml(sourceName) + '</span>' +
-          '<div class="flex flex-wrap gap-1 mt-1">' +
-            interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + escapeHtml(i) + '</span>'; }).join('') +
-          '</div>' +
-        '</td>' +
-        '<td class="py-3.5 px-4">' +
+        '<td class="py-3.5 px-4 whitespace-nowrap">' +
           '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ' + stageClass + '">' + stageLabel + '</span>' +
         '</td>' +
-        '<td class="py-3.5 px-4">' +
+        '<td class="py-3.5 px-4 whitespace-nowrap">' +
           (lead.next_action_at ? ('<div class="text-xs font-medium text-slate-700">' + escapeHtml(lead.next_action_type || 'Action') + '<br><span class="text-[11px] text-slate-400">' + escapeHtml(lead.next_action_at) + '</span></div>') : '<span class="text-[11px] text-amber-600 font-semibold bg-amber-50 px-2 py-0.5 rounded-md">Needs Next Action</span>') +
         '</td>' +
         '<td class="py-3.5 px-4 text-right">' +
@@ -409,16 +405,19 @@
       }
 
       function renderMobileCard(lead) {
-        let interests = [];
-        try {
-          interests = typeof lead.interest_types === 'string' ? JSON.parse(lead.interest_types) : (lead.interest_types || []);
-        } catch(e) {}
-
-        const sourceName = DATA.sources[lead.lead_source_id] || 'Direct';
         const initialLetter = (lead.name || 'L').charAt(0).toUpperCase();
         const stageLabel = (lead.stage || 'new').replace('_', ' ').toUpperCase();
         const cleanWhatsapp = (lead.whatsapp || lead.mobile || '').replace(/[^0-9]/g, '');
         const stageClass = getStageBadgeClass(lead.stage || 'new');
+        const fbUrl = lead.facebook_url || '';
+
+        const callIconSvg = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>';
+        const waIconSvg = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>';
+        const fbIconSvg = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+
+        const callBtn = '<a href="tel:' + escapeHtml(lead.mobile) + '" class="inline-flex items-center gap-1 text-emerald-600 font-semibold">' + callIconSvg + ' Call</a>';
+        const waBtn = cleanWhatsapp ? ('<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-emerald-600 font-semibold">' + waIconSvg + ' WhatsApp</a>') : '';
+        const fbBtn = fbUrl ? ('<a href="' + escapeHtml(fbUrl) + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-blue-600 font-semibold">' + fbIconSvg + ' Facebook</a>') : '';
 
         return '<div class="flex items-start justify-between gap-2">' +
           '<div class="flex items-center gap-3">' +
@@ -430,14 +429,9 @@
           '</div>' +
           '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ' + stageClass + '">' + stageLabel + '</span>' +
         '</div>' +
-        '<div class="flex flex-wrap items-center gap-1 text-xs text-slate-500 pt-1">' +
-          '<span>' + escapeHtml(sourceName) + '</span>' +
-          interests.map(function(i) { return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200/80">' + escapeHtml(i) + '</span>'; }).join('') +
-        '</div>' +
         '<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">' +
-          '<div class="flex items-center gap-2">' +
-            '<a href="tel:' + escapeHtml(lead.mobile) + '" class="text-emerald-600 font-semibold">📞 Call</a>' +
-            '<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" class="text-emerald-600 font-semibold">💬 WhatsApp</a>' +
+          '<div class="flex items-center gap-3">' +
+            callBtn + waBtn + fbBtn +
           '</div>' +
           '<div class="flex items-center gap-1.5">' +
             '<a href="/leads/' + lead.id + '" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">View</a>' +
@@ -482,7 +476,7 @@
         if (tableBody) {
           tableBody.innerHTML = '';
           if (DATA.leads.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400"><div class="text-base font-semibold text-slate-700">No leads found</div><div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div><a href="/leads/create" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">+ Add New Lead</a></td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" class="py-12 text-center text-slate-400"><div class="text-base font-semibold text-slate-700">No leads found</div><div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div><a href="/leads/create" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">+ Add New Lead</a></td></tr>';
           } else {
             DATA.leads.forEach(function(lead) {
               const tr = document.createElement('tr');
