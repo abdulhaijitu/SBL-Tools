@@ -158,7 +158,14 @@ function teamExplorerData() {
     getNodeData(node) {
         if (!node) return {};
         const id = (typeof node === 'object' && node !== null) ? node.id : node;
-        return (typeof node === 'object' && node !== null) ? node : { id: node };
+        let base = (typeof node === 'object' && node !== null) ? { ...node } : { id: node };
+        if (window.DATA && Array.isArray(window.DATA.nodes)) {
+            const found = window.DATA.nodes.find(n => String(n.id) === String(id));
+            if (found) {
+                base = Object.assign({}, found, base);
+            }
+        }
+        return base;
     },
     openDetailsModal(node) {
         this.detailsNode = this.getNodeData(node);
@@ -211,11 +218,13 @@ function teamExplorerData() {
         const liveNode = this.getNodeData(node);
         let contribs = [];
         if (liveNode.contributions) {
-            contribs = typeof liveNode.contributions === 'string' ? JSON.parse(liveNode.contributions) : liveNode.contributions;
+            try {
+                contribs = typeof liveNode.contributions === 'string' ? JSON.parse(liveNode.contributions) : liveNode.contributions;
+            } catch (e) { contribs = []; }
         }
-        if (!contribs || contribs.length === 0) {
+        if (!contribs || !Array.isArray(contribs) || contribs.length === 0) {
             contribs = [
-                { amount: liveNode.total_investment || liveNode.point_value || 0, date: new Date().toISOString().slice(0, 10), note: liveNode.package_name || 'Initial' }
+                { amount: liveNode.total_investment || liveNode.point_value || 100, date: (liveNode.created_at ? String(liveNode.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10)), note: liveNode.package_name || 'Initial' }
             ];
         }
 
@@ -1014,7 +1023,7 @@ function teamExplorerData() {
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" class="space-y-3.5">
+            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" @submit="recalcTotalContribution(); const ci = $el.querySelector('input[name=contributions]'); if(ci) ci.value = JSON.stringify(editNode.contributions); if(editNode.id) $el.action = '/team/' + editNode.id;" class="space-y-3.5">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="is_active" value="1">

@@ -257,6 +257,92 @@ export default {
             }
         }
 
+        // Team Member Credentials GET endpoint
+        if (
+            path.match(/^\/(?:team|binary)\/\d+\/credentials$/) &&
+            request.method === "GET"
+        ) {
+            const decryptLaravelCredential = async (payload) => {
+                if (
+                    !payload ||
+                    typeof payload !== "string" ||
+                    !payload.startsWith("eyJ")
+                )
+                    return payload;
+                try {
+                    const json = JSON.parse(atob(payload));
+                    const appKey =
+                        "jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=";
+                    const rawKey = Uint8Array.from(atob(appKey), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const iv = Uint8Array.from(atob(json.iv), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const ciphertext = Uint8Array.from(atob(json.value), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const key = await crypto.subtle.importKey(
+                        "raw",
+                        rawKey,
+                        { name: "AES-CBC" },
+                        false,
+                        ["decrypt"],
+                    );
+                    const decrypted = await crypto.subtle.decrypt(
+                        { name: "AES-CBC", iv },
+                        key,
+                        ciphertext,
+                    );
+                    const decStr = new TextDecoder().decode(decrypted);
+                    const match = decStr.match(/^s:\d+:"(.*)";$/s);
+                    return match ? match[1] : decStr;
+                } catch (e) {
+                    return payload;
+                }
+            };
+
+            const parts = path.split("/");
+            const nodeId = parseInt(parts[2], 10);
+            if (db && nodeId) {
+                try {
+                    const row = await db
+                        .prepare(
+                            "SELECT password_plain, tpin FROM binary_nodes WHERE id = ?",
+                        )
+                        .bind(nodeId)
+                        .first();
+                    if (row) {
+                        const plainPassword =
+                            (await decryptLaravelCredential(
+                                row.password_plain,
+                            )) || "sbl123456";
+                        const plainTpin =
+                            (await decryptLaravelCredential(row.tpin)) ||
+                            "1234";
+                        return Response.json(
+                            {
+                                password_plain: plainPassword,
+                                tpin: plainTpin,
+                            },
+                            {
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Cache-Control": "no-store, private",
+                                },
+                            },
+                        );
+                    }
+                } catch (e) {
+                    console.error("D1 credentials error:", e);
+                }
+            }
+            return Response.json({
+                password_plain: "sbl123456",
+                tpin: "1234",
+            });
+        }
+
         // 4. Handle POST, PUT, PATCH, DELETE Form Actions on Cloudflare D1
         if (
             request.method === "POST" ||
@@ -283,6 +369,32 @@ export default {
                 } catch (e) {
                     console.error("Error parsing formData:", e);
                 }
+            } else if (contentType.includes("json")) {
+                try {
+                    const jsonBody = await request.clone().json();
+                    if (jsonBody && typeof jsonBody === "object") {
+                        formData = {
+                            _map: jsonBody,
+                            get(k) {
+                                return this._map[k] !== undefined &&
+                                    this._map[k] !== null
+                                    ? String(this._map[k])
+                                    : null;
+                            },
+                            has(k) {
+                                return (
+                                    this._map[k] !== undefined &&
+                                    this._map[k] !== null
+                                );
+                            },
+                        };
+                        if (jsonBody._method) {
+                            effectiveMethod = String(
+                                jsonBody._method,
+                            ).toUpperCase();
+                        }
+                    }
+                } catch (e) {}
             }
 
             // Currency Switch Handler
@@ -959,13 +1071,18 @@ export default {
                                 const targetNotes = formData.has("target_notes")
                                     ? formData.get("target_notes")
                                     : existing.target_notes;
+                                const notes = formData.has("notes")
+                                    ? formData.get("notes")
+                                    : formData.has("target_notes")
+                                      ? formData.get("target_notes")
+                                      : existing.notes;
 
                                 let contributions =
                                     formData.get("contributions");
                                 let pointValue =
                                     Number(existing.point_value) || 0;
+                                let contributionsArr = [];
                                 if (contributions) {
-                                    let contributionsArr = [];
                                     try {
                                         contributionsArr =
                                             typeof contributions === "string"
@@ -1014,7 +1131,7 @@ export default {
 
                                 await db
                                     .prepare(
-                                        "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                        "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, notes = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                     )
                                     .bind(
                                         memberName,
@@ -1032,16 +1149,65 @@ export default {
                                         isTarget,
                                         targetDate,
                                         targetNotes,
+                                        notes,
                                         userId,
                                         isActive,
                                         nodeId,
                                     )
                                     .run();
+
+                                if (
+                                    Array.isArray(contributionsArr) &&
+                                    contributionsArr.length > 0
+                                ) {
+                                    try {
+                                        await db
+                                            .prepare(
+                                                "DELETE FROM investments WHERE binary_node_id = ?",
+                                            )
+                                            .bind(nodeId)
+                                            .run();
+                                        for (const c of contributionsArr) {
+                                            await db
+                                                .prepare(
+                                                    "INSERT INTO investments (binary_node_id, plan_name, amount, point_value, status, investment_date, note, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                                )
+                                                .bind(
+                                                    nodeId,
+                                                    c.note ||
+                                                        packageName ||
+                                                        "Contribution",
+                                                    Number(c.amount) || 0,
+                                                    Number(c.amount) || 0,
+                                                    c.date ||
+                                                        new Date()
+                                                            .toISOString()
+                                                            .slice(0, 10),
+                                                    c.note ||
+                                                        "Contribution Record",
+                                                )
+                                                .run();
+                                        }
+                                    } catch (invErr) {
+                                        console.error(
+                                            "D1 investments sync error:",
+                                            invErr,
+                                        );
+                                    }
+                                }
                             }
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
                         }
                     }
+
+                    if (request.headers.get("accept")?.includes("json")) {
+                        return Response.json({
+                            success: true,
+                            message: "Member updated successfully",
+                        });
+                    }
+
                     const ref = request.headers.get("referer");
                     if (ref)
                         return Response.redirect(
@@ -1052,6 +1218,39 @@ export default {
                         new URL("/team", request.url),
                         302,
                     );
+                }
+
+                // Member Notes update endpoint
+                if (
+                    path.match(/^\/(?:team|binary)\/\d+\/notes$/) &&
+                    (effectiveMethod === "PATCH" ||
+                        effectiveMethod === "POST" ||
+                        effectiveMethod === "PUT")
+                ) {
+                    const parts = path.split("/");
+                    const targetNodeId = parseInt(parts[2], 10);
+                    let notesVal = "";
+                    if (formData && formData.has("notes")) {
+                        notesVal = formData.get("notes") || "";
+                    } else {
+                        try {
+                            const body = await request.clone().json();
+                            notesVal = body.notes || "";
+                        } catch (e) {}
+                    }
+                    if (db && targetNodeId) {
+                        try {
+                            await db
+                                .prepare(
+                                    "UPDATE binary_nodes SET notes = ?, target_notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(notesVal, notesVal, targetNodeId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 member note update error:", e);
+                        }
+                    }
+                    return Response.json({ success: true, notes: notesVal });
                 }
             }
 

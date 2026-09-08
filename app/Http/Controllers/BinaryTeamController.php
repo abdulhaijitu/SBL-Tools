@@ -245,8 +245,10 @@ class BinaryTeamController extends Controller
                 ->first();
             if ($matchedNode) {
                 $request->merge(['sponsor_id' => $matchedNode->id, 'sponsor_name' => $matchedNode->member_name]);
+            } else {
+                $request->merge(['sponsor_id' => null, 'sponsor_name' => $sName]);
             }
-        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
+        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0' || !$request->filled('sponsor_name')) {
             $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
         }
 
@@ -276,7 +278,12 @@ class BinaryTeamController extends Controller
         ]);
 
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->input('is_active') : true;
-        if (!empty($validated['sponsor_id'])) BinaryNode::where('tree_owner_id', $node->tree_owner_id)->findOrFail($validated['sponsor_id']);
+        if (!empty($validated['sponsor_id'])) {
+            $spNode = BinaryNode::where('tree_owner_id', $node->tree_owner_id)->find($validated['sponsor_id']);
+            if (!$spNode) {
+                $validated['sponsor_id'] = null;
+            }
+        }
         if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
         $validated['is_target'] = $request->boolean('is_target');
 
