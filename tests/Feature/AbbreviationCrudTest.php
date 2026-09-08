@@ -1,10 +1,13 @@
 <?php
+
 namespace Tests\Feature;
+
 use App\Models\Abbreviation;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
 class AbbreviationCrudTest extends TestCase
 {
     use RefreshDatabase;
@@ -12,16 +15,23 @@ class AbbreviationCrudTest extends TestCase
     {
         $this->seed(RoleAndPermissionSeeder::class);
         $this->actingAs(User::where('email', 'admin@sbl.test')->first());
-        $this->get('/abbreviations')->assertOk()->assertSee('Add Abbreviation');
+        $response = $this->get('/abbreviations')->assertOk();
+        $response->assertSee('No');
+        $response->assertSee('Short Form');
+        $response->assertSee('Abbreviation');
+        $response->assertSee('Use Case');
+        $response->assertSee('Action');
+        $response->assertDontSee('E-Commerce Core (');
+
         $count = Abbreviation::count();
-        $data = ['code' => "QA'T", 'name' => 'Test term', 'category_slug' => 'marketing', 'meaning_bn' => 'পরীক্ষা', 'description_bn' => 'বাংলা ব্যবহার', 'icon' => '', 'tag' => ''];
-        $id = $this->postJson('/abbreviations', $data)->assertCreated()->json('id');
+        $data = ['code' => "QA'T", 'name' => 'Test term', 'meaning_bn' => 'পরীক্ষা', 'description_bn' => 'বাংলা ব্যবহার', 'icon' => '', 'tag' => ''];
+        $id = $this->postJson('/abbreviations', $data)->assertCreated()->assertJsonPath('category_slug', 'ecommerce')->json('id');
         $this->postJson('/abbreviations', $data)->assertUnprocessable()->assertJsonValidationErrors('code');
-        $this->putJson('/abbreviations/'.$id, array_merge($data, ['name' => 'Updated']))->assertOk()->assertJsonPath('name', 'Updated');
-        $this->assertDatabaseHas('abbreviations', ['id' => $id, 'name' => 'Updated']);
-        $this->deleteJson('/abbreviations/'.$id)->assertNoContent();
+        $this->putJson('/abbreviations/' . $id, array_merge($data, ['name' => 'Updated']))->assertOk()->assertJsonPath('name', 'Updated');
+        $this->assertDatabaseHas('abbreviations', ['id' => $id, 'name' => 'Updated', 'category_slug' => 'ecommerce']);
+        $this->deleteJson('/abbreviations/' . $id)->assertNoContent();
         $this->assertDatabaseCount('abbreviations', $count);
-        $this->deleteJson('/abbreviations/'.$id)->assertNotFound();
+        $this->deleteJson('/abbreviations/' . $id)->assertNotFound();
     }
     public function test_read_only_users_and_guests_cannot_write(): void
     {
@@ -30,8 +40,8 @@ class AbbreviationCrudTest extends TestCase
         $this->get('/abbreviations')->assertOk();
         $this->postJson('/abbreviations', [])->assertForbidden();
         $term = Abbreviation::first();
-        $this->putJson('/abbreviations/'.$term->id, [])->assertForbidden();
-        $this->deleteJson('/abbreviations/'.$term->id)->assertForbidden();
+        $this->putJson('/abbreviations/' . $term->id, [])->assertForbidden();
+        $this->deleteJson('/abbreviations/' . $term->id)->assertForbidden();
     }
     public function test_invalid_input_is_rejected(): void
     {

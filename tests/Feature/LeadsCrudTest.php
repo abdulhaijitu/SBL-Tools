@@ -54,6 +54,9 @@ class LeadsCrudTest extends TestCase
         $response->assertSee('Kalam Hossain');
         $response->assertSee('Edit');
         $response->assertSee('Delete');
+        $response->assertDontSee('Source & Interest');
+        $response->assertSee('tel:01711001122');
+        $response->assertSee('https://wa.me/');
 
         // Kanban view
         $kanbanResponse = $this->actingAs($this->user)->get(route('leads.index', ['view' => 'kanban']));

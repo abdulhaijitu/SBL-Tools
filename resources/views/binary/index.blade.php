@@ -47,6 +47,25 @@ function teamExplorerData() {
     isEditingNote: false,
     noteSaving: false,
     tempNote: '',
+    placementMemberName: '',
+    placementMemberCode: '',
+    placementPhone: '',
+    placementEmail: '',
+    placementNotes: '',
+    selectedLeadId: '',
+    crmLeads: @json($crmLeads ?? []),
+    onSelectLead(leadId) {
+        if (!leadId) return;
+        const lead = this.crmLeads.find(l => String(l.id) === String(leadId));
+        if (lead) {
+            this.placementMemberName = lead.name || '';
+            this.placementPhone = lead.mobile || '';
+            this.placementEmail = lead.email || '';
+            if (lead.profession_or_business || lead.location) {
+                this.placementNotes = [lead.profession_or_business, lead.location].filter(Boolean).join(' • ');
+            }
+        }
+    },
     init() { 
         this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; this.isEditingNote = false; } }); 
         window.copyToClipboard = (text, label) => this.copyToClipboard(text, label);
@@ -66,6 +85,12 @@ function teamExplorerData() {
         this.selectedSlotNumber = 1;
         this.sponsorName = parentName || rootName;
         this.isTargetMember = false;
+        this.selectedLeadId = '';
+        this.placementMemberName = '';
+        this.placementMemberCode = '';
+        this.placementPhone = '';
+        this.placementEmail = '';
+        this.placementNotes = '';
         this.placementModalOpen = true;
     },
     copyToClipboard(text, label) {
@@ -152,6 +177,12 @@ function teamExplorerData() {
         this.selectedSlotNumber = slotNumber || 1;
         this.sponsorName = parentName || '';
         this.isTargetMember = false;
+        this.selectedLeadId = '';
+        this.placementMemberName = '';
+        this.placementMemberCode = '';
+        this.placementPhone = '';
+        this.placementEmail = '';
+        this.placementNotes = '';
         this.placementModalOpen = true;
     },
     addContributionRow() {
@@ -262,8 +293,9 @@ function teamExplorerData() {
                 </button>
             </div>
             <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-                <a class="px-3 py-2 rounded-lg {{ $viewMode !== 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}">Explorer</a>
-                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}">Directory</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Builder">⚡ Explorer (Builder)</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'mindmap' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'mindmap', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Mindmap Canvas Tree">🗺️ Mindmap</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}" title="Directory List">📋 Directory</a>
             </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
@@ -470,8 +502,10 @@ function teamExplorerData() {
         @endif
     </div>
 
-    @else
+    @elseif($viewMode === 'mindmap')
     @include('binary.partials.mindmap')
+    @else
+    @include('binary.partials.builder')
     @endif
 
     <!-- ==================== 5. MEMBER DETAILS MODAL / DRAWER ==================== -->
@@ -758,6 +792,44 @@ function teamExplorerData() {
             <form action="{{ route('binary.store') }}" method="POST" class="space-y-4">
                 @csrf
 
+                <!-- ==================== CRM LEADS QUICK IMPORT ==================== -->
+                @if(isset($crmLeads) && count($crmLeads) > 0)
+                <div class="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50/60 rounded-2xl border border-amber-200/90 space-y-1.5 shadow-2xs">
+                    <label class="block text-xs font-black text-amber-950 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <span>⚡</span>
+                            <span>CRM Leads থেকে দ্রুত নির্বাচন করুন (Auto-Fill)</span>
+                        </span>
+                        <span class="text-[10px] text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full font-bold">এক ক্লিকে ফিল</span>
+                    </label>
+                    <select x-model="selectedLeadId" 
+                            @change="onSelectLead($event.target.value)"
+                            class="w-full text-xs bg-white border border-amber-300 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                        <option value="">-- Select from CRM Leads (বাছাই করতে ক্লিক করুন) --</option>
+                        @foreach($crmLeads as $cLead)
+                            <option value="{{ $cLead->id }}">
+                                {{ $cLead->name }} {{ $cLead->mobile ? '• '.$cLead->mobile : '' }} {{ $cLead->location ? '• '.$cLead->location : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[10px] text-amber-800/80">লিড সিলেক্ট করলে মেম্বারের নাম, ফোন ও ইমেইল নিজে থেকেই পূরণ হয়ে যাবে।</p>
+                </div>
+                @endif
+
+                <!-- ==================== PLACEMENT POSITION VISUAL PREVIEW ==================== -->
+                <div class="p-3 bg-slate-100 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between text-xs font-bold gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-orange-600">📍 প্লেসমেন্ট টার্গেট:</span>
+                        <span class="text-slate-900" x-text="selectedParentName || 'Root'"></span>
+                        <span class="text-slate-400">›</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-black" 
+                              :class="selectedBranch === 'LEFT' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'"
+                              x-text="selectedBranch === 'LEFT' ? '👈 LEFT TEAM' : '👉 RIGHT TEAM'"></span>
+                        <span class="text-slate-400">›</span>
+                        <span class="bg-white px-2 py-0.5 rounded border border-slate-300 font-mono" x-text="'Slot ' + selectedSlotNumber"></span>
+                    </div>
+                </div>
+
                 <!-- ==================== MEMBER CONNECTOR (PLACEMENT UPLINE) ==================== -->
                 <div class="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-3">
                     <div>
@@ -845,11 +917,11 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
-                        <input type="text" name="member_name" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="member_name" x-model="placementMemberName" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Username / Member Code</label>
-                        <input type="text" name="member_code" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                        <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
                     </div>
                 </div>
 
@@ -857,11 +929,11 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-                        <input type="text" name="phone" placeholder="017xxxxxxxx" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="phone" x-model="placementPhone" placeholder="017xxxxxxxx" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                        <input type="email" name="email" placeholder="karim@sbl.test" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="email" name="email" x-model="placementEmail" placeholder="karim@sbl.test" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                 </div>
 
@@ -912,7 +984,7 @@ function teamExplorerData() {
                 <!-- Member Notes -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Member Notes</label>
-                    <textarea name="notes" rows="2" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
+                    <textarea name="notes" x-model="placementNotes" rows="2" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">

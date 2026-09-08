@@ -39,7 +39,15 @@ class BinaryTeamController extends Controller
             $this->treeService->ensureUserRoot($currentUser);
         }
 
-        $viewMode = $request->query('view', 'tree');
+        $rawView = $request->query('view', 'builder');
+        if (in_array($rawView, ['mindmap', 'tree'])) {
+            $viewMode = 'mindmap';
+        } elseif ($rawView === 'table') {
+            $viewMode = 'table';
+        } else {
+            $viewMode = 'builder';
+        }
+
         $nodeId = $memberId ?: ($request->query('node_id') ?: $request->query('member_id'));
         if ($nodeId) {
             $requestedNode = BinaryNode::findOrFail($nodeId);
@@ -47,6 +55,13 @@ class BinaryTeamController extends Controller
             abort_unless((int)$requestedNode->tree_owner_id === (int)$ownerId, 404);
         }
         $treeData = $this->treeService->getVisualTree($nodeId ? (int)$nodeId : null, $ownerId, 2);
+
+        $firstVacantLeft = collect($treeData['left_slots'] ?? [])->firstWhere('is_vacant', true);
+        $firstVacantRight = collect($treeData['right_slots'] ?? [])->firstWhere('is_vacant', true);
+        $weakerLeg = $treeData['stats']['weaker_leg'] ?? 'LEFT';
+        $autoBalanceSlot = ($weakerLeg === 'LEFT' ? $firstVacantLeft : $firstVacantRight) ?: ($firstVacantLeft ?: $firstVacantRight);
+
+        $crmLeads = \App\Models\Lead::orderBy('name')->get(['id', 'name', 'mobile', 'email', 'profession_or_business', 'location']);
 
         $packages = [
             ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'ন্যাশনাল প্যাকেজ (১২০,০০০/-) - ১০০ BV'],
@@ -76,7 +91,21 @@ class BinaryTeamController extends Controller
         }
         $members = $tableQuery->paginate(15)->withQueryString();
 
-        return view('binary.index', compact('treeData', 'packages', 'allNodes', 'users', 'viewMode', 'members', 'ownerId', 'isSuperAdmin'));
+        return view('binary.index', compact(
+            'treeData',
+            'packages',
+            'allNodes',
+            'users',
+            'viewMode',
+            'members',
+            'ownerId',
+            'isSuperAdmin',
+            'crmLeads',
+            'firstVacantLeft',
+            'firstVacantRight',
+            'autoBalanceSlot',
+            'weakerLeg'
+        ));
     }
 
     /**
