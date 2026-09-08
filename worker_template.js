@@ -2315,7 +2315,7 @@ export default {
                 html = html.replace(/data-terms="[^"]*"/, () => 'data-terms="' + escapeHtml(JSON.stringify(terms.results)) + '"');
                 html = html.replace(/data-can-manage="[^"]*"/, 'data-can-manage="' + (abbreviationAdmin ? '1' : '0') + '"');
             } catch (error) {
-                return new Response('Abbreviation database migration is required.', {status: 503});
+                console.error('Abbreviation DB error:', error);
             }
         } else if (path === "/contacts") {
             html = PAGES.contacts;
@@ -2326,10 +2326,13 @@ export default {
             path.startsWith("/team")
         ) {
             const viewMode = url.searchParams.get("view");
-            html =
-                viewMode === "table"
-                    ? PAGES.binary_table || PAGES.binary
-                    : PAGES.binary;
+            if (viewMode === "table") {
+                html = PAGES.binary_table || PAGES.binary;
+            } else if (viewMode === "mindmap" || viewMode === "tree") {
+                html = PAGES.binary_mindmap || PAGES.binary;
+            } else {
+                html = PAGES.binary;
+            }
         } else {
             html = PAGES.dashboard;
         }

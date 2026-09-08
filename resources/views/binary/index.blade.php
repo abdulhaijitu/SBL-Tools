@@ -75,8 +75,8 @@ function teamExplorerData() {
     },
     openAddMemberModal(parentId = null, parentName = '', parentCode = '') {
         const rootId = {{ $treeData['root']->id ?? 'null' }};
-        const rootName = {{ json_encode($treeData['root']->member_name ?? '') }};
-        const rootCode = {{ json_encode($treeData['root']->member_code ?? '') }};
+        const rootName = @json($treeData['root']->member_name ?? '');
+        const rootCode = @json($treeData['root']->member_code ?? '');
 
         this.selectedParentId = parentId || rootId;
         this.selectedParentName = parentName || rootName;
