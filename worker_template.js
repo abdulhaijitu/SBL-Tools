@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+
 // SBL Growth Manager - Cloudflare Worker Edge Application
 // Serves the exact, 100% pixel-perfect compiled Laravel Blade views and handles real D1 CRUD on the edge.
 
@@ -10,6 +12,72 @@ const CSS_PATH = __CSS_PATH__;
 const JS_PATH = __JS_PATH__;
 const PAGES = __PAGES__;
 const CLIENT_SYNC_JS = __CLIENT_SYNC_JS__;
+const MANIFEST_CONTENT = __MANIFEST_CONTENT__;
+const SW_CONTENT = __SW_CONTENT__;
+const OFFLINE_CONTENT = __OFFLINE_CONTENT__;
+
+const APP_SECRET = "jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=";
+
+async function signSession(userId, secret = APP_SECRET) {
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+    const data = `${userId}.${expiry}`;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+    const sigHex = Array.from(new Uint8Array(sigBuf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    return `${data}.${sigHex}`;
+}
+
+async function verifySession(token, secret = APP_SECRET) {
+    if (!token || typeof token !== "string") return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [userIdStr, expiryStr, expectedSigHex] = parts;
+    const expiry = parseInt(expiryStr, 10);
+    if (isNaN(expiry) || Date.now() > expiry) return null;
+
+    const data = `${userIdStr}.${expiryStr}`;
+    const enc = new TextEncoder();
+    try {
+        const key = await crypto.subtle.importKey(
+            "raw",
+            enc.encode(secret),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["verify"],
+        );
+        const match = expectedSigHex.match(/.{1,2}/g);
+        if (!match) return null;
+        const sigBytes = new Uint8Array(
+            match.map((byte) => parseInt(byte, 16)),
+        );
+        const isValid = await crypto.subtle.verify(
+            "HMAC",
+            key,
+            sigBytes,
+            enc.encode(data),
+        );
+        return isValid ? parseInt(userIdStr, 10) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function getCookie(name, cookieStr) {
+    if (!cookieStr) return null;
+    const match = cookieStr.match(
+        new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"),
+    );
+    return match ? decodeURIComponent(match[1]) : null;
+}
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return "";
@@ -96,60 +164,453 @@ export default {
             });
         }
 
+        // 4. PWA Assets (Manifest, Service Worker, Offline HTML, Icons)
+        if (path === "/manifest.webmanifest" || path === "/manifest.json") {
+            return new Response(MANIFEST_CONTENT, {
+                headers: {
+                    "Content-Type": "application/manifest+json; charset=utf-8",
+                    "Cache-Control": "public, max-age=86400",
+                },
+            });
+        }
+
+        if (path === "/sw.js") {
+            return new Response(SW_CONTENT, {
+                headers: {
+                    "Content-Type": "application/javascript; charset=utf-8",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                },
+            });
+        }
+
+        if (path === "/offline.html") {
+            return new Response(OFFLINE_CONTENT, {
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control": "public, max-age=3600",
+                },
+            });
+        }
+
+        if (path.startsWith("/icons/")) {
+            const binaryString = atob(SBL_LOGO_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
         if (path === "/ping") {
             return new Response("pong", { status: 200 });
         }
 
         const db = env.DB || env.sbl_database;
 
+        // 5. Authentication: Logout
+        if (path === "/logout") {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/login",
+                    "Set-Cookie":
+                        "sbl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
+                },
+            });
+        }
+
+        // 6. Authentication: Login POST
+        if (path === "/login" && request.method === "POST") {
+            let formData = null;
+            const contentType = request.headers.get("content-type") || "";
+            if (
+                contentType.includes("form") ||
+                contentType.includes("multipart") ||
+                contentType.includes("urlencoded")
+            ) {
+                try {
+                    formData = await request.formData();
+                } catch (e) {}
+            } else if (contentType.includes("json")) {
+                try {
+                    const j = await request.json();
+                    formData = {
+                        get(k) {
+                            return j[k] !== undefined && j[k] !== null
+                                ? String(j[k])
+                                : null;
+                        },
+                    };
+                } catch (e) {}
+            }
+
+            const loginInput = (
+                formData
+                    ? formData.get("login") ||
+                      formData.get("email") ||
+                      formData.get("phone") ||
+                      ""
+                    : ""
+            )
+                .toString()
+                .trim();
+            const passwordInput = (
+                formData ? formData.get("password") || "" : ""
+            ).toString();
+
+            if (!loginInput || !passwordInput) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=empty" },
+                });
+            }
+
+            let user = null;
+            if (db) {
+                try {
+                    const cleanPhone = loginInput.replace(/[^0-9]/g, "");
+                    const phoneVariants = [loginInput];
+                    if (cleanPhone) {
+                        phoneVariants.push(cleanPhone);
+                        if (cleanPhone.startsWith("01")) {
+                            phoneVariants.push("88" + cleanPhone);
+                            phoneVariants.push("+88" + cleanPhone);
+                        } else if (cleanPhone.startsWith("8801")) {
+                            phoneVariants.push(cleanPhone.slice(2));
+                        }
+                    }
+
+                    const placeholders = phoneVariants
+                        .map(() => "?")
+                        .join(", ");
+                    const sql = `SELECT * FROM users WHERE email = ? OR phone IN (${placeholders}) LIMIT 1`;
+                    user = await db
+                        .prepare(sql)
+                        .bind(loginInput, ...phoneVariants)
+                        .first();
+                } catch (e) {
+                    console.error("Login user query error:", e);
+                }
+            }
+
+            if (!user) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=invalid" },
+                });
+            }
+
+            if (user.status === "inactive") {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=inactive" },
+                });
+            }
+
+            let validPass = false;
+            if (user.password) {
+                const hashCompat = user.password.replace(/^\$2y\$/, "$2a$");
+                try {
+                    validPass = bcrypt.compareSync(passwordInput, hashCompat);
+                } catch (e) {
+                    console.error("Bcrypt compare error:", e);
+                }
+            }
+
+            if (!validPass) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/login?error=invalid" },
+                });
+            }
+
+            const sessionToken = await signSession(user.id, APP_SECRET);
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/dashboard",
+                    "Set-Cookie": `sbl_session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000; Secure`,
+                },
+            });
+        }
+
         // Glossary management is opt-in until an administrator password is configured.
         let abbreviationAdmin = false;
         if (/^\/abbreviations(?:\/\d+)?$/.test(path)) {
             const password = env.ABBREVIATIONS_ADMIN_PASSWORD;
             if (password) {
-                const expected = 'Basic ' + btoa('admin:' + password);
-                const supplied = request.headers.get('Authorization') || '';
-                const digest = async value => new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
-                const [a, b] = await Promise.all([digest(expected), digest(supplied)]);
-                abbreviationAdmin = a.reduce((diff, value, i) => diff | (value ^ b[i]), 0) === 0;
-                if (!abbreviationAdmin) return new Response('Administrator sign-in required.', {status: 401, headers: {'WWW-Authenticate': 'Basic realm="Abbreviations", charset="UTF-8"'}});
+                const expected = "Basic " + btoa("admin:" + password);
+                const supplied = request.headers.get("Authorization") || "";
+                const digest = async (value) =>
+                    new Uint8Array(
+                        await crypto.subtle.digest(
+                            "SHA-256",
+                            new TextEncoder().encode(value),
+                        ),
+                    );
+                const [a, b] = await Promise.all([
+                    digest(expected),
+                    digest(supplied),
+                ]);
+                abbreviationAdmin =
+                    a.reduce((diff, value, i) => diff | (value ^ b[i]), 0) ===
+                    0;
+                if (!abbreviationAdmin)
+                    return new Response("Administrator sign-in required.", {
+                        status: 401,
+                        headers: {
+                            "WWW-Authenticate":
+                                'Basic realm="Abbreviations", charset="UTF-8"',
+                        },
+                    });
             }
-            if (request.method !== 'GET') {
-                if (!abbreviationAdmin) return Response.json({message: 'Abbreviation management is not configured.'}, {status: 403});
-                if (request.headers.get('Origin') !== url.origin) return Response.json({message: 'Invalid origin.'}, {status: 403});
-                if (!db) return Response.json({message: 'Database unavailable.'}, {status: 503});
+            if (request.method !== "GET") {
+                if (!abbreviationAdmin)
+                    return Response.json(
+                        {
+                            message:
+                                "Abbreviation management is not configured.",
+                        },
+                        { status: 403 },
+                    );
+                if (request.headers.get("Origin") !== url.origin)
+                    return Response.json(
+                        { message: "Invalid origin." },
+                        { status: 403 },
+                    );
+                if (!db)
+                    return Response.json(
+                        { message: "Database unavailable." },
+                        { status: 503 },
+                    );
                 const id = /^\/abbreviations\/(\d+)$/.exec(path)?.[1];
                 try {
-                    if (id && !(await db.prepare('SELECT id FROM abbreviations WHERE id = ?').bind(id).first())) return Response.json({message: 'Abbreviation not found.'}, {status: 404});
-                    if (id && request.method === 'DELETE') {
-                        await db.prepare('DELETE FROM abbreviations WHERE id = ?').bind(id).run();
-                        return new Response(null, {status: 204});
+                    if (
+                        id &&
+                        !(await db
+                            .prepare(
+                                "SELECT id FROM abbreviations WHERE id = ?",
+                            )
+                            .bind(id)
+                            .first())
+                    )
+                        return Response.json(
+                            { message: "Abbreviation not found." },
+                            { status: 404 },
+                        );
+                    if (id && request.method === "DELETE") {
+                        await db
+                            .prepare("DELETE FROM abbreviations WHERE id = ?")
+                            .bind(id)
+                            .run();
+                        return new Response(null, { status: 204 });
                     }
-                    if ((!id && request.method !== 'POST') || (id && request.method !== 'PUT')) return new Response(null, {status: 405});
+                    if (
+                        (!id && request.method !== "POST") ||
+                        (id && request.method !== "PUT")
+                    )
+                        return new Response(null, { status: 405 });
                     let data;
-                    try { data = await request.json(); } catch { return Response.json({message: 'Invalid JSON.'}, {status: 422}); }
-                    if (!data || typeof data !== 'object' || Array.isArray(data)) return Response.json({message: 'Invalid term.'}, {status: 422});
-                    const categories = {ecommerce: 'E-Commerce Core', marketing: 'Marketing & Ads', logistics: 'Logistics & Delivery', network: 'SBL Network & System', finance: 'Finance & Operations'};
-                    if (!Object.hasOwn(categories, data.category_slug)) return Response.json({message: 'Select a valid category.'}, {status: 422});
-                    for (const [key, max] of Object.entries({code: 50, name: 200, meaning_bn: 1000, description_bn: 3000, icon: 20, tag: 100})) {
-                        if (data[key] == null && ['icon', 'tag'].includes(key)) data[key] = '';
-                        if (typeof data[key] !== 'string' || [...data[key]].length > max || (!['icon', 'tag'].includes(key) && !data[key].trim())) return Response.json({message: 'Invalid ' + key + '.'}, {status: 422});
+                    try {
+                        data = await request.json();
+                    } catch {
+                        return Response.json(
+                            { message: "Invalid JSON." },
+                            { status: 422 },
+                        );
+                    }
+                    if (
+                        !data ||
+                        typeof data !== "object" ||
+                        Array.isArray(data)
+                    )
+                        return Response.json(
+                            { message: "Invalid term." },
+                            { status: 422 },
+                        );
+                    const categories = {
+                        ecommerce: "E-Commerce Core",
+                        marketing: "Marketing & Ads",
+                        logistics: "Logistics & Delivery",
+                        network: "SBL Network & System",
+                        finance: "Finance & Operations",
+                    };
+                    if (!Object.hasOwn(categories, data.category_slug))
+                        return Response.json(
+                            { message: "Select a valid category." },
+                            { status: 422 },
+                        );
+                    for (const [key, max] of Object.entries({
+                        code: 50,
+                        name: 200,
+                        meaning_bn: 1000,
+                        description_bn: 3000,
+                        icon: 20,
+                        tag: 100,
+                    })) {
+                        if (data[key] == null && ["icon", "tag"].includes(key))
+                            data[key] = "";
+                        if (
+                            typeof data[key] !== "string" ||
+                            [...data[key]].length > max ||
+                            (!["icon", "tag"].includes(key) &&
+                                !data[key].trim())
+                        )
+                            return Response.json(
+                                { message: "Invalid " + key + "." },
+                                { status: 422 },
+                            );
                         data[key] = data[key].trim();
                     }
-                    if (await db.prepare('SELECT id FROM abbreviations WHERE code = ? AND id != ?').bind(data.code, id || 0).first()) return Response.json({message: 'This short form already exists.'}, {status: 422});
-                    const values = [data.code, data.name, categories[data.category_slug], data.category_slug, data.meaning_bn, data.description_bn, data.icon || '📖', data.tag];
+                    if (
+                        await db
+                            .prepare(
+                                "SELECT id FROM abbreviations WHERE code = ? AND id != ?",
+                            )
+                            .bind(data.code, id || 0)
+                            .first()
+                    )
+                        return Response.json(
+                            { message: "This short form already exists." },
+                            { status: 422 },
+                        );
+                    const values = [
+                        data.code,
+                        data.name,
+                        categories[data.category_slug],
+                        data.category_slug,
+                        data.meaning_bn,
+                        data.description_bn,
+                        data.icon || "📖",
+                        data.tag,
+                    ];
                     let savedId = id;
-                    if (id) await db.prepare('UPDATE abbreviations SET code=?, name=?, category=?, category_slug=?, meaning_bn=?, description_bn=?, icon=?, tag=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(...values, id).run();
+                    if (id)
+                        await db
+                            .prepare(
+                                "UPDATE abbreviations SET code=?, name=?, category=?, category_slug=?, meaning_bn=?, description_bn=?, icon=?, tag=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                            )
+                            .bind(...values, id)
+                            .run();
                     else {
-                        const result = await db.prepare('INSERT INTO abbreviations (code,name,category,category_slug,meaning_bn,description_bn,icon,tag,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)').bind(...values).run();
+                        const result = await db
+                            .prepare(
+                                "INSERT INTO abbreviations (code,name,category,category_slug,meaning_bn,description_bn,icon,tag,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",
+                            )
+                            .bind(...values)
+                            .run();
                         savedId = result.meta.last_row_id;
                     }
-                    return Response.json(await db.prepare('SELECT * FROM abbreviations WHERE id=?').bind(savedId).first(), {status: id ? 200 : 201});
+                    return Response.json(
+                        await db
+                            .prepare("SELECT * FROM abbreviations WHERE id=?")
+                            .bind(savedId)
+                            .first(),
+                        { status: id ? 200 : 201 },
+                    );
                 } catch (error) {
-                    console.error('Abbreviation write failed', error);
-                    return Response.json({message: 'Unable to save abbreviation. Check database configuration.'}, {status: 503});
+                    console.error("Abbreviation write failed", error);
+                    return Response.json(
+                        {
+                            message:
+                                "Unable to save abbreviation. Check database configuration.",
+                        },
+                        { status: 503 },
+                    );
                 }
             }
+        }
+
+        // Team Member Credentials GET endpoint
+        if (
+            path.match(/^\/(?:team|binary)\/\d+\/credentials$/) &&
+            request.method === "GET"
+        ) {
+            const decryptLaravelCredential = async (payload) => {
+                if (
+                    !payload ||
+                    typeof payload !== "string" ||
+                    !payload.startsWith("eyJ")
+                )
+                    return payload;
+                try {
+                    const json = JSON.parse(atob(payload));
+                    const appKey =
+                        "jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=";
+                    const rawKey = Uint8Array.from(atob(appKey), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const iv = Uint8Array.from(atob(json.iv), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const ciphertext = Uint8Array.from(atob(json.value), (c) =>
+                        c.charCodeAt(0),
+                    );
+                    const key = await crypto.subtle.importKey(
+                        "raw",
+                        rawKey,
+                        { name: "AES-CBC" },
+                        false,
+                        ["decrypt"],
+                    );
+                    const decrypted = await crypto.subtle.decrypt(
+                        { name: "AES-CBC", iv },
+                        key,
+                        ciphertext,
+                    );
+                    const decStr = new TextDecoder().decode(decrypted);
+                    const match = decStr.match(/^s:\d+:"(.*)";$/s);
+                    return match ? match[1] : decStr;
+                } catch (e) {
+                    return payload;
+                }
+            };
+
+            const parts = path.split("/");
+            const nodeId = parseInt(parts[2], 10);
+            if (db && nodeId) {
+                try {
+                    const row = await db
+                        .prepare(
+                            "SELECT password_plain, tpin FROM binary_nodes WHERE id = ?",
+                        )
+                        .bind(nodeId)
+                        .first();
+                    if (row) {
+                        const plainPassword =
+                            (await decryptLaravelCredential(
+                                row.password_plain,
+                            )) || "sbl123456";
+                        const plainTpin =
+                            (await decryptLaravelCredential(row.tpin)) ||
+                            "1234";
+                        return Response.json(
+                            {
+                                password_plain: plainPassword,
+                                tpin: plainTpin,
+                            },
+                            {
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Cache-Control": "no-store, private",
+                                },
+                            },
+                        );
+                    }
+                } catch (e) {
+                    console.error("D1 credentials error:", e);
+                }
+            }
+            return Response.json({
+                password_plain: "sbl123456",
+                tpin: "1234",
+            });
         }
 
         // 4. Handle POST, PUT, PATCH, DELETE Form Actions on Cloudflare D1
@@ -178,6 +639,32 @@ export default {
                 } catch (e) {
                     console.error("Error parsing formData:", e);
                 }
+            } else if (contentType.includes("json")) {
+                try {
+                    const jsonBody = await request.clone().json();
+                    if (jsonBody && typeof jsonBody === "object") {
+                        formData = {
+                            _map: jsonBody,
+                            get(k) {
+                                return this._map[k] !== undefined &&
+                                    this._map[k] !== null
+                                    ? String(this._map[k])
+                                    : null;
+                            },
+                            has(k) {
+                                return (
+                                    this._map[k] !== undefined &&
+                                    this._map[k] !== null
+                                );
+                            },
+                        };
+                        if (jsonBody._method) {
+                            effectiveMethod = String(
+                                jsonBody._method,
+                            ).toUpperCase();
+                        }
+                    }
+                } catch (e) {}
             }
 
             // Currency Switch Handler
@@ -328,7 +815,10 @@ export default {
                         try {
                             const refUrl = new URL(referer);
                             if (refUrl.pathname === "/leads") {
-                                refUrl.searchParams.set("deleted_lead", String(leadId));
+                                refUrl.searchParams.set(
+                                    "deleted_lead",
+                                    String(leadId),
+                                );
                                 dest = refUrl.pathname + refUrl.search;
                             }
                         } catch (e) {}
@@ -357,7 +847,10 @@ export default {
                                 ? Number(formData.get("score"))
                                 : 30;
 
-                            const photo = formData.get("photo") !== null ? (formData.get("photo") || null) : undefined;
+                            const photo =
+                                formData.get("photo") !== null
+                                    ? formData.get("photo") || null
+                                    : undefined;
                             if (photo !== undefined) {
                                 await db
                                     .prepare(
@@ -848,13 +1341,18 @@ export default {
                                 const targetNotes = formData.has("target_notes")
                                     ? formData.get("target_notes")
                                     : existing.target_notes;
+                                const notes = formData.has("notes")
+                                    ? formData.get("notes")
+                                    : formData.has("target_notes")
+                                      ? formData.get("target_notes")
+                                      : existing.notes;
 
                                 let contributions =
                                     formData.get("contributions");
                                 let pointValue =
                                     Number(existing.point_value) || 0;
+                                let contributionsArr = [];
                                 if (contributions) {
-                                    let contributionsArr = [];
                                     try {
                                         contributionsArr =
                                             typeof contributions === "string"
@@ -903,7 +1401,7 @@ export default {
 
                                 await db
                                     .prepare(
-                                        "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                        "UPDATE binary_nodes SET member_name = ?, member_code = ?, phone = ?, email = ?, password_plain = ?, tpin = ?, package_name = ?, rank_name = ?, sponsor_id = ?, sponsor_name = ?, point_value = ?, contributions = ?, is_target = ?, target_date = ?, target_notes = ?, notes = ?, user_id = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                     )
                                     .bind(
                                         memberName,
@@ -921,16 +1419,65 @@ export default {
                                         isTarget,
                                         targetDate,
                                         targetNotes,
+                                        notes,
                                         userId,
                                         isActive,
                                         nodeId,
                                     )
                                     .run();
+
+                                if (
+                                    Array.isArray(contributionsArr) &&
+                                    contributionsArr.length > 0
+                                ) {
+                                    try {
+                                        await db
+                                            .prepare(
+                                                "DELETE FROM investments WHERE binary_node_id = ?",
+                                            )
+                                            .bind(nodeId)
+                                            .run();
+                                        for (const c of contributionsArr) {
+                                            await db
+                                                .prepare(
+                                                    "INSERT INTO investments (binary_node_id, plan_name, amount, point_value, status, investment_date, note, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                                )
+                                                .bind(
+                                                    nodeId,
+                                                    c.note ||
+                                                        packageName ||
+                                                        "Contribution",
+                                                    Number(c.amount) || 0,
+                                                    Number(c.amount) || 0,
+                                                    c.date ||
+                                                        new Date()
+                                                            .toISOString()
+                                                            .slice(0, 10),
+                                                    c.note ||
+                                                        "Contribution Record",
+                                                )
+                                                .run();
+                                        }
+                                    } catch (invErr) {
+                                        console.error(
+                                            "D1 investments sync error:",
+                                            invErr,
+                                        );
+                                    }
+                                }
                             }
                         } catch (e) {
                             console.error("D1 Binary update error:", e);
                         }
                     }
+
+                    if (request.headers.get("accept")?.includes("json")) {
+                        return Response.json({
+                            success: true,
+                            message: "Member updated successfully",
+                        });
+                    }
+
                     const ref = request.headers.get("referer");
                     if (ref)
                         return Response.redirect(
@@ -942,20 +1489,78 @@ export default {
                         302,
                     );
                 }
+
+                // Member Notes update endpoint
+                if (
+                    path.match(/^\/(?:team|binary)\/\d+\/notes$/) &&
+                    (effectiveMethod === "PATCH" ||
+                        effectiveMethod === "POST" ||
+                        effectiveMethod === "PUT")
+                ) {
+                    const parts = path.split("/");
+                    const targetNodeId = parseInt(parts[2], 10);
+                    let notesVal = "";
+                    if (formData && formData.has("notes")) {
+                        notesVal = formData.get("notes") || "";
+                    } else {
+                        try {
+                            const body = await request.clone().json();
+                            notesVal = body.notes || "";
+                        } catch (e) {}
+                    }
+                    if (db && targetNodeId) {
+                        try {
+                            await db
+                                .prepare(
+                                    "UPDATE binary_nodes SET notes = ?, target_notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(notesVal, notesVal, targetNodeId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 member note update error:", e);
+                        }
+                    }
+                    return Response.json({ success: true, notes: notesVal });
+                }
             }
 
-            // 4c. Team & Users Handlers (POST, PUT, DELETE)
+            // 4c. Team & Users Handlers (Auth Users - Mobile + Password)
             if (path === "/users" && effectiveMethod === "POST" && formData) {
                 if (db) {
                     try {
-                        const name = formData.get("name") || "New Team Member";
-                        const email = formData.get("email") || "";
-                        const phone = formData.get("phone") || null;
-                        const designation = formData.get("designation") || null;
-                        const roleId = Number(formData.get("role_id")) || 3;
-                        const status = formData.get("status") || "active";
-                        const passwordHash =
-                            "$2y$12$e/e8u9R52f4q4z1V0h.qgeNq4mGkLpY4o5wOQvS5c9zQvT/zKk2yC";
+                        const name = (formData.get("name") || "New User")
+                            .toString()
+                            .trim();
+                        const phone = (formData.get("phone") || "")
+                            .toString()
+                            .trim();
+                        const rawPass = (formData.get("password") || "")
+                            .toString()
+                            .trim();
+                        let email = (formData.get("email") || "")
+                            .toString()
+                            .trim();
+                        const designation = (formData.get("designation") || "")
+                            .toString()
+                            .trim();
+                        const roleId = Number(formData.get("role_id")) || 2;
+                        const status = (formData.get("status") || "active")
+                            .toString()
+                            .trim();
+
+                        if (!email) {
+                            const cleanP = phone.replace(/[^0-9]/g, "");
+                            email =
+                                (cleanP || "user_" + Date.now()) + "@sbl.test";
+                        }
+
+                        const passwordHash = rawPass
+                            ? bcrypt
+                                  .hashSync(rawPass, 10)
+                                  .replace(/^\$2a\$/, "$2y$")
+                            : bcrypt
+                                  .hashSync("password", 10)
+                                  .replace(/^\$2a\$/, "$2y$");
 
                         const insRes = await db
                             .prepare(
@@ -973,7 +1578,7 @@ export default {
                             .run();
 
                         const newUserId = insRes?.meta?.last_row_id;
-                        if (newUserId) {
+                        if (newUserId && roleId) {
                             await db
                                 .prepare(
                                     "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
@@ -995,8 +1600,8 @@ export default {
                 if (effectiveMethod === "DELETE" && userId) {
                     if (db) {
                         try {
-                            if (userId !== 1) {
-                                // Never delete super admin
+                            if (userId > 1) {
+                                // Never delete root admin
                                 await db
                                     .prepare(
                                         "DELETE FROM role_user WHERE user_id = ?",
@@ -1021,40 +1626,82 @@ export default {
                 if (effectiveMethod === "PUT" && userId && formData) {
                     if (db) {
                         try {
-                            const name = formData.get("name");
-                            const email = formData.get("email");
-                            const phone = formData.get("phone") || null;
-                            const designation =
-                                formData.get("designation") || null;
-                            const roleId = Number(formData.get("role_id")) || 3;
-                            const status = formData.get("status") || "active";
+                            const name = (formData.get("name") || "")
+                                .toString()
+                                .trim();
+                            let email = (formData.get("email") || "")
+                                .toString()
+                                .trim();
+                            const phone = (formData.get("phone") || "")
+                                .toString()
+                                .trim();
+                            const designation = (
+                                formData.get("designation") || ""
+                            )
+                                .toString()
+                                .trim();
+                            const roleId = Number(formData.get("role_id")) || 2;
+                            const status = (formData.get("status") || "active")
+                                .toString()
+                                .trim();
+                            const newPass = (formData.get("password") || "")
+                                .toString()
+                                .trim();
 
-                            await db
-                                .prepare(
-                                    "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(
-                                    name,
-                                    email,
-                                    phone,
-                                    designation,
-                                    status,
-                                    userId,
-                                )
-                                .run();
+                            if (!email) {
+                                const cleanP = phone.replace(/[^0-9]/g, "");
+                                email =
+                                    (cleanP || "user_" + userId) + "@sbl.test";
+                            }
 
-                            await db
-                                .prepare(
-                                    "DELETE FROM role_user WHERE user_id = ?",
-                                )
-                                .bind(userId)
-                                .run();
-                            await db
-                                .prepare(
-                                    "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
-                                )
-                                .bind(userId, roleId)
-                                .run();
+                            if (newPass) {
+                                const passwordHash = bcrypt
+                                    .hashSync(newPass, 10)
+                                    .replace(/^\$2a\$/, "$2y$");
+                                await db
+                                    .prepare(
+                                        "UPDATE users SET name = ?, email = ?, phone = ?, password = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        email,
+                                        phone,
+                                        passwordHash,
+                                        designation,
+                                        status,
+                                        userId,
+                                    )
+                                    .run();
+                            } else {
+                                await db
+                                    .prepare(
+                                        "UPDATE users SET name = ?, email = ?, phone = ?, designation = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    )
+                                    .bind(
+                                        name,
+                                        email,
+                                        phone,
+                                        designation,
+                                        status,
+                                        userId,
+                                    )
+                                    .run();
+                            }
+
+                            if (roleId) {
+                                await db
+                                    .prepare(
+                                        "DELETE FROM role_user WHERE user_id = ?",
+                                    )
+                                    .bind(userId)
+                                    .run();
+                                await db
+                                    .prepare(
+                                        "INSERT INTO role_user (user_id, role_id) VALUES (?, ?)",
+                                    )
+                                    .bind(userId, roleId)
+                                    .run();
+                            }
                         } catch (e) {
                             console.error("D1 User update error:", e);
                         }
@@ -1431,11 +2078,11 @@ export default {
                     }
                 }
                 const refEco = request.headers.get("Referer");
-                const ecoDest = (refEco && refEco.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
-                return Response.redirect(
-                    new URL(ecoDest, request.url),
-                    302,
-                );
+                const ecoDest =
+                    refEco && refEco.includes("/toolkit")
+                        ? "/toolkit?tab=ecosystem"
+                        : "/ecosystem";
+                return Response.redirect(new URL(ecoDest, request.url), 302);
             }
 
             if (path.startsWith("/ecosystem/")) {
@@ -1455,7 +2102,10 @@ export default {
                         }
                     }
                     const refEcoDel = request.headers.get("Referer");
-                    const ecoDestDel = (refEcoDel && refEcoDel.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
+                    const ecoDestDel =
+                        refEcoDel && refEcoDel.includes("/toolkit")
+                            ? "/toolkit?tab=ecosystem"
+                            : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestDel, request.url),
                         302,
@@ -1494,7 +2144,10 @@ export default {
                         }
                     }
                     const refEcoPut = request.headers.get("Referer");
-                    const ecoDestPut = (refEcoPut && refEcoPut.includes("/toolkit")) ? "/toolkit?tab=ecosystem" : "/ecosystem";
+                    const ecoDestPut =
+                        refEcoPut && refEcoPut.includes("/toolkit")
+                            ? "/toolkit?tab=ecosystem"
+                            : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestPut, request.url),
                         302,
@@ -2017,11 +2670,31 @@ export default {
                 ]);
 
                 if (leadsRes?.results) liveLeads = leadsRes.results;
-                if (delLeadsRes?.results)
-                    deletedLeadIds = delLeadsRes.results.map((r) =>
-                        Number(r.id),
+                if (delLeadsRes?.results) {
+                    const activeLeadIds = new Set(
+                        (liveLeads || []).map((l) => Number(l.id)),
                     );
-                if (nodesRes?.results) liveNodes = nodesRes.results;
+                    deletedLeadIds = delLeadsRes.results
+                        .map((r) => Number(r.id))
+                        .filter((id) => !activeLeadIds.has(id));
+                }
+                if (nodesRes?.results) {
+                    liveNodes = nodesRes.results;
+                    for (const node of liveNodes) {
+                        const children = liveNodes.filter(
+                            (c) => Number(c.parent_id) === Number(node.id),
+                        );
+                        node.direct_left_count = children.filter(
+                            (c) => c.branch === "LEFT" || c.position === "left",
+                        ).length;
+                        node.direct_right_count = children.filter(
+                            (c) =>
+                                c.branch === "RIGHT" || c.position === "right",
+                        ).length;
+                        node.direct_total_count =
+                            node.direct_left_count + node.direct_right_count;
+                    }
+                }
                 if (contactsRes?.results) liveContacts = contactsRes.results;
                 if (tasksRes?.results) liveTasks = tasksRes.results;
                 if (ecoRes?.results) liveEcosystem = ecoRes.results;
@@ -2057,6 +2730,87 @@ export default {
             } catch (e) {
                 console.error("D1 Query error:", e);
             }
+        }
+
+        // 5b. Authenticate Session Cookie
+        const sessionCookie = getCookie(
+            "sbl_session",
+            request.headers.get("Cookie") || "",
+        );
+        const authUserId = await verifySession(sessionCookie, APP_SECRET);
+        let authUser = null;
+        if (authUserId) {
+            authUser = liveUsers.find(
+                (u) => Number(u.id) === Number(authUserId),
+            );
+            if (authUser && authUser.status === "inactive") {
+                authUser = null; // Revoke immediately
+            }
+        }
+
+        // Login Route (Public Gateway)
+        if (path === "/login") {
+            if (authUser) {
+                return new Response(null, {
+                    status: 302,
+                    headers: { Location: "/dashboard" },
+                });
+            }
+
+            let loginHtml = PAGES.login || "<h1>Login</h1>";
+            const errParam = url.searchParams.get("error");
+            if (errParam) {
+                let errMsg =
+                    "মোবাইল নম্বর অথবা পাসওয়ার্ডটি সঠিক নয়। অনুগ্রহ করে পুনরায় চেষ্টা করুন।";
+                let isInactive = false;
+                if (errParam === "inactive") {
+                    errMsg =
+                        "আপনার অ্যাকাউন্টটি নিষ্ক্রিয় (Inactive) রয়েছে। অ্যাক্সেসের জন্য অ্যাডমিনের সাথে যোগাযোগ করুন।";
+                    isInactive = true;
+                } else if (errParam === "empty") {
+                    errMsg =
+                        "মোবাইল নম্বর এবং পাসওয়ার্ড উভয়ই সঠিকভাবে প্রদান করুন।";
+                }
+
+                const alertBox = `
+                    <div class="mb-5 p-4 rounded-xl ${isInactive ? "bg-amber-500/15 border border-amber-500/30 text-amber-200" : "bg-rose-500/15 border border-rose-500/30 text-rose-200"} text-xs font-medium flex items-center gap-2.5 animate-pulse shadow-lg">
+                        <span class="text-base">${isInactive ? "⛔" : "⚠️"}</span>
+                        <span>${errMsg}</span>
+                    </div>
+                `;
+                if (loginHtml.includes("<form")) {
+                    loginHtml = loginHtml.replace("<form", alertBox + "<form");
+                }
+            }
+
+            if (loginHtml.includes("</head>")) {
+                loginHtml = loginHtml.replace(
+                    "</head>",
+                    '<style id="sbl-edge-styles">\n' +
+                        CSS_CONTENT +
+                        "\n</style>\n</head>",
+                );
+            }
+
+            return new Response(loginHtml, {
+                headers: {
+                    "Content-Type": "text/html; charset=utf-8",
+                    "Cache-Control":
+                        "no-store, no-cache, must-revalidate, max-age=0",
+                },
+            });
+        }
+
+        // Protected Application Routes - Must be authenticated!
+        if (!authUser) {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/login",
+                    "Set-Cookie":
+                        "sbl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
+                },
+            });
         }
 
         // 6. Select Page Template
@@ -2132,8 +2886,14 @@ export default {
                     .replace(/name:\s*'[^']*'/, `name: '${jsName}'`)
                     .replace(/mobile:\s*'[^']*'/, `mobile: '${jsMobile}'`)
                     .replace(/whatsapp:\s*'[^']*'/, `whatsapp: '${jsWhatsapp}'`)
-                    .replace(/photoData:\s*'[^']*'/, `photoData: '${(currentLead.photo || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`)
-                    .replace(/name="photo" :value="photoData"/, `name="photo" value="${escapeHtml(currentLead.photo || '')}" :value="photoData"`)
+                    .replace(
+                        /photoData:\s*'[^']*'/,
+                        `photoData: '${(currentLead.photo || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`,
+                    )
+                    .replace(
+                        /name="photo" :value="photoData"/,
+                        `name="photo" value="${escapeHtml(currentLead.photo || "")}" :value="photoData"`,
+                    )
                     .replace(
                         /name="email" value="[^"]*"/g,
                         `name="email" value="${escapeHtml(currentLead.email || "")}"`,
@@ -2343,11 +3103,22 @@ export default {
         } else if (path === "/abbreviations") {
             html = PAGES.abbreviations;
             try {
-                const terms = await db.prepare('SELECT * FROM abbreviations ORDER BY id').all();
-                html = html.replace(/data-terms="[^"]*"/, () => 'data-terms="' + escapeHtml(JSON.stringify(terms.results)) + '"');
-                html = html.replace(/data-can-manage="[^"]*"/, 'data-can-manage="' + (abbreviationAdmin ? '1' : '0') + '"');
+                const terms = await db
+                    .prepare("SELECT * FROM abbreviations ORDER BY id")
+                    .all();
+                html = html.replace(
+                    /data-terms="[^"]*"/,
+                    () =>
+                        'data-terms="' +
+                        escapeHtml(JSON.stringify(terms.results)) +
+                        '"',
+                );
+                html = html.replace(
+                    /data-can-manage="[^"]*"/,
+                    'data-can-manage="' + (abbreviationAdmin ? "1" : "0") + '"',
+                );
             } catch (error) {
-                return new Response('Abbreviation database migration is required.', {status: 503});
+                console.error("Abbreviation DB error:", error);
             }
         } else if (path === "/contacts") {
             html = PAGES.contacts;
@@ -2358,15 +3129,68 @@ export default {
             path.startsWith("/team")
         ) {
             const viewMode = url.searchParams.get("view");
-            html =
-                viewMode === "table"
-                    ? PAGES.binary_table || PAGES.binary
-                    : PAGES.binary;
+            if (viewMode === "table") {
+                html = PAGES.binary_table || PAGES.binary;
+            } else if (viewMode === "mindmap" || viewMode === "tree") {
+                html = PAGES.binary_mindmap || PAGES.binary;
+            } else {
+                html = PAGES.binary;
+            }
         } else {
             html = PAGES.dashboard;
         }
 
         let responseHtml = html;
+
+        if (authUser && authUser.name) {
+            responseHtml = responseHtml.replace(
+                /<strong class="block truncate text-sm text-white">.*?<\/strong>/,
+                `<strong class="block truncate text-sm text-white">${escapeHtml(authUser.name)}</strong>`,
+            );
+            const userInitial = escapeHtml(
+                authUser.name.charAt(0).toUpperCase(),
+            );
+            responseHtml = responseHtml.replace(
+                /<a href="[^"]*profile[^"]*" class="profile-avatar"[^>]*>.*?<\/a>/,
+                `<a href="/profile" class="profile-avatar" aria-label="Your profile">${userInitial}</a>`,
+            );
+        }
+
+        const safeUsers = liveUsers.map(({ password, ...u }) => u);
+
+        const syncDataPayload = {
+            authUser: authUser
+                ? {
+                      id: authUser.id,
+                      name: authUser.name,
+                      phone: authUser.phone,
+                      email: authUser.email,
+                      role_name: authUser.role_name,
+                      designation: authUser.designation,
+                  }
+                : null,
+            leads: liveLeads,
+            deletedLeads: deletedLeadIds,
+            nodes: liveNodes,
+            deletedNodes: deletedNodeIds,
+            contacts: liveContacts,
+            tasks: liveTasks,
+            ecosystem: liveEcosystem,
+            users: safeUsers,
+            deletedUsers: deletedUserIds,
+            sources: sourcesMap,
+            presentations: livePresentations,
+            deletedPresentations: deletedPresIds,
+            contentItems: liveContentItems,
+            activities: liveActivities,
+            roles: liveRoles,
+        };
+
+        const dataScript =
+            '<script id="sbl-live-d1-data">\n' +
+            "window.DATA = " +
+            JSON.stringify(syncDataPayload) +
+            ";\nconst DATA = window.DATA;\n</script>\n";
 
         // 7. Inject Edge Styles
         if (responseHtml && responseHtml.includes("</head>")) {
@@ -2420,34 +3244,19 @@ export default {
                     CSS_CONTENT +
                     "\n" +
                     syncStyles +
-                    "</style>\n</head>",
+                    "</style>\n" +
+                    dataScript +
+                    "</head>",
             );
         }
 
         // 8. Inject Live Dynamic Edge Synchronization Script (STRICT PATH ISOLATION)
         if (responseHtml && responseHtml.includes("</body>")) {
-            const syncDataPayload = {
-                leads: liveLeads,
-                deletedLeads: deletedLeadIds,
-                nodes: liveNodes,
-                deletedNodes: deletedNodeIds,
-                contacts: liveContacts,
-                tasks: liveTasks,
-                ecosystem: liveEcosystem,
-                users: liveUsers,
-                deletedUsers: deletedUserIds,
-                sources: sourcesMap,
-                presentations: livePresentations,
-                deletedPresentations: deletedPresIds,
-                contentItems: liveContentItems,
-                activities: liveActivities,
-                roles: liveRoles,
-            };
-
-            const syncScript = '<script id="sbl-live-d1-sync">\n' +
-                'const DATA = ' + JSON.stringify(syncDataPayload) + ';\n' +
-                CLIENT_SYNC_JS + '\n' +
-                '</script>\n'
+            const syncScript =
+                '<script id="sbl-live-d1-sync">\n' +
+                CLIENT_SYNC_JS +
+                "\n" +
+                "</script>\n";
             responseHtml = responseHtml.replace(
                 "</body>",
                 () => syncScript + "</body>",
@@ -2457,7 +3266,10 @@ export default {
         return new Response(responseHtml, {
             headers: {
                 "Content-Type": "text/html; charset=utf-8",
-                "Cache-Control": "public, max-age=0, must-revalidate",
+                "Cache-Control":
+                    "no-store, no-cache, must-revalidate, max-age=0",
+                Pragma: "no-cache",
+                Expires: "0",
                 "X-Powered-By":
                     "Cloudflare Workers Edge (Laravel Pixel-Perfect Edition)",
             },

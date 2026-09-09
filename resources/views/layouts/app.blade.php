@@ -3,8 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#111827">
+    <meta name="theme-color" content="#f97316">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SBL Tools">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <title>@yield('page-title', 'Profile') · SBL Growth Manager</title>
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="preload" as="image" href="{{ asset('images/sbl-logo.webp') }}" type="image/webp" fetchpriority="high">
@@ -58,5 +62,14 @@
         <button type="button" @click="sidebarOpen = true" aria-label="All pages" aria-controls="main-sidebar" :aria-expanded="sidebarOpen"><x-ui-icon name="menu" /><span>More</span></button>
     </nav>
     <div class="toast-stack" aria-live="polite" aria-atomic="false"><template x-for="toast in toasts" :key="toast.id"><div class="app-notice shadow-lg" :class="{'app-notice-error': toast.type === 'error'}"><span x-text="toast.message"></span><button type="button" class="icon-button" aria-label="Dismiss notification" @click="removeToast(toast.id)"><x-ui-icon name="close" /></button></div></template></div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('SW register failed: ', err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>

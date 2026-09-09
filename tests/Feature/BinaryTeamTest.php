@@ -41,7 +41,7 @@ class BinaryTeamTest extends TestCase
         $tree = app(\App\Services\BinaryTreeService::class)->getVisualTree(null, $this->admin->id, 2);
         $root = $tree['tree'];
         $children = array_merge($root['left_slots'], $root['right_slots']);
-        $nested = collect($children)->first(fn ($node) => empty($node['is_vacant']) && isset($node['left_slots']));
+        $nested = collect($children)->first(fn($node) => empty($node['is_vacant']) && isset($node['left_slots']));
 
         $this->assertNotNull($nested, 'The recursive tree must not be overwritten by flat direct slots.');
         $this->assertContains($nested['id'], $tree['all_node_ids']);
@@ -117,5 +117,40 @@ class BinaryTeamTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('team.search', ['search' => '@zobayerabdullah']));
 
         $response->assertRedirect(route('team.show', ['memberId' => $target->id]));
+    }
+
+    public function test_authenticated_user_can_view_binary_builder_view_with_slots_and_leads(): void
+    {
+        // Seed a CRM lead
+        $source = \App\Models\LeadSource::firstOrCreate(['name' => 'Direct Contact'], ['is_active' => true, 'order' => 1]);
+        \App\Models\Lead::create([
+            'owner_user_id' => $this->admin->id,
+            'lead_source_id' => $source->id,
+            'name' => 'Tanvir Ahmed',
+            'mobile' => '01811223344',
+            'email' => 'tanvir@sbl.test',
+            'stage' => \App\Enums\LeadStage::QUALIFIED,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('team.index'));
+
+        $response->assertOk();
+        $response->assertSee('Explorer (Builder)');
+        $response->assertSee('Mindmap');
+        $response->assertSee('Directory');
+        $response->assertSee('LEFT TEAM (৫টি স্লট)');
+        $response->assertSee('RIGHT TEAM (৫টি স্লট)');
+        $response->assertSee('Place Member');
+        $response->assertSee('Tanvir Ahmed');
+        $response->assertSee('CRM Leads থেকে দ্রুত নির্বাচন করুন');
+    }
+
+    public function test_user_can_view_mindmap_canvas_mode(): void
+    {
+        $response = $this->actingAs($this->admin)->get(route('team.index', ['view' => 'mindmap']));
+
+        $response->assertOk();
+        $response->assertSee('mindmap-board');
+        $response->assertSee('Explorer (Builder)');
     }
 }

@@ -45,6 +45,10 @@ class AbbreviationController extends Controller
 
     private function validated(Request $request, ?int $id = null): array
     {
+        if (! $request->filled('category_slug')) {
+            $request->merge(['category_slug' => 'ecommerce']);
+        }
+
         $data = $request->validate([
             'code' => ['required', 'string', 'max:50', \Illuminate\Validation\Rule::unique('abbreviations')->ignore($id)],
             'name' => 'required|string|max:200',

@@ -1,0 +1,55 @@
+{
+    "name": "SBL Tools - Smart Business & Team Management",
+    "short_name": "SBL Tools",
+    "description": "Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#090d16",
+    "theme_color": "#f97316",
+    "lang": "bn",
+    "categories": ["business", "productivity", "utilities"],
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "View overall business metrics and performance",
+            "url": "/dashboard",
+            "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Leads CRM",
+            "short_name": "Leads",
+            "description": "Manage prospective leads and follow-ups",
+            "url": "/leads",
+            "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Team Explorer",
+            "short_name": "Team",
+            "description": "10-Slot binary tree placement and structure",
+            "url": "/team",
+            "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+        }
+    ]
+}

@@ -47,6 +47,25 @@ function teamExplorerData() {
     isEditingNote: false,
     noteSaving: false,
     tempNote: '',
+    placementMemberName: '',
+    placementMemberCode: '',
+    placementPhone: '',
+    placementEmail: '',
+    placementNotes: '',
+    selectedLeadId: '',
+    crmLeads: @json($crmLeads ?? []),
+    onSelectLead(leadId) {
+        if (!leadId) return;
+        const lead = this.crmLeads.find(l => String(l.id) === String(leadId));
+        if (lead) {
+            this.placementMemberName = lead.name || '';
+            this.placementPhone = lead.mobile || '';
+            this.placementEmail = lead.email || '';
+            if (lead.profession_or_business || lead.location) {
+                this.placementNotes = [lead.profession_or_business, lead.location].filter(Boolean).join(' • ');
+            }
+        }
+    },
     init() { 
         this.$watch('detailsModalOpen', open => { if (!open) { this.credentials = {}; this.showDetailsPass = false; this.isEditingNote = false; } }); 
         window.copyToClipboard = (text, label) => this.copyToClipboard(text, label);
@@ -56,8 +75,8 @@ function teamExplorerData() {
     },
     openAddMemberModal(parentId = null, parentName = '', parentCode = '') {
         const rootId = {{ $treeData['root']->id ?? 'null' }};
-        const rootName = {{ json_encode($treeData['root']->member_name ?? '') }};
-        const rootCode = {{ json_encode($treeData['root']->member_code ?? '') }};
+        const rootName = @json($treeData['root']->member_name ?? '');
+        const rootCode = @json($treeData['root']->member_code ?? '');
 
         this.selectedParentId = parentId || rootId;
         this.selectedParentName = parentName || rootName;
@@ -66,6 +85,12 @@ function teamExplorerData() {
         this.selectedSlotNumber = 1;
         this.sponsorName = parentName || rootName;
         this.isTargetMember = false;
+        this.selectedLeadId = '';
+        this.placementMemberName = '';
+        this.placementMemberCode = '';
+        this.placementPhone = '';
+        this.placementEmail = '';
+        this.placementNotes = '';
         this.placementModalOpen = true;
     },
     copyToClipboard(text, label) {
@@ -133,7 +158,15 @@ function teamExplorerData() {
     getNodeData(node) {
         if (!node) return {};
         const id = (typeof node === 'object' && node !== null) ? node.id : node;
-        return (typeof node === 'object' && node !== null) ? node : { id: node };
+        let base = (typeof node === 'object' && node !== null) ? { ...node } : { id: node };
+        const dataNodes = (window.DATA && Array.isArray(window.DATA.nodes)) ? window.DATA.nodes : (typeof DATA !== 'undefined' && Array.isArray(DATA.nodes) ? DATA.nodes : null);
+        if (dataNodes) {
+            const found = dataNodes.find(n => String(n.id) === String(id));
+            if (found) {
+                base = Object.assign({}, base, found);
+            }
+        }
+        return base;
     },
     openDetailsModal(node) {
         this.detailsNode = this.getNodeData(node);
@@ -152,6 +185,12 @@ function teamExplorerData() {
         this.selectedSlotNumber = slotNumber || 1;
         this.sponsorName = parentName || '';
         this.isTargetMember = false;
+        this.selectedLeadId = '';
+        this.placementMemberName = '';
+        this.placementMemberCode = '';
+        this.placementPhone = '';
+        this.placementEmail = '';
+        this.placementNotes = '';
         this.placementModalOpen = true;
     },
     addContributionRow() {
@@ -180,11 +219,13 @@ function teamExplorerData() {
         const liveNode = this.getNodeData(node);
         let contribs = [];
         if (liveNode.contributions) {
-            contribs = typeof liveNode.contributions === 'string' ? JSON.parse(liveNode.contributions) : liveNode.contributions;
+            try {
+                contribs = typeof liveNode.contributions === 'string' ? JSON.parse(liveNode.contributions) : liveNode.contributions;
+            } catch (e) { contribs = []; }
         }
-        if (!contribs || contribs.length === 0) {
+        if (!contribs || !Array.isArray(contribs) || contribs.length === 0) {
             contribs = [
-                { amount: liveNode.total_investment || liveNode.point_value || 0, date: new Date().toISOString().slice(0, 10), note: liveNode.package_name || 'Initial' }
+                { amount: liveNode.total_investment || liveNode.point_value || 100, date: (liveNode.created_at ? String(liveNode.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10)), note: liveNode.package_name || 'Initial' }
             ];
         }
 
@@ -218,6 +259,49 @@ function teamExplorerData() {
                 form.action = '/team/' + liveNode.id;
             }
         });
+    },
+    async submitEditMember(e) {
+        e.preventDefault();
+        this.recalcTotalContribution();
+        const form = e.target;
+        const ci = form.querySelector('input[name=contributions]');
+        if (ci) ci.value = JSON.stringify(this.editNode.contributions);
+        const targetUrl = '/team/' + this.editNode.id;
+        form.action = targetUrl;
+        
+        if (window.DATA && Array.isArray(window.DATA.nodes)) {
+            const idx = window.DATA.nodes.findIndex(n => String(n.id) === String(this.editNode.id));
+            if (idx !== -1) {
+                window.DATA.nodes[idx] = Object.assign({}, window.DATA.nodes[idx], {
+                    member_name: this.editNode.member_name,
+                    member_code: this.editNode.member_code,
+                    phone: this.editNode.phone,
+                    email: this.editNode.email,
+                    package_name: this.editNode.package_name,
+                    rank_name: this.editNode.rank_name,
+                    sponsor_id: this.editNode.sponsor_id,
+                    sponsor_name: this.editNode.sponsor_name,
+                    point_value: this.editNode.point_value,
+                    is_target: this.editNode.is_target ? 1 : 0,
+                    target_date: this.editNode.target_date,
+                    target_notes: this.editNode.target_notes,
+                    notes: this.editNode.notes,
+                    contributions: JSON.stringify(this.editNode.contributions)
+                });
+            }
+        }
+        
+        try {
+            const formData = new FormData(form);
+            const res = await fetch(targetUrl, {
+                method: 'POST',
+                body: formData
+            });
+            this.editModalOpen = false;
+            window.location.reload();
+        } catch (err) {
+            form.submit();
+        }
     }
 };
 }
@@ -262,8 +346,9 @@ function teamExplorerData() {
                 </button>
             </div>
             <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-                <a class="px-3 py-2 rounded-lg {{ $viewMode !== 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}">Explorer</a>
-                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}">Directory</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Builder">⚡ Explorer (Builder)</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'mindmap' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'mindmap', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Mindmap Canvas Tree">🗺️ Mindmap</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}" title="Directory List">📋 Directory</a>
             </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
@@ -356,9 +441,9 @@ function teamExplorerData() {
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                <tbody data-binary-table-body class="divide-y divide-slate-100 text-xs text-slate-700">
                     @forelse($members as $member)
-                    <tr class="hover:bg-slate-50/60 transition-colors">
+                    <tr data-node-id="{{ $member->id }}" class="hover:bg-slate-50/60 transition-colors">
                         <!-- Member Profile -->
                         <td class="py-3.5 px-4">
                             <div class="flex items-center gap-3">
@@ -367,7 +452,7 @@ function teamExplorerData() {
                                 </div>
                                 <div>
                                     <div class="font-bold text-slate-900 hover:text-orange-600 transition-colors cursor-pointer"
-                                         @click="openDetailsModal({{ json_encode($member) }})">
+                                         @click="openDetailsModal({{ $member->id }})">
                                         {{ $member->member_name }}
                                     </div>
                                     <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
@@ -444,7 +529,7 @@ function teamExplorerData() {
                                 </a>
 
                                 <button type="button" 
-                                        @click="openDetailsModal({{ json_encode($member) }})"
+                                        @click="openDetailsModal({{ $member->id }})"
                                         class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
                                         title="View member details">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -470,8 +555,10 @@ function teamExplorerData() {
         @endif
     </div>
 
-    @else
+    @elseif($viewMode === 'mindmap')
     @include('binary.partials.mindmap')
+    @else
+    @include('binary.partials.builder')
     @endif
 
     <!-- ==================== 5. MEMBER DETAILS MODAL / DRAWER ==================== -->
@@ -758,6 +845,44 @@ function teamExplorerData() {
             <form action="{{ route('binary.store') }}" method="POST" class="space-y-4">
                 @csrf
 
+                <!-- ==================== CRM LEADS QUICK IMPORT ==================== -->
+                @if(isset($crmLeads) && count($crmLeads) > 0)
+                <div class="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50/60 rounded-2xl border border-amber-200/90 space-y-1.5 shadow-2xs">
+                    <label class="block text-xs font-black text-amber-950 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <span>⚡</span>
+                            <span>CRM Leads থেকে দ্রুত নির্বাচন করুন (Auto-Fill)</span>
+                        </span>
+                        <span class="text-[10px] text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full font-bold">এক ক্লিকে ফিল</span>
+                    </label>
+                    <select x-model="selectedLeadId" 
+                            @change="onSelectLead($event.target.value)"
+                            class="w-full text-xs bg-white border border-amber-300 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                        <option value="">-- Select from CRM Leads (বাছাই করতে ক্লিক করুন) --</option>
+                        @foreach($crmLeads as $cLead)
+                            <option value="{{ $cLead->id }}">
+                                {{ $cLead->name }} {{ $cLead->mobile ? '• '.$cLead->mobile : '' }} {{ $cLead->location ? '• '.$cLead->location : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[10px] text-amber-800/80">লিড সিলেক্ট করলে মেম্বারের নাম, ফোন ও ইমেইল নিজে থেকেই পূরণ হয়ে যাবে।</p>
+                </div>
+                @endif
+
+                <!-- ==================== PLACEMENT POSITION VISUAL PREVIEW ==================== -->
+                <div class="p-3 bg-slate-100 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between text-xs font-bold gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-orange-600">📍 প্লেসমেন্ট টার্গেট:</span>
+                        <span class="text-slate-900" x-text="selectedParentName || 'Root'"></span>
+                        <span class="text-slate-400">›</span>
+                        <span class="px-2 py-0.5 rounded text-[11px] font-black" 
+                              :class="selectedBranch === 'LEFT' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'"
+                              x-text="selectedBranch === 'LEFT' ? '👈 LEFT TEAM' : '👉 RIGHT TEAM'"></span>
+                        <span class="text-slate-400">›</span>
+                        <span class="bg-white px-2 py-0.5 rounded border border-slate-300 font-mono" x-text="'Slot ' + selectedSlotNumber"></span>
+                    </div>
+                </div>
+
                 <!-- ==================== MEMBER CONNECTOR (PLACEMENT UPLINE) ==================== -->
                 <div class="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-3">
                     <div>
@@ -845,11 +970,11 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
-                        <input type="text" name="member_name" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="member_name" x-model="placementMemberName" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Username / Member Code</label>
-                        <input type="text" name="member_code" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                        <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
                     </div>
                 </div>
 
@@ -857,11 +982,11 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-                        <input type="text" name="phone" placeholder="017xxxxxxxx" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="phone" x-model="placementPhone" placeholder="017xxxxxxxx" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                        <input type="email" name="email" placeholder="karim@sbl.test" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="email" name="email" x-model="placementEmail" placeholder="karim@sbl.test" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                 </div>
 
@@ -912,7 +1037,7 @@ function teamExplorerData() {
                 <!-- Member Notes -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Member Notes</label>
-                    <textarea name="notes" rows="2" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
+                    <textarea name="notes" x-model="placementNotes" rows="2" placeholder="Any special notes, background info, or goals for this member..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500"></textarea>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
@@ -942,7 +1067,7 @@ function teamExplorerData() {
                 <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" class="space-y-3.5">
+            <form id="edit-member-form" :action="'/team/' + (editNode.id || '')" method="POST" @submit="submitEditMember($event)" class="space-y-3.5">
                 @csrf
                 @method('PUT')
                 <input type="hidden" name="is_active" value="1">

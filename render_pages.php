@@ -61,7 +61,11 @@ $pages = [
         return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
     },
     'binary' => function () {
-        request()->merge(['view' => 'tree']);
+        request()->merge(['view' => 'builder']);
+        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+    },
+    'binary_mindmap' => function () {
+        request()->merge(['view' => 'mindmap']);
         return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
     },
     'binary_table' => function () {
@@ -78,6 +82,9 @@ $pages = [
     },
     'profile' => function () {
         return app(App\Http\Controllers\ProfileController::class)->edit(request())->render();
+    },
+    'login' => function () {
+        return view('auth.login')->render();
     },
 ];
 

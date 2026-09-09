@@ -92,7 +92,6 @@
                     <tr>
                         <th class="py-3.5 px-4">Lead Info</th>
                         <th class="py-3.5 px-4">Contact</th>
-                        <th class="py-3.5 px-4">Source & Interest</th>
                         <th class="py-3.5 px-4">Stage</th>
                         <th class="py-3.5 px-4">Next Action</th>
                         <th class="py-3.5 px-4 text-right">Actions</th>
@@ -106,9 +105,9 @@
                                 <div class="flex items-center gap-3">
                                     <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-xs flex-shrink-0 overflow-hidden border border-orange-200/50">
                                         @if(!empty($lead->photo))
-                                            <img src="{{ $lead->photo }}" alt="{{ $lead->name }}" class="w-full h-full object-cover">
+                                             <img src="{{ $lead->photo }}" alt="{{ $lead->name }}" class="w-full h-full object-cover">
                                         @else
-                                            {{ substr($lead->name, 0, 1) }}
+                                             {{ substr($lead->name, 0, 1) }}
                                         @endif
                                     </div>
                                     <div>
@@ -123,41 +122,61 @@
                                 </div>
                             </td>
 
-                            <!-- Contact -->
-                            <td class="py-3.5 px-4">
-                                <div class="font-medium text-slate-800">{{ $lead->mobile }}</div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <a href="tel:{{ $lead->mobile }}" title="Call" class="text-slate-400 hover:text-emerald-600 text-sm">
-                                        📞
+                            <!-- Contact (Number + Call, WhatsApp, Facebook Icons) -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <div class="font-semibold text-slate-900 text-xs font-mono tracking-wide">{{ $lead->mobile }}</div>
+                                <div class="flex items-center gap-1.5 mt-1.5">
+                                    <!-- Call Icon -->
+                                    <a href="tel:{{ $lead->mobile }}" 
+                                       title="Call {{ $lead->mobile }}" 
+                                       class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all shadow-2xs active:scale-95" 
+                                       aria-label="Call {{ $lead->mobile }}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/>
+                                        </svg>
                                     </a>
-                                    @if ($lead->whatsapp ?? $lead->mobile)
-                                        <a href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" target="_blank" title="WhatsApp" class="text-slate-400 hover:text-emerald-600 text-sm">
-                                            💬
-                                        </a>
-                                    @endif
-                                    @if ($lead->facebook_url)
-                                        <a href="{{ $lead->facebook_url }}" target="_blank" title="Facebook" class="text-slate-400 hover:text-blue-600 text-sm">
-                                            🌐
-                                        </a>
-                                    @endif
-                                </div>
-                            </td>
 
-                            <!-- Source & Interest -->
-                            <td class="py-3.5 px-4">
-                                <span class="font-medium text-slate-800 block">{{ $lead->source->name ?? 'N/A' }}</span>
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                    @if($lead->lead_tag)
-                                        <span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 text-[10px] font-bold">
-                                            {{ $lead->lead_tag }}
+                                    <!-- WhatsApp Icon -->
+                                    @php
+                                        $waNumber = \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile);
+                                    @endphp
+                                    @if ($waNumber)
+                                        <a href="https://wa.me/{{ $waNumber }}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer" 
+                                           title="WhatsApp ({{ $lead->whatsapp ?: $lead->mobile }})" 
+                                           class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all shadow-2xs active:scale-95" 
+                                           aria-label="WhatsApp ({{ $lead->whatsapp ?: $lead->mobile }})">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/>
+                                            </svg>
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-300" title="No WhatsApp">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/>
+                                            </svg>
                                         </span>
                                     @endif
-                                    @if($lead->interest_types)
-                                        @foreach(array_slice($lead->interest_types, 0, 2) as $type)
-                                            <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">
-                                                {{ $type }}
-                                            </span>
-                                        @endforeach
+
+                                    <!-- Facebook Icon -->
+                                    @if ($lead->facebook_url)
+                                        <a href="{{ $lead->facebook_url }}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer" 
+                                           title="Facebook Profile" 
+                                           class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-all shadow-2xs active:scale-95" 
+                                           aria-label="Facebook Profile">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                            </svg>
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-300" title="No Facebook URL">
+                                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                            </svg>
+                                        </span>
                                     @endif
                                 </div>
                             </td>
@@ -232,7 +251,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-12 text-center text-slate-400">
+                            <td colspan="5" class="py-12 text-center text-slate-400">
                                 <div class="text-base font-semibold text-slate-700">No leads found</div>
                                 <div class="text-xs text-slate-500 mt-1">Try adjusting your filters or add a new lead.</div>
                                 @can('leads.create')<a href="{{ route('leads.create') }}" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold">
@@ -313,14 +332,14 @@
                     <div class="grid grid-cols-3 gap-2 pt-1">
                         <a href="tel:{{ $lead->mobile }}" 
                            class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                            <span>📞</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>
                             <span>Call</span>
                         </a>
 
                         <a href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" 
                            target="_blank"
                            class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">
-                            <span>💬</span>
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>
                             <span>WhatsApp</span>
                         </a>
 

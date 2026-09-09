@@ -28,7 +28,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'login' => ['sometimes', 'string'],
+            'email' => ['sometimes', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,11 +43,52 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt([...$this->only('email', 'password'), 'status' => 'active'], $this->boolean('remember'))) {
+        $login = (string) ($this->input('login') ?: $this->input('email') ?: $this->input('phone'));
+        $login = trim($login);
+        $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+
+        // Check if account exists and is inactive
+        $user = \App\Models\User::where($field, $login)
+            ->orWhere(function ($q) use ($login) {
+                // If input starts with 01..., also check without leading 0 or with 88
+                if (preg_match('/^01[3-9]\d{8}$/', $login)) {
+                    $q->where('phone', $login)
+                        ->orWhere('phone', '88' . $login)
+                        ->orWhere('phone', '+88' . $login);
+                }
+            })->first();
+
+        $errorKey = ($this->has('email') && !$this->filled('login')) ? 'email' : 'login';
+
+        if ($user && $user->status === 'inactive') {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                $errorKey => 'Your account is currently inactive. Please contact an administrator.',
+            ]);
+        }
+
+        $credentials = [
+            $field => $login,
+            'password' => $this->input('password'),
+            'status' => 'active',
+        ];
+
+        $attemptSuccess = Auth::attempt($credentials, $this->boolean('remember'));
+
+        // If direct attempt failed and it's a phone with BD variations, try matching the actual user's phone field
+        if (!$attemptSuccess && $user && $user->status === 'active') {
+            $attemptSuccess = Auth::attempt([
+                'id' => $user->id,
+                'password' => $this->input('password'),
+                'status' => 'active',
+            ], $this->boolean('remember'));
+        }
+
+        if (! $attemptSuccess) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                $errorKey => 'These credentials do not match our records.',
             ]);
         }
 
@@ -69,7 +111,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'login' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -81,6 +123,7 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        $login = (string) ($this->input('login') ?: $this->input('email') ?: $this->input('phone'));
+        return Str::transliterate(Str::lower(trim($login)) . '|' . $this->ip());
     }
 }

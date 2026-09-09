@@ -39,7 +39,15 @@ class BinaryTeamController extends Controller
             $this->treeService->ensureUserRoot($currentUser);
         }
 
-        $viewMode = $request->query('view', 'tree');
+        $rawView = $request->query('view', 'builder');
+        if (in_array($rawView, ['mindmap', 'tree'])) {
+            $viewMode = 'mindmap';
+        } elseif ($rawView === 'table') {
+            $viewMode = 'table';
+        } else {
+            $viewMode = 'builder';
+        }
+
         $nodeId = $memberId ?: ($request->query('node_id') ?: $request->query('member_id'));
         if ($nodeId) {
             $requestedNode = BinaryNode::findOrFail($nodeId);
@@ -47,6 +55,13 @@ class BinaryTeamController extends Controller
             abort_unless((int)$requestedNode->tree_owner_id === (int)$ownerId, 404);
         }
         $treeData = $this->treeService->getVisualTree($nodeId ? (int)$nodeId : null, $ownerId, 2);
+
+        $firstVacantLeft = collect($treeData['left_slots'] ?? [])->firstWhere('is_vacant', true);
+        $firstVacantRight = collect($treeData['right_slots'] ?? [])->firstWhere('is_vacant', true);
+        $weakerLeg = $treeData['stats']['weaker_leg'] ?? 'LEFT';
+        $autoBalanceSlot = ($weakerLeg === 'LEFT' ? $firstVacantLeft : $firstVacantRight) ?: ($firstVacantLeft ?: $firstVacantRight);
+
+        $crmLeads = \App\Models\Lead::orderBy('name')->get(['id', 'name', 'mobile', 'email', 'profession_or_business', 'location']);
 
         $packages = [
             ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'National Package (120,000/-) - 100 BV'],
@@ -76,7 +91,21 @@ class BinaryTeamController extends Controller
         }
         $members = $tableQuery->paginate(15)->withQueryString();
 
-        return view('binary.index', compact('treeData', 'packages', 'allNodes', 'users', 'viewMode', 'members', 'ownerId', 'isSuperAdmin'));
+        return view('binary.index', compact(
+            'treeData',
+            'packages',
+            'allNodes',
+            'users',
+            'viewMode',
+            'members',
+            'ownerId',
+            'isSuperAdmin',
+            'crmLeads',
+            'firstVacantLeft',
+            'firstVacantRight',
+            'autoBalanceSlot',
+            'weakerLeg'
+        ));
     }
 
     /**
@@ -216,8 +245,10 @@ class BinaryTeamController extends Controller
                 ->first();
             if ($matchedNode) {
                 $request->merge(['sponsor_id' => $matchedNode->id, 'sponsor_name' => $matchedNode->member_name]);
+            } else {
+                $request->merge(['sponsor_id' => null, 'sponsor_name' => $sName]);
             }
-        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0') {
+        } elseif ($request->input('sponsor_id') === '' || $request->input('sponsor_id') === '0' || !$request->filled('sponsor_name')) {
             $request->merge(['sponsor_id' => null, 'sponsor_name' => null]);
         }
 
@@ -247,7 +278,12 @@ class BinaryTeamController extends Controller
         ]);
 
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->input('is_active') : true;
-        if (!empty($validated['sponsor_id'])) BinaryNode::where('tree_owner_id', $node->tree_owner_id)->findOrFail($validated['sponsor_id']);
+        if (!empty($validated['sponsor_id'])) {
+            $spNode = BinaryNode::where('tree_owner_id', $node->tree_owner_id)->find($validated['sponsor_id']);
+            if (!$spNode) {
+                $validated['sponsor_id'] = null;
+            }
+        }
         if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
         $validated['is_target'] = $request->boolean('is_target');
 
