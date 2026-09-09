@@ -33,43 +33,43 @@
         </div>
         <div class="mt-1 space-y-0.5 pl-1">
             <!-- Packages -->
-            <a href="{{ route('toolkit.index', ['tab' => 'packages']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ ($isToolkit && ($currentTab === 'packages' || !$currentTab)) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('packages.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('packages.*') || ($isToolkit && ($currentTab === 'packages' || !$currentTab))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📦</span>
                 <span>Packages</span>
             </a>
 
             <!-- Ranks -->
-            <a href="{{ route('toolkit.index', ['tab' => 'ranks']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ ($isToolkit && in_array($currentTab, ['ranks', 'compensation'])) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('ranks.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('ranks.*') || ($isToolkit && in_array($currentTab, ['ranks', 'compensation']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🏆</span>
                 <span>Ranks</span>
             </a>
 
             <!-- Counseling Guide -->
-            <a href="{{ route('toolkit.index', ['tab' => 'counseling']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ ($isToolkit && $currentTab === 'counseling') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('counseling.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('counseling.*') || ($isToolkit && $currentTab === 'counseling')) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🎯</span>
                 <span>Counseling Guide</span>
             </a>
 
             <!-- Commission -->
-            <a href="{{ route('toolkit.index', ['tab' => 'commission']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ ($isToolkit && in_array($currentTab, ['commission', 'calculator'])) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('commission.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('commission.*') || ($isToolkit && in_array($currentTab, ['commission', 'calculator']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🧮</span>
                 <span>Commission</span>
             </a>
 
             <!-- Links (Formerly Websites) -->
-            <a href="{{ route('toolkit.index', ['tab' => 'links']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('ecosystem.*') || ($isToolkit && in_array($currentTab, ['links', 'ecosystem']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('links.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('links.*', 'ecosystem.*') || ($isToolkit && in_array($currentTab, ['links', 'ecosystem']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🔗</span>
                 <span>Links</span>
             </a>
 
             <!-- Resources (Leaflets & Official Documents) -->
-            <a href="{{ route('toolkit.index', ['tab' => 'resources']) }}" 
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ ($isToolkit && $currentTab === 'resources') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a href="{{ route('resources.index') }}" 
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('resources.*', 'marketing-resources.*') || ($isToolkit && $currentTab === 'resources')) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📁</span>
                 <span>Resources</span>
                 <span class="ml-auto text-[9px] bg-orange-500/30 text-orange-200 px-1.5 py-0.5 rounded-md font-bold">New</span>

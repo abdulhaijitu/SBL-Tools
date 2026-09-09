@@ -127,9 +127,7 @@
         },
 
         openCalculator(type = 'national', amount = 120000) {
-            window.dispatchEvent(new CustomEvent('switch-to-calculator', {
-                detail: { type: type, amount: amount }
-            }));
+            window.location.href = '{{ route("commission.index") }}?type=' + encodeURIComponent(type) + '&amount=' + encodeURIComponent(amount);
         },
 
         trackJoin(pkgKey = 'starter', location = 'card') {

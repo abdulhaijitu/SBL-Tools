@@ -28,7 +28,25 @@ $pages = [
         return app(App\Http\Controllers\LeadController::class)->index(request())->render();
     },
     'toolkit' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->index(request())->render();
+        return app(App\Http\Controllers\SblToolkitController::class)->packages(request())->render();
+    },
+    'packages' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->packages(request())->render();
+    },
+    'ranks' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->ranks(request())->render();
+    },
+    'counseling' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->counseling(request())->render();
+    },
+    'commission' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->commission(request())->render();
+    },
+    'links' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->links(request())->render();
+    },
+    'resources' => function () {
+        return app(App\Http\Controllers\SblToolkitController::class)->resources(request())->render();
     },
     'tasks' => function () {
         return app(App\Http\Controllers\TaskController::class)->index(request())->render();

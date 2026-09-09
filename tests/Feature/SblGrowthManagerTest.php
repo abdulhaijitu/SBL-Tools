@@ -338,12 +338,40 @@ class SblGrowthManagerTest extends TestCase
     {
         $this->seed(\Database\Seeders\SblPdfDataSeeder::class);
 
-        $response = $this->actingAs($this->user)->get('/toolkit');
-        $response->assertStatus(200);
-        $response->assertSee('SBL Marketing Tools', false);
-        $response->assertSee('National Package');
-        $response->assertSee('Field Marketing Executive');
-        $response->assertSee('Counseling Guide');
-        $response->assertSee('Commission');
+        // Test Packages (default toolkit)
+        $pkgResponse = $this->actingAs($this->user)->get('/packages');
+        $pkgResponse->assertStatus(200);
+        $pkgResponse->assertSee('National Package');
+        $pkgResponse->assertSee('Packages');
+
+        // Test Toolkit backward compatibility
+        $toolkitResponse = $this->actingAs($this->user)->get('/toolkit');
+        $toolkitResponse->assertStatus(200);
+        $toolkitResponse->assertSee('National Package');
+
+        // Test Ranks
+        $ranksResponse = $this->actingAs($this->user)->get('/ranks');
+        $ranksResponse->assertStatus(200);
+        $ranksResponse->assertSee('Field Marketing Executive');
+
+        // Test Counseling Guide
+        $counselingResponse = $this->actingAs($this->user)->get('/counseling');
+        $counselingResponse->assertStatus(200);
+        $counselingResponse->assertSee('Investor vs Networker');
+
+        // Test Commission
+        $commissionResponse = $this->actingAs($this->user)->get('/commission');
+        $commissionResponse->assertStatus(200);
+        $commissionResponse->assertSee('Commission');
+
+        // Test Links
+        $linksResponse = $this->actingAs($this->user)->get('/links');
+        $linksResponse->assertStatus(200);
+        $linksResponse->assertSee('Official SBL Links');
+
+        // Test Resources
+        $resResponse = $this->actingAs($this->user)->get('/resources');
+        $resResponse->assertStatus(200);
+        $resResponse->assertSee('Resources');
     }
 }

@@ -58,11 +58,14 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     Route::put('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'update'])->name('abbreviations.update');
     Route::delete('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'destroy'])->name('abbreviations.destroy');
 
-    // SBL Marketing Tools & Packages
+    // SBL Marketing Tools (Standalone Single Pages)
+    Route::get('/packages', [\App\Http\Controllers\SblToolkitController::class, 'packages'])->name('packages.index');
+    Route::get('/ranks', [\App\Http\Controllers\SblToolkitController::class, 'ranks'])->name('ranks.index');
+    Route::get('/counseling', [\App\Http\Controllers\SblToolkitController::class, 'counseling'])->name('counseling.index');
+    Route::get('/commission', [\App\Http\Controllers\SblToolkitController::class, 'commission'])->name('commission.index');
+    Route::get('/links', [\App\Http\Controllers\SblToolkitController::class, 'links'])->name('links.index');
+    Route::get('/resources', [\App\Http\Controllers\SblToolkitController::class, 'resources'])->name('resources.index');
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
-    Route::redirect('/packages', '/toolkit?tab=packages')->name('packages.index');
-    Route::redirect('/links', '/toolkit?tab=links')->name('links.index');
-    Route::redirect('/resources', '/toolkit?tab=resources')->name('resources.index');
 
     // SBL Marketing Resources CRUD (Super Admin)
     Route::post('/marketing-resources', [\App\Http\Controllers\MarketingResourceController::class, 'store'])->name('marketing-resources.store');

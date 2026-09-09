@@ -2079,8 +2079,8 @@ export default {
                 }
                 const refEco = request.headers.get("Referer");
                 const ecoDest =
-                    refEco && refEco.includes("/toolkit")
-                        ? "/toolkit?tab=ecosystem"
+                    refEco && (refEco.includes("/links") || refEco.includes("/toolkit"))
+                        ? "/links"
                         : "/ecosystem";
                 return Response.redirect(new URL(ecoDest, request.url), 302);
             }
@@ -2103,8 +2103,8 @@ export default {
                     }
                     const refEcoDel = request.headers.get("Referer");
                     const ecoDestDel =
-                        refEcoDel && refEcoDel.includes("/toolkit")
-                            ? "/toolkit?tab=ecosystem"
+                        refEcoDel && (refEcoDel.includes("/links") || refEcoDel.includes("/toolkit"))
+                            ? "/links"
                             : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestDel, request.url),
@@ -2145,13 +2145,110 @@ export default {
                     }
                     const refEcoPut = request.headers.get("Referer");
                     const ecoDestPut =
-                        refEcoPut && refEcoPut.includes("/toolkit")
-                            ? "/toolkit?tab=ecosystem"
+                        refEcoPut && (refEcoPut.includes("/links") || refEcoPut.includes("/toolkit"))
+                            ? "/links"
                             : "/ecosystem";
                     return Response.redirect(
                         new URL(ecoDestPut, request.url),
                         302,
                     );
+                }
+            }
+
+            // 4f2. Marketing Resources Handlers
+            if (
+                path === "/marketing-resources" &&
+                effectiveMethod === "POST" &&
+                formData
+            ) {
+                if (db) {
+                    try {
+                        const title = formData.get("title") || "Untitled Resource";
+                        const category = formData.get("category") || "Leaflets & Sheets";
+                        const fileType = formData.get("file_type") || "pdf";
+                        const fileUrl = formData.get("file_url") || "#";
+                        const fileSize = formData.get("file_size") || null;
+                        const badge = formData.get("badge") || null;
+                        const description = formData.get("description") || null;
+                        const sortOrder = parseInt(formData.get("sort_order") || "0", 10);
+                        const isActive = formData.has("is_active") ? 1 : 1;
+
+                        await db
+                            .prepare(
+                                "INSERT INTO marketing_resources (title, category, file_type, file_url, file_size, badge, description, sort_order, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            )
+                            .bind(
+                                title,
+                                category,
+                                fileType,
+                                fileUrl,
+                                fileSize,
+                                badge,
+                                description,
+                                sortOrder,
+                                isActive,
+                            )
+                            .run();
+                    } catch (e) {
+                        console.error("D1 Marketing Resource insert error:", e);
+                    }
+                }
+                return Response.redirect(new URL("/resources", request.url), 302);
+            }
+
+            if (path.startsWith("/marketing-resources/")) {
+                const parts = path.split("/");
+                const resId = parseInt(parts[2], 10);
+                if (effectiveMethod === "DELETE" && resId) {
+                    if (db) {
+                        try {
+                            await db
+                                .prepare(
+                                    "DELETE FROM marketing_resources WHERE id = ?",
+                                )
+                                .bind(resId)
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Marketing Resource delete error:", e);
+                        }
+                    }
+                    return Response.redirect(new URL("/resources", request.url), 302);
+                }
+                if (effectiveMethod === "PUT" && resId && formData) {
+                    if (db) {
+                        try {
+                            const title = formData.get("title") || "Untitled Resource";
+                            const category = formData.get("category") || "Leaflets & Sheets";
+                            const fileType = formData.get("file_type") || "pdf";
+                            const fileUrl = formData.get("file_url") || "#";
+                            const fileSize = formData.get("file_size") || null;
+                            const badge = formData.get("badge") || null;
+                            const description = formData.get("description") || null;
+                            const sortOrder = parseInt(formData.get("sort_order") || "0", 10);
+                            const isActive = formData.has("is_active") ? 1 : 0;
+
+                            await db
+                                .prepare(
+                                    "UPDATE marketing_resources SET title = ?, category = ?, file_type = ?, file_url = ?, file_size = ?, badge = ?, description = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                )
+                                .bind(
+                                    title,
+                                    category,
+                                    fileType,
+                                    fileUrl,
+                                    fileSize,
+                                    badge,
+                                    description,
+                                    sortOrder,
+                                    isActive,
+                                    resId,
+                                )
+                                .run();
+                        } catch (e) {
+                            console.error("D1 Marketing Resource update error:", e);
+                        }
+                    }
+                    return Response.redirect(new URL("/resources", request.url), 302);
                 }
             }
 
@@ -3086,8 +3183,18 @@ export default {
             html = PAGES.profile || PAGES.dashboard;
         } else if (path === "/presentations") {
             html = PAGES.presentations;
-        } else if (path === "/toolkit" || path === "/packages") {
-            html = PAGES.toolkit;
+        } else if (path === "/packages" || path === "/toolkit") {
+            html = PAGES.packages || PAGES.toolkit;
+        } else if (path === "/ranks") {
+            html = PAGES.ranks;
+        } else if (path === "/counseling") {
+            html = PAGES.counseling;
+        } else if (path === "/commission") {
+            html = PAGES.commission;
+        } else if (path === "/links" || path === "/ecosystem") {
+            html = PAGES.links || PAGES.ecosystem;
+        } else if (path === "/resources") {
+            html = PAGES.resources;
         } else if (path === "/tasks") {
             html = PAGES.tasks;
         } else if (path === "/reports") {
@@ -3098,8 +3205,6 @@ export default {
             html = PAGES.users;
         } else if (path === "/roles" || path.startsWith("/roles/")) {
             html = PAGES.roles;
-        } else if (path === "/ecosystem") {
-            html = PAGES.ecosystem;
         } else if (path === "/abbreviations") {
             html = PAGES.abbreviations;
             try {
