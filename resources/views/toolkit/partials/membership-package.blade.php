@@ -225,14 +225,6 @@
                     <span class="w-2 h-2 rounded-full bg-amber-600"></span>
                     <span>International (৳৫,৫০,০০০)</span>
                 </button>
-
-                <a 
-                    href="#package-comparison-sheet"
-                    class="px-3 py-1.5 text-slate-500 hover:text-slate-800 rounded-lg transition-all flex items-center gap-1 whitespace-nowrap min-h-[36px] hover:bg-slate-200/60"
-                    aria-label="লিফলেট তুলনা শিট দেখুন"
-                >
-                    <span>📄 তুলনা শিট</span>
-                </a>
             </div>
         </div>
     </div>

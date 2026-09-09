@@ -118,7 +118,10 @@ class BinaryTeamController extends Controller
 
     public function credentials(BinaryNode $node): \Illuminate\Http\JsonResponse
     {
-        // Scoped model binding guarantees the member belongs to the caller's tree.
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$node->tree_owner_id === auth()->id(), 403, 'Access denied.');
+        }
+
         return response()->json([
             'password_plain' => $node->password_plain,
             'tpin' => $node->tpin,
@@ -199,8 +202,14 @@ class BinaryTeamController extends Controller
         ]);
 
         $parentNode = BinaryNode::findOrFail($validated['parent_id']);
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$parentNode->tree_owner_id === auth()->id(), 403, 'You can only place members in your own team.');
+            $validated['tree_owner_id'] = auth()->id();
+            $validated['user_id'] = auth()->id();
+        } else {
+            $validated['tree_owner_id'] = $parentNode->tree_owner_id;
+        }
         if (!empty($validated['sponsor_id'])) BinaryNode::where('tree_owner_id', $parentNode->tree_owner_id)->findOrFail($validated['sponsor_id']);
-        if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
         $validated['is_target'] = $request->boolean('is_target');
 
         try {
@@ -225,6 +234,10 @@ class BinaryTeamController extends Controller
      */
     public function convertTarget(Request $request, BinaryNode $node): RedirectResponse
     {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$node->tree_owner_id === auth()->id(), 403, 'You can only convert members in your own team.');
+        }
+
         try {
             $this->treeService->convertToActive($node);
             return redirect()->back()->with('success', "Member '{$node->member_name}' was successfully converted from target to active member.");
@@ -284,7 +297,10 @@ class BinaryTeamController extends Controller
                 $validated['sponsor_id'] = null;
             }
         }
-        if (!auth()->user()->isSuperAdmin() && !empty($validated['user_id'])) abort_unless((int)$validated['user_id'] === auth()->id(), 403);
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$node->tree_owner_id === auth()->id(), 403, 'You can only edit members in your own team.');
+            $validated['user_id'] = auth()->id();
+        }
         $validated['is_target'] = $request->boolean('is_target');
 
         try {
@@ -302,6 +318,13 @@ class BinaryTeamController extends Controller
      */
     public function destroy(Request $request, BinaryNode $node): RedirectResponse
     {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$node->tree_owner_id === auth()->id(), 403, 'You can only delete members from your own team.');
+            if ($node->parent_id === null) {
+                return redirect()->back()->with('error', 'The primary root member cannot be deleted.');
+            }
+        }
+
         try {
             $name = $node->member_name;
             $code = $node->member_code;
@@ -365,6 +388,10 @@ class BinaryTeamController extends Controller
      */
     public function updateNotes(Request $request, BinaryNode $node)
     {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort_unless((int)$node->tree_owner_id === auth()->id(), 403, 'You can only edit notes for members in your own team.');
+        }
+
         $validated = $request->validate([
             'notes' => 'nullable|string|max:2000',
         ]);

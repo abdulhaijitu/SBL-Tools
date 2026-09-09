@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'SBL Tools'),
+    'name' => env('APP_NAME', 'SBL Marketing'),
 
     /*
     |--------------------------------------------------------------------------

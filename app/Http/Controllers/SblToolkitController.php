@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommissionType;
+use App\Models\EcosystemLink;
 use App\Models\InvestmentPlan;
+use App\Models\MarketingResource;
 use App\Models\Rank;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -12,11 +14,22 @@ class SblToolkitController extends Controller
 {
     public function index(Request $request): View
     {
-        $activeTab = $request->query('tab', 'packages'); // 'packages', 'compensation', 'counseling', 'calculator'
+        $rawTab = $request->query('tab', 'packages');
+        $tabAliases = [
+            'compensation' => 'ranks',
+            'calculator' => 'commission',
+            'ecosystem' => 'links',
+            'websites' => 'links',
+        ];
+        $activeTab = $tabAliases[$rawTab] ?? $rawTab;
 
         $plans = InvestmentPlan::where('active', true)->get();
         $ranks = Rank::where('active', true)->orderBy('order')->get();
         $commissions = CommissionType::where('active', true)->get();
+        $resources = MarketingResource::where('is_active', true)->orderBy('sort_order')->get();
+        $resourceCategories = MarketingResource::where('is_active', true)->distinct()->pluck('category');
+        $links = EcosystemLink::where('is_active', true)->orderBy('sort_order')->get();
+        $linkCategories = EcosystemLink::where('is_active', true)->distinct()->pluck('category');
 
         // Market vs SBL 20k Dropshipping Comparison (PDF Page 4)
         $marketComparisons = [
@@ -86,7 +99,11 @@ class SblToolkitController extends Controller
             'growthTrajectory',
             'counselingPoints',
             'generationMatrix',
-            'activeTab'
+            'activeTab',
+            'resources',
+            'resourceCategories',
+            'links',
+            'linkCategories'
         ));
     }
 }

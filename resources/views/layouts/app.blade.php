@@ -7,14 +7,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SBL Tools">
+    <meta name="apple-mobile-web-app-title" content="SBL Marketing">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <title>
         @hasSection('meta-title')
             @yield('meta-title')
         @else
-            @yield('page-title', 'Profile') · SBL Growth Manager
+            @yield('page-title', 'Dashboard') · SBL Marketing
         @endif
     </title>
     @hasSection('meta-description')
@@ -29,7 +29,7 @@
     <div class="app-backdrop" x-show="sidebarOpen" x-cloak @click="closeMenus()"></div>
     <aside id="main-sidebar" class="app-sidebar" :data-open="sidebarOpen" :inert="!sidebarOpen && isMobile">
         <div class="app-brand">
-            <a href="{{ route('dashboard') }}" aria-label="SBL Growth Manager home"><img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL" width="142" height="48" fetchpriority="high" decoding="async"></a>
+            <a href="{{ route('dashboard') }}" aria-label="SBL Marketing home"><img src="{{ asset('images/sbl-logo.webp') }}" alt="SBL Marketing" width="142" height="48" fetchpriority="high" decoding="async"></a>
             <button type="button" class="icon-button lg:hidden" aria-label="Close navigation" @click="closeMenus()"><x-ui-icon name="close" /></button>
         </div>
         @include('layouts.sidebar')

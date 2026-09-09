@@ -58,9 +58,16 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     Route::put('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'update'])->name('abbreviations.update');
     Route::delete('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'destroy'])->name('abbreviations.destroy');
 
-    // SBL Toolkit & Packages
+    // SBL Marketing Tools & Packages
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
     Route::redirect('/packages', '/toolkit?tab=packages')->name('packages.index');
+    Route::redirect('/links', '/toolkit?tab=links')->name('links.index');
+    Route::redirect('/resources', '/toolkit?tab=resources')->name('resources.index');
+
+    // SBL Marketing Resources CRUD (Super Admin)
+    Route::post('/marketing-resources', [\App\Http\Controllers\MarketingResourceController::class, 'store'])->name('marketing-resources.store');
+    Route::put('/marketing-resources/{resource}', [\App\Http\Controllers\MarketingResourceController::class, 'update'])->name('marketing-resources.update');
+    Route::delete('/marketing-resources/{resource}', [\App\Http\Controllers\MarketingResourceController::class, 'destroy'])->name('marketing-resources.destroy');
 
     // SBL Ecosystem Directory & Links CRUD
     Route::get('/ecosystem', [\App\Http\Controllers\EcosystemController::class, 'index'])->name('ecosystem.index');

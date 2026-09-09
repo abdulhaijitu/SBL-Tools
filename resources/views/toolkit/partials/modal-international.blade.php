@@ -131,40 +131,23 @@
                 </div>
             </div>
 
-            <!-- 3. Leaflet Verbatim Quote -->
-            <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/80 text-xs text-amber-950 space-y-1.5">
-                <span class="font-bold uppercase tracking-wider text-amber-900 block flex items-center gap-1.5">
+            <!-- 3. Capital & Return Overview -->
+            <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-800 space-y-1.5">
+                <span class="font-bold uppercase tracking-wider text-amber-800 block flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-amber-700" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                     </svg>
-                    অফিসিয়াল লিফলেট বিবরণী:
+                    ক্যাপিটাল রিটার্ন ও মুনাফা বিবরণী:
                 </span>
-                <p class="italic leading-relaxed">
-                    “৫,৫০,০০০ টাকা বিনিয়োগ করে প্রতি সপ্তাহে ১০০০০ টাকা করে ১০০ সপ্তাহ অর্থাৎ ২৪ মাসে মূলধন সহ মোট দশ লক্ষ টাকা গ্যারান্টি সহকারে পাবেন। এবং পরবর্তীতে আর কোন বিনিয়োগ না করে প্রতি মাসে কম বেশি ২৫,০০০ থেকে ১,০০,০০০ টাকা মাসে আজীবন মুনাফা অর্জন করা সম্ভব।”
+                <p class="leading-relaxed text-slate-700">
+                    ৫,৫০,০০০ টাকা বিনিয়োগে প্রতি সপ্তাহে ১০,০০০ টাকা করে ১০০ সপ্তাহ অর্থাৎ ২৪ মাসে মূলধন সহ মোট ১০,০০,০০০ টাকা প্রাপ্তি কাঠামো নির্ধারিত। ২৪ মাস মেয়াদের পর অতিরিক্ত বিনিয়োগ ব্যতীত প্রতি মাসে আনুমানিক ২৫,০০০ থেকে ১,০০,০০০ টাকা পর্যন্ত গ্লোবাল ড্রপশিপিং প্রফিট শেয়ারিং সুবিধা প্রযোজ্য।
                 </p>
             </div>
 
             <!-- 4. Mandatory Disclaimer -->
             <div class="p-3.5 bg-slate-100 rounded-2xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
                 <span class="font-bold text-slate-800 block mb-1">প্রয়োজনীয় সতর্কতা ও শর্তাবলী:</span>
-                প্যাকেজ সুবিধা, কমিশন, ড্রপশিপিং বিক্রয় ও রিটার্ন SBL-এর বর্তমান নীতিমালা, ব্যবসায়িক পারফরম্যান্স ও প্রযোজ্য শর্তসাপেক্ষ। প্রদর্শিত কোনো অঙ্ককে ব্যক্তিগত নিশ্চিত আয় বা স্থায়ী ব্যাংক গ্যারান্টি হিসেবে বিবেচনা করবেন না।
-            </div>
-
-            <!-- 5. Secondary Brand / Leaflet Photo Context -->
-            <div class="space-y-2 pt-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">
-                    অফিসিয়াল লিফলেট ও রেফারেন্স
-                </span>
-                <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
-                    <img 
-                        src="{{ asset('images/sbl/sbl-office-leaflet.jpg') }}" 
-                        alt="SBL Dropshipping Package Official Leaflet" 
-                        loading="lazy"
-                        width="700"
-                        height="420"
-                        class="w-full h-auto object-cover max-h-56"
-                    >
-                </div>
+                প্যাকেজ সুবিধা, কমিশন, ড্রপশিপিং বিক্রয় ও রিটার্ন SBL-এর বর্তমান নীতিমালা, ব্যবসায়িক পারফরম্যান্স ও প্রযোজ্য শর্তসাপেক্ষ। প্রদর্শিত কোনো অঙ্ককে ব্যক্তিগত স্থায়ী ব্যাংক গ্যারান্টি হিসেবে বিবেচনা করবেন না।
             </div>
 
         </div>

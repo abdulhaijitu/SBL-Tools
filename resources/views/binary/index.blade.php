@@ -525,15 +525,32 @@ function teamExplorerData() {
                                 <a href="{{ route('team.show', ['memberId' => $member->id, 'owner_id' => request('owner_id')]) }}" 
                                    class="px-2 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center gap-1" 
                                    title="Explore this member's team">
-                                    <span>👥</span> <span>View Team</span>
+                                    <span>👥</span> <span>View</span>
                                 </a>
 
                                 <button type="button" 
                                         @click="openDetailsModal({{ $member->id }})"
-                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" 
+                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" 
                                         title="View member details">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </button>
+
+                                <button type="button" 
+                                        @click="openEditModal({{ $member->id }})"
+                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer" 
+                                        title="Edit member">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </button>
+
+                                @if($member->parent_id !== null)
+                                <form action="{{ route('team.destroy', $member->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete member {{ addslashes($member->member_name) }}? Any children will be safely reattached.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" title="Delete member">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </form>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -797,6 +814,14 @@ function teamExplorerData() {
                             @csrf
                             <button type="submit" onclick="return confirm('Do you want to convert this target member to an Active Confirmed Member?');" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1">
                                 <span>🎯</span> <span>Convert to Active</span>
+                            </button>
+                        </form>
+                    <template x-if="detailsNode.parent_id">
+                        <form :action="'/team/' + detailsNode.id" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this member? Any children will be safely reattached.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1">
+                                <span>🗑️</span> <span>Delete Member</span>
                             </button>
                         </form>
                     </template>

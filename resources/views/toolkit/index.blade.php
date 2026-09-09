@@ -1,21 +1,38 @@
 @extends('layouts.app')
 
-@section('meta-title', 'SBL Packages & Toolkit | SBLTool')
-@section('page-title', 'SBL Packages & Toolkit')
-@section('page-subtitle', 'Official Business Packages, Compensation Models & Counseling Cheatsheet')
-@section('meta-description', 'SBL Ecosystem-এর Membership ও Dropshipping package, সুবিধা, service details, ownership note এবং গুরুত্বপূর্ণ শর্ত এক জায়গায় দেখুন।')
+@section('meta-title', 'SBL Marketing Tools | SBL Marketing')
+@section('page-title', 'SBL Marketing Tools')
+@section('page-subtitle', 'Packages, Ranks, Counseling Guide, Commission, Links & Resources')
+@section('meta-description', 'SBL Marketing-এর Membership ও Dropshipping package, সুবিধা, service details, ownership note এবং রিসোর্স এক জায়গায় দেখুন।')
 
 @section('content')
 <div class="space-y-6" 
-    x-on:switch-to-calculator.window="activeTab = 'calculator'"
+    x-on:switch-to-calculator.window="activeTab = 'commission'"
     x-data="{ 
-    activeTab: @js(in_array(request('tab'), ['packages','compensation','counseling','calculator','ecosystem']) ? request('tab') : 'packages'), 
+    activeTab: @js($activeTab ?? (in_array(request('tab'), ['packages','ranks','compensation','counseling','commission','calculator','links','ecosystem','resources']) ? (in_array(request('tab'), ['compensation']) ? 'ranks' : (in_array(request('tab'), ['calculator']) ? 'commission' : (in_array(request('tab'), ['ecosystem']) ? 'links' : request('tab')))) : 'packages')), 
     createWebsiteModalOpen: false,
     editWebsiteModalOpen: false,
     editingWebsite: { id: null, title: '', url: '', category: 'Official Portals', badge: '', description: '', icon: '🌐', sort_order: 0 },
+    createResourceModalOpen: false,
+    editResourceModalOpen: false,
+    editingResource: { id: null, title: '', category: 'Leaflets & Sheets', file_type: 'pdf', file_url: '', file_size: '', badge: '', description: '', sort_order: 0 },
+    resourceFilter: 'all',
+    resourceSearch: '',
+    copiedUrl: null,
+    copyToClipboard(url) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url);
+            this.copiedUrl = url;
+            setTimeout(() => { if (this.copiedUrl === url) this.copiedUrl = null; }, 2000);
+        }
+    },
     openEditWebsiteModal(link) {
         this.editingWebsite = Object.assign({}, link);
         this.editWebsiteModalOpen = true;
+    },
+    openEditResourceModal(res) {
+        this.editingResource = Object.assign({}, res);
+        this.editResourceModalOpen = true;
     },
     init() { 
         this.$watch('activeTab', value => history.replaceState(null, '', '?tab=' + value)); 
@@ -26,222 +43,41 @@
     <div class="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-xs flex items-center gap-2 overflow-x-auto text-xs font-semibold">
         <button :aria-pressed="activeTab === 'packages'" @click="activeTab = 'packages'" 
                 :class="activeTab === 'packages' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
             <span>📦</span> Packages
         </button>
-        <button :aria-pressed="activeTab === 'compensation'" @click="activeTab = 'compensation'" 
-                :class="activeTab === 'compensation' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>💰</span> Ranks
+        <button :aria-pressed="activeTab === 'ranks' || activeTab === 'compensation'" @click="activeTab = 'ranks'" 
+                :class="activeTab === 'ranks' || activeTab === 'compensation' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+            <span>🏆</span> Ranks
         </button>
         <button :aria-pressed="activeTab === 'counseling'" @click="activeTab = 'counseling'" 
                 :class="activeTab === 'counseling' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
             <span>🎯</span> Counseling Guide
         </button>
-        <button :aria-pressed="activeTab === 'calculator'" @click="activeTab = 'calculator'" 
-                :class="activeTab === 'calculator' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>🧮</span> Commission Calculator
+        <button :aria-pressed="activeTab === 'commission' || activeTab === 'calculator'" @click="activeTab = 'commission'" 
+                :class="activeTab === 'commission' || activeTab === 'calculator' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+            <span>🧮</span> Commission
         </button>
-        <button :aria-pressed="activeTab === 'ecosystem'" @click="activeTab = 'ecosystem'" 
-                :class="activeTab === 'ecosystem' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
-                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0">
-            <span>🌐</span> Websites
+        <button :aria-pressed="activeTab === 'links' || activeTab === 'ecosystem'" @click="activeTab = 'links'" 
+                :class="activeTab === 'links' || activeTab === 'ecosystem' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+            <span>🔗</span> Links
+        </button>
+        <button :aria-pressed="activeTab === 'resources'" @click="activeTab = 'resources'" 
+                :class="activeTab === 'resources' ? 'bg-orange-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                class="px-4 py-2 rounded-xl transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer">
+            <span>📁</span> Resources
         </button>
     </div>
 
-    <!-- TAB 1: DROPSHIPPING PACKAGES (Matches Uploaded Sheet) -->
+    <!-- TAB 1: DROPSHIPPING & MEMBERSHIP PACKAGES -->
     <div x-show="activeTab === 'packages'" class="space-y-6" x-cloak>
-        
-        <!-- Action bar above document: Print / View original / Calculator -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs print:hidden">
-            <div class="flex items-center gap-3">
-                <span class="p-2.5 bg-orange-50 text-orange-600 rounded-xl">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </span>
-                <div>
-                    <h2 class="text-sm sm:text-base font-bold text-slate-900">SBL Dropshipping Packages</h2>
-                    <p class="text-xs text-slate-500">Official National & International comparison sheet</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="window.print()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    <span>Print Sheet</span>
-                </button>
-                <a href="{{ asset('images/sbl-packages-sheet.png') }}" target="_blank" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span>Original Sheet</span>
-                </a>
-                <button type="button" @click="activeTab = 'calculator'" class="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs">
-                    <span>🧮 Calculator</span>
-                </button>
-            </div>
-        </div>
 
-        <!-- SBL MEMBERSHIP PACKAGE (৳১০,০০০ Starter Membership) -->
+        <!-- SBL MEMBERSHIP PACKAGES (Starter ৳১০,০০০, National ৳১,২০,০০০, International ৳৫,৫০,০০০) -->
         @include('toolkit.partials.membership-package')
-
-        <!-- MAIN PACKAGE SHEET (Identical structure and text to uploaded image) -->
-        <div id="package-comparison-sheet" class="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 shadow-xl p-5 sm:p-10 max-w-4xl mx-auto text-slate-900 print:shadow-none print:border-none print:p-0 scroll-mt-6">
-            
-            <!-- Document Header -->
-            <div class="text-center pb-6 sm:pb-8">
-                <h1 class="text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wide text-slate-950 underline underline-offset-8 decoration-2">
-                    SHOPLOGIST BANGLADESH LIMITED
-                </h1>
-                
-                <h2 class="text-lg sm:text-2xl font-black text-slate-900 mt-4 sm:mt-5">
-                    অনলাইনে আপনার নিজের একটা ব্যবসা হোক
-                </h2>
-                
-                <p class="text-xs sm:text-sm font-bold text-slate-800 mt-3 max-w-2xl mx-auto leading-relaxed">
-                    <span class="font-black uppercase tracking-wider">SBL DROPSHIPPING</span> মডেল কোনো অভিজ্ঞতা এবং নিজের কোনো পণ্য স্টক করা ছাড়াই <span class="font-black underline decoration-1 underline-offset-2">ই-কমার্স</span> বিজনেস করা যায়
-                </p>
-            </div>
-
-            <!-- Comparison Table Container -->
-            <div class="border-2 border-slate-900 rounded-lg overflow-x-auto bg-white">
-                <table class="w-full min-w-[540px] border-collapse text-left">
-                    <thead>
-                        <tr class="border-b-2 border-slate-900">
-                            <th class="w-1/2 p-3 sm:p-4 text-center border-r-2 border-slate-900 bg-slate-50/50">
-                                <span class="text-base sm:text-xl font-black underline decoration-2 underline-offset-4 text-slate-950 block">
-                                    National Package
-                                </span>
-                            </th>
-                            <th class="w-1/2 p-3 sm:p-4 text-center bg-slate-50/50">
-                                <span class="text-base sm:text-xl font-black underline decoration-2 underline-offset-4 text-slate-950 block">
-                                    International Package
-                                </span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y-2 divide-slate-900 text-slate-900">
-                        
-                        <!-- Row 1: Capital / Investment Range -->
-                        <tr>
-                            <td class="p-3 sm:p-4 text-center border-r-2 border-slate-900 font-black text-base sm:text-xl text-slate-950">
-                                1,00,000 Tk - 4,90,000 Tk
-                            </td>
-                            <td class="p-3 sm:p-4 text-center font-black text-base sm:text-xl text-slate-950">
-                                5,00,000 Tk - Unlimited
-                            </td>
-                        </tr>
-
-                        <!-- Row 2: Website Development Fee -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Website Development Fee: <span class="font-black text-slate-950">20000 TK</span>
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold">
-                                Website and Content Development Fee: <span class="font-black text-slate-950">50000 TK</span>
-                            </td>
-                        </tr>
-
-                        <!-- Row 3: Weekly Return & Generated Return -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base">
-                                <div class="font-semibold">Weekly 1.75% for 100 week</div>
-                                <div class="font-black text-slate-950 mt-1">Generated return 1,75,000 TK</div>
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base">
-                                <div class="font-semibold">Weekly 2% for 100 week</div>
-                                <div class="font-black text-slate-950 mt-1">Generated return 10,00,000 TK</div>
-                            </td>
-                        </tr>
-
-                        <!-- Row 4: Crowdfunding Opportunity -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Crowdfunding Opportunity up to 10 Lac
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold">
-                                Crowdfunding Opportunity up to 50 Lac
-                            </td>
-                        </tr>
-
-                        <!-- Row 5: Lifetime Profit Sharing -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Lifetime Profit sharing (After 100 Week)
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold">
-                                Lifetime Profit sharing (After 100 Week)
-                            </td>
-                        </tr>
-
-                        <!-- Row 6: Shopify Store / Dedicated Team -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Branded Shopify Store and Product
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold">
-                                Dedicated Team for Project management
-                            </td>
-                        </tr>
-
-                        <!-- Row 7: Own Packaging / Unlimited UGC Content -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Own Packaging
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold">
-                                Unlimited UGC Content
-                            </td>
-                        </tr>
-
-                        <!-- Row 8: Paid Camping Setup -->
-                        <tr>
-                            <td class="p-3 sm:p-4 border-r-2 border-slate-900 text-xs sm:text-base font-semibold">
-                                Paid Camping setup
-                            </td>
-                            <td class="p-3 sm:p-4 text-xs sm:text-base font-semibold text-slate-400">
-                                
-                            </td>
-                        </tr>
-
-                        <!-- Row 9: Guarantee & Detailed Return Explanation (Bangla) -->
-                        <tr class="align-top">
-                            <td class="p-3.5 sm:p-5 border-r-2 border-slate-900 text-xs sm:text-sm leading-relaxed text-slate-900 space-y-3">
-                                <p class="font-normal">
-                                    <span class="font-black text-slate-950">১,২০,০০০ টাকা বিনিয়োগ করলে</span> প্রতি সপ্তাহে <span class="font-black text-slate-950">১৭৫০ টাকা</span> করে ১০০ সপ্তাহ অর্থাৎ ২৪ মাসে মোট মূলধন সহ <span class="font-black text-slate-950">এক লক্ষ ৭৫ হাজার টাকা</span> গ্যারান্টি সহকারে পাবেন।
-                                </p>
-                                <p class="font-normal pt-2">
-                                    এবং পরবর্তীতে আর কোন বিনিয়োগ না করে প্রতি মাসে কম বেশি <span class="font-black text-slate-950">5,000 থেকে 20,000 টাকা</span> পর্যন্ত আজীবন মুনাফা অর্জন করা সম্ভব।
-                                </p>
-                            </td>
-                            <td class="p-3.5 sm:p-5 text-xs sm:text-sm leading-relaxed text-slate-900 space-y-3">
-                                <p class="font-normal">
-                                    <span class="font-black text-slate-950">৫,৫০,০০০ টাকা বিনিয়োগ করে</span> প্রতি সপ্তাহে <span class="font-black text-slate-950">১০০০০ টাকা</span> করে ১০০ সপ্তাহ অর্থাৎ ২৪ মাসে মূলধন সহ মোট <span class="font-black text-slate-950">দশ লক্ষ টাকা</span> গ্যারান্টি সহকারে পাবেন।
-                                </p>
-                                <p class="font-normal pt-2">
-                                    এবং পরবর্তীতে আর কোন বিনিয়োগ না করে প্রতি মাসে কম বেশি <span class="font-black text-slate-950">25,000 থেকে 1,00,000 টাকা</span> মাসে আজীবন মুনাফা অর্জন করা সম্ভব।
-                                </p>
-                            </td>
-                        </tr>
-
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Bottom QR Code -->
-            <div class="mt-8 text-center flex flex-col items-center justify-center">
-                <div class="inline-block p-1 bg-white border border-slate-400 rounded-lg shadow-xs">
-                    <img src="{{ asset('images/sbl-packages-qr.png') }}" 
-                         alt="SBL Package QR Code" 
-                         class="w-24 h-24 sm:w-28 sm:h-28 object-contain">
-                </div>
-            </div>
-
-        </div>
 
         <!-- Additional Supporting Sections (Market comparison & 6-month growth) -->
         <div class="max-w-4xl mx-auto space-y-6 pt-4 print:hidden">
@@ -320,7 +156,7 @@
     </div>
 
     <!-- TAB 2: COMPENSATION PLAN & RANKS (PDF Page 2 & 7) -->
-    <div x-show="activeTab === 'compensation'" class="space-y-6" x-cloak>
+    <div x-show="activeTab === 'ranks' || activeTab === 'compensation'" class="space-y-6" x-cloak>
 
         <!-- 10,000 Tk Membership Card (Page 2) -->
         <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
@@ -518,8 +354,8 @@
         </div>
     </div>
 
-    <!-- TAB 4: LIVE INTERACTIVE CALCULATOR (PDF Page 1, 2, 3, 7) -->
-    <div x-show="activeTab === 'calculator'" class="space-y-6" x-cloak 
+    <!-- TAB 4: COMMISSION CALCULATOR (PDF Page 1, 2, 3, 7) -->
+    <div x-show="activeTab === 'commission' || activeTab === 'calculator'" class="space-y-6" x-cloak 
          x-on:switch-to-calculator.window="packageType = $event.detail.type; packageAmount = $event.detail.amount; window.scrollTo({ top: 0, behavior: 'smooth' });"
          x-data="{
             packageType: 'national',
@@ -944,22 +780,22 @@
 
     </div>
 
-    <!-- TAB 5: ECOSYSTEM WEBSITES -->
-    <div x-show="activeTab === 'ecosystem'" class="space-y-6" x-cloak>
+    <!-- TAB 5: SBL LINKS & WEB DIRECTORY -->
+    <div x-show="activeTab === 'links' || activeTab === 'ecosystem'" class="space-y-6" x-cloak>
         <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-orange-950 text-white p-6 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
             <div class="space-y-2">
                 <span class="px-3 py-1 bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
-                    Official SBL Ecosystem Portals
+                    Official SBL Links & Directory
                 </span>
-                <h2 class="text-xl md:text-2xl font-bold tracking-tight">Key Websites & Link Directory</h2>
+                <h2 class="text-xl md:text-2xl font-bold tracking-tight">Official SBL Links & Web Directory</h2>
                 <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                    Visit official SBL websites, dropshipping shops, investor portals, and community channels for counseling or personal use.
+                    Visit official SBL portals, dropshipping stores, investor platforms, and tools.
                 </p>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button type="button" @click="createWebsiteModalOpen = true" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-2 shadow-xs cursor-pointer">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span>Add Website</span>
+                    <span>Add Link</span>
                 </button>
                 <a href="{{ route('ecosystem.index') }}" class="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 border border-slate-700">
                     <span>Manage All</span>
@@ -1144,6 +980,11 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <!-- TAB 6: RESOURCES & OFFICIAL LEAFLETS -->
+    <div x-show="activeTab === 'resources'" class="space-y-6" x-cloak>
+        @include('toolkit.partials.resources')
     </div>
 
 </div>
