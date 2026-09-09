@@ -28,12 +28,13 @@
 
     <!-- 3. SBL Marketing Tools Section -->
     <div class="pt-4 pb-1">
-        <div class="px-3 py-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase text-orange-400">
+        <a href="{{ route('packages.index') }}" class="px-3 py-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase text-orange-400 hover:text-orange-300 transition-colors">
             <span>SBL Marketing Tools</span>
-        </div>
+        </a>
         <div class="mt-1 space-y-0.5 pl-1">
             <!-- Packages -->
             <a href="{{ route('packages.index') }}" 
+               @if(request()->routeIs('packages.*') || ($isToolkit && ($currentTab === 'packages' || !$currentTab))) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('packages.*') || ($isToolkit && ($currentTab === 'packages' || !$currentTab))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📦</span>
                 <span>Packages</span>
@@ -41,6 +42,7 @@
 
             <!-- Ranks -->
             <a href="{{ route('ranks.index') }}" 
+               @if(request()->routeIs('ranks.*') || ($isToolkit && in_array($currentTab, ['ranks', 'compensation']))) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('ranks.*') || ($isToolkit && in_array($currentTab, ['ranks', 'compensation']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🏆</span>
                 <span>Ranks</span>
@@ -48,6 +50,7 @@
 
             <!-- Counseling Guide -->
             <a href="{{ route('counseling.index') }}" 
+               @if(request()->routeIs('counseling.*') || ($isToolkit && $currentTab === 'counseling')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('counseling.*') || ($isToolkit && $currentTab === 'counseling')) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🎯</span>
                 <span>Counseling Guide</span>
@@ -55,6 +58,7 @@
 
             <!-- Commission -->
             <a href="{{ route('commission.index') }}" 
+               @if(request()->routeIs('commission.*') || ($isToolkit && in_array($currentTab, ['commission', 'calculator']))) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('commission.*') || ($isToolkit && in_array($currentTab, ['commission', 'calculator']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🧮</span>
                 <span>Commission</span>
@@ -62,6 +66,7 @@
 
             <!-- Links (Formerly Websites) -->
             <a href="{{ route('links.index') }}" 
+               @if(request()->routeIs('links.*', 'ecosystem.*') || ($isToolkit && in_array($currentTab, ['links', 'ecosystem']))) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('links.*', 'ecosystem.*') || ($isToolkit && in_array($currentTab, ['links', 'ecosystem']))) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">🔗</span>
                 <span>Links</span>
@@ -69,6 +74,7 @@
 
             <!-- Resources (Leaflets & Official Documents) -->
             <a href="{{ route('resources.index') }}" 
+               @if(request()->routeIs('resources.*', 'marketing-resources.*') || ($isToolkit && $currentTab === 'resources')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ (request()->routeIs('resources.*', 'marketing-resources.*') || ($isToolkit && $currentTab === 'resources')) ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📁</span>
                 <span>Resources</span>
@@ -77,6 +83,7 @@
 
             <!-- Team Explorer -->
             <a href="{{ route('team.index') }}" 
+               @if(request()->routeIs('team.*', 'binary.*')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">👥</span>
                 <span>Team Explorer</span>
@@ -84,6 +91,7 @@
 
             <!-- Abbreviation -->
             <a href="{{ route('abbreviations.index') }}" 
+               @if(request()->routeIs('abbreviations.*')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('abbreviations.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📖</span>
                 <span>Abbreviation</span>
@@ -100,6 +108,7 @@
         <div class="mt-1 space-y-0.5">
             @if(Auth::user()->can('users.view'))
             <a href="{{ route('users.index') }}" 
+               @if(request()->routeIs('users.*')) aria-current="page" @endif
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('users.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <x-ui-icon name="users" />
                 <span>Users & Accounts</span>
@@ -108,6 +117,7 @@
 
             @if(Auth::user()->can('roles.view'))
             <a href="{{ route('roles.index') }}" 
+               @if(request()->routeIs('roles.*')) aria-current="page" @endif
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('roles.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <x-ui-icon name="shield" />
                 <span>Roles & Permissions</span>
@@ -115,6 +125,7 @@
             @endif
 
             <a href="{{ route('contacts.index') }}" 
+               @if(request()->routeIs('contacts.*')) aria-current="page" @endif
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('contacts.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <x-ui-icon name="phone" />
                 <span>Contacts</span>

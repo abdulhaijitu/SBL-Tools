@@ -3183,16 +3183,44 @@ export default {
             html = PAGES.profile || PAGES.dashboard;
         } else if (path === "/presentations") {
             html = PAGES.presentations;
-        } else if (path === "/packages" || path === "/toolkit") {
-            html = PAGES.packages || PAGES.toolkit;
+        } else if (path === "/toolkit") {
+            const rawTab = url.searchParams.get("tab") || "packages";
+            const tabMap = {
+                ranks: "/ranks",
+                compensation: "/ranks",
+                counseling: "/counseling",
+                commission: "/commission",
+                calculator: "/commission",
+                links: "/links",
+                ecosystem: "/links",
+                websites: "/links",
+                resources: "/resources",
+                packages: "/packages",
+            };
+            const target = tabMap[rawTab] || "/packages";
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: target,
+                },
+            });
+        } else if (path === "/ecosystem") {
+            return new Response(null, {
+                status: 302,
+                headers: {
+                    Location: "/links",
+                },
+            });
+        } else if (path === "/packages") {
+            html = PAGES.packages;
         } else if (path === "/ranks") {
             html = PAGES.ranks;
         } else if (path === "/counseling") {
             html = PAGES.counseling;
         } else if (path === "/commission") {
             html = PAGES.commission;
-        } else if (path === "/links" || path === "/ecosystem") {
-            html = PAGES.links || PAGES.ecosystem;
+        } else if (path === "/links") {
+            html = PAGES.links;
         } else if (path === "/resources") {
             html = PAGES.resources;
         } else if (path === "/tasks") {

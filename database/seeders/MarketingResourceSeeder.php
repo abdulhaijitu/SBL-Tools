@@ -36,7 +36,7 @@ class MarketingResourceSeeder extends Seeder
                 'title' => '10 Leadership Ranks & Performance Incentive Matrix',
                 'category' => 'Policies & Guides',
                 'file_type' => 'pdf',
-                'file_url' => '/toolkit?tab=ranks',
+                'file_url' => '/ranks',
                 'file_size' => '950 KB',
                 'badge' => 'Incentive Guide',
                 'description' => 'Detailed criteria, BV thresholds, and monetary incentives (up to 40 Lakh BDT) for all 10 corporate leadership ranks from SBL Starter to Crown Ambassador.',

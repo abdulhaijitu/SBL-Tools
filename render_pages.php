@@ -13,95 +13,142 @@ if ($user) {
 
 Illuminate\Support\Facades\View::share('errors', new Illuminate\Support\ViewErrorBag);
 
+function setRenderRoute(string $uri, array $query = []) {
+    $request = Illuminate\Http\Request::create($uri, 'GET', $query);
+    $user = Illuminate\Support\Facades\Auth::user();
+    if ($user) {
+        $request->setUserResolver(fn() => $user);
+    }
+    $router = app('router');
+    try {
+        $route = $router->getRoutes()->match($request);
+        $request->setRouteResolver(fn() => $route);
+    } catch (\Throwable $e) {
+        // Fallback
+    }
+    app()->instance('request', $request);
+    Illuminate\Support\Facades\Request::swap($request);
+    Illuminate\Support\Facades\View::share('errors', new Illuminate\Support\ViewErrorBag);
+    return $request;
+}
+
 echo "Bootstrap successful. User: " . (Illuminate\Support\Facades\Auth::user()->email ?? 'None') . "\n";
 
 $pages = [
     'dashboard' => function () {
-        return app(App\Http\Controllers\DashboardController::class)->index(request())->render();
+        $req = setRenderRoute('/dashboard');
+        return app(App\Http\Controllers\DashboardController::class)->index($req)->render();
     },
     'leads' => function () {
-        request()->merge(['view' => 'table']);
-        return app(App\Http\Controllers\LeadController::class)->index(request())->render();
+        $req = setRenderRoute('/leads', ['view' => 'table']);
+        return app(App\Http\Controllers\LeadController::class)->index($req)->render();
     },
     'kanban' => function () {
-        request()->merge(['view' => 'kanban']);
-        return app(App\Http\Controllers\LeadController::class)->index(request())->render();
+        $req = setRenderRoute('/leads', ['view' => 'kanban']);
+        return app(App\Http\Controllers\LeadController::class)->index($req)->render();
     },
     'toolkit' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->packages(request())->render();
+        $req = setRenderRoute('/packages');
+        return app(App\Http\Controllers\SblToolkitController::class)->packages($req)->render();
     },
     'packages' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->packages(request())->render();
+        $req = setRenderRoute('/packages');
+        return app(App\Http\Controllers\SblToolkitController::class)->packages($req)->render();
     },
     'ranks' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->ranks(request())->render();
+        $req = setRenderRoute('/ranks');
+        return app(App\Http\Controllers\SblToolkitController::class)->ranks($req)->render();
     },
     'counseling' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->counseling(request())->render();
+        $req = setRenderRoute('/counseling');
+        return app(App\Http\Controllers\SblToolkitController::class)->counseling($req)->render();
     },
     'commission' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->commission(request())->render();
+        $req = setRenderRoute('/commission');
+        return app(App\Http\Controllers\SblToolkitController::class)->commission($req)->render();
     },
     'links' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->links(request())->render();
+        $req = setRenderRoute('/links');
+        return app(App\Http\Controllers\SblToolkitController::class)->links($req)->render();
     },
     'resources' => function () {
-        return app(App\Http\Controllers\SblToolkitController::class)->resources(request())->render();
+        $req = setRenderRoute('/resources');
+        return app(App\Http\Controllers\SblToolkitController::class)->resources($req)->render();
     },
     'tasks' => function () {
-        return app(App\Http\Controllers\TaskController::class)->index(request())->render();
+        $req = setRenderRoute('/tasks');
+        return app(App\Http\Controllers\TaskController::class)->index($req)->render();
     },
     'reports' => function () {
-        return app(App\Http\Controllers\ReportController::class)->index(request())->render();
+        $req = setRenderRoute('/reports');
+        return app(App\Http\Controllers\ReportController::class)->index($req)->render();
     },
     'calendar' => function () {
-        return app(App\Http\Controllers\ContentCalendarController::class)->index(request())->render();
+        $req = setRenderRoute('/marketing/content-calendar');
+        return app(App\Http\Controllers\ContentCalendarController::class)->index($req)->render();
     },
     'users' => function () {
-        return app(App\Http\Controllers\UserController::class)->index(request())->render();
+        $req = setRenderRoute('/users');
+        return app(App\Http\Controllers\UserController::class)->index($req)->render();
     },
     'roles' => function () {
+        $req = setRenderRoute('/roles');
         return app(App\Http\Controllers\RoleController::class)->index()->render();
     },
     'ecosystem' => function () {
-        return app(App\Http\Controllers\EcosystemController::class)->index(request())->render();
+        $req = setRenderRoute('/ecosystem');
+        return app(App\Http\Controllers\EcosystemController::class)->index($req)->render();
     },
     'abbreviations' => function () {
-        return app(App\Http\Controllers\AbbreviationController::class)->index(request())->render();
+        $req = setRenderRoute('/abbreviations');
+        return app(App\Http\Controllers\AbbreviationController::class)->index($req)->render();
     },
     'contacts' => function () {
-        return app(App\Http\Controllers\SblContactController::class)->index(request())->render();
+        $req = setRenderRoute('/contacts');
+        return app(App\Http\Controllers\SblContactController::class)->index($req)->render();
     },
     'leads_create' => function () {
+        $req = setRenderRoute('/leads/create');
         return app(App\Http\Controllers\LeadController::class)->create()->render();
     },
     'presentations' => function () {
-        return app(App\Http\Controllers\PresentationController::class)->index(request())->render();
+        $req = setRenderRoute('/presentations');
+        return app(App\Http\Controllers\PresentationController::class)->index($req)->render();
     },
     'binary' => function () {
-        request()->merge(['view' => 'builder']);
-        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+        $req = setRenderRoute('/team', ['view' => 'builder']);
+        return app(App\Http\Controllers\BinaryTeamController::class)->index($req)->render();
     },
     'binary_mindmap' => function () {
-        request()->merge(['view' => 'mindmap']);
-        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+        $req = setRenderRoute('/team', ['view' => 'mindmap']);
+        return app(App\Http\Controllers\BinaryTeamController::class)->index($req)->render();
     },
     'binary_table' => function () {
-        request()->merge(['view' => 'table']);
-        return app(App\Http\Controllers\BinaryTeamController::class)->index(request())->render();
+        $req = setRenderRoute('/team', ['view' => 'table']);
+        return app(App\Http\Controllers\BinaryTeamController::class)->index($req)->render();
     },
     'leads_show' => function () {
         $lead = App\Models\Lead::first();
-        return $lead ? app(App\Http\Controllers\LeadController::class)->show($lead)->render() : '';
+        if ($lead) {
+            setRenderRoute('/leads/' . $lead->id);
+            return app(App\Http\Controllers\LeadController::class)->show($lead)->render();
+        }
+        return '';
     },
     'leads_edit' => function () {
         $lead = App\Models\Lead::first();
-        return $lead ? app(App\Http\Controllers\LeadController::class)->edit($lead)->render() : '';
+        if ($lead) {
+            setRenderRoute('/leads/' . $lead->id . '/edit');
+            return app(App\Http\Controllers\LeadController::class)->edit($lead)->render();
+        }
+        return '';
     },
     'profile' => function () {
-        return app(App\Http\Controllers\ProfileController::class)->edit(request())->render();
+        $req = setRenderRoute('/profile');
+        return app(App\Http\Controllers\ProfileController::class)->edit($req)->render();
     },
     'login' => function () {
+        setRenderRoute('/login');
         return view('auth.login')->render();
     },
 ];
