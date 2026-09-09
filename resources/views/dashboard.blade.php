@@ -76,21 +76,21 @@
                     </div>
                     <div class="mt-2">
                         <div class="w-full bg-slate-200/80 h-1.5 rounded-full overflow-hidden">
-                            <div class="bg-gradient-to-r {{ $barGradient }} h-full rounded-full transition-all duration-500" 
+                            <div data-funnel-bar="{{ $stageKey }}" class="bg-gradient-to-r {{ $barGradient }} h-full rounded-full transition-all duration-500" 
                                  style="width: {{ $pct }}%">
                             </div>
                         </div>
-                        <span class="text-[9px] text-slate-400 font-semibold mt-1 block">{{ $pct }}%</span>
+                        <span data-funnel-pct="{{ $stageKey }}" class="text-[9px] text-slate-400 font-semibold mt-1 block">{{ $pct }}%</span>
                     </div>
                 </a>
             @endforeach
         </div>
     </div>
 
-    <!-- ==================== 5. OVERDUE FOLLOW-UPS & TODAY'S ACTIONS GRID ==================== -->
+    <!-- Quick Workflow Grid (2 Columns) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Left: Overdue Follow-ups & Due Today (2 Columns) -->
+        <!-- Left: Overdue Follow-ups & Today's Actions (2 Columns) -->
         <div class="lg:col-span-2 space-y-6">
 
             <!-- Urgent Overdue Follow-ups Card -->
@@ -100,18 +100,18 @@
                         <span class="w-2.5 h-2.5 rounded-full bg-rose-500 "></span>
                         <h3 class="text-sm font-bold text-slate-900">Immediate Follow-up Needed (Overdue)</h3>
                     </div>
-                    <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                    <span id="dashboard-overdue-badge" class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
                         {{ $overdueFollowups->count() }} Overdue
                     </span>
                 </div>
 
                 @if ($overdueFollowups->isEmpty())
-                    <div class="p-8 text-center text-slate-400 text-xs">
+                    <div id="dashboard-overdue-empty" class="p-8 text-center text-slate-400 text-xs">
                         <span class="text-2xl block mb-1">🎉</span>
                         <span class="font-semibold text-slate-600">Great job! No overdue follow-ups right now.</span>
                     </div>
                 @else
-                    <div class="divide-y divide-slate-100">
+                    <div id="dashboard-overdue-container" class="divide-y divide-slate-100">
                         @foreach ($overdueFollowups as $lead)
                             @php
                                 $cleanWa = \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile);
@@ -175,12 +175,12 @@
                 </div>
 
                 @if ($todayTasks->isEmpty())
-                    <div class="p-8 text-center text-slate-400 text-xs">
+                    <div id="dashboard-tasks-empty" class="p-8 text-center text-slate-400 text-xs">
                         <span class="text-2xl block mb-1">📅</span>
                         <span class="font-semibold text-slate-600">No pending tasks scheduled for today yet.</span>
                     </div>
                 @else
-                    <div class="divide-y divide-slate-100">
+                    <div id="dashboard-tasks-container" class="divide-y divide-slate-100">
                         @foreach ($todayTasks as $task)
                             <div data-task-id="{{ $task->id }}" class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -226,17 +226,17 @@
                     <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                         <span>🔥</span> Hot Priority Leads
                     </h3>
-                    <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                    <span id="dashboard-hot-badge" class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
                         {{ $hotLeads->count() }} hot
                     </span>
                 </div>
 
                 @if ($hotLeads->isEmpty())
-                    <div class="py-6 text-center text-slate-400 text-xs">
+                    <div id="dashboard-hot-empty" class="py-6 text-center text-slate-400 text-xs">
                         No leads scored as Hot (80+) yet.
                     </div>
                 @else
-                    <div class="space-y-2.5">
+                    <div id="dashboard-hot-container" class="space-y-2.5">
                         @foreach ($hotLeads as $lead)
                             <a data-lead-id="{{ $lead->id }}" href="{{ route('leads.show', $lead->id) }}" 
                                class="block p-3 rounded-xl border border-slate-100 hover:border-orange-300 hover:bg-orange-50/30 transition-all shadow-2xs group">

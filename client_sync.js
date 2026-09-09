@@ -311,92 +311,192 @@
 
         // 1. DASHBOARD SYNC - ONLY on / or /dashboard!
         if (curPath === "/" || curPath === "/dashboard") {
-            if (DATA.leads) {
-                const totalLeads = DATA.leads.length;
-                const totalEl = document.querySelector(
-                    '[data-metric="total-leads"]',
-                );
-                if (totalEl) totalEl.textContent = totalLeads;
+            const nonDeletedLeads = (DATA.leads || []).filter(function (l) {
+                return !l.deleted_at;
+            });
+            const activeLeads = nonDeletedLeads.filter(function (l) {
+                return l.stage !== "converted" && l.stage !== "lost" && l.stage !== "not_suitable";
+            });
 
-                // Stage Funnel Counters
-                const stages = [
-                    "new",
-                    "contacted",
-                    "qualified",
-                    "presentation",
-                    "interested",
-                    "negotiation",
-                    "converted",
-                    "lost",
-                ];
-                stages.forEach(function (s) {
-                    const count = DATA.leads.filter(function (l) {
-                        return (l.stage || "new") === s;
+            // 1.1 Total Active Leads & Added Today
+            const activeLeadsEl = document.getElementById("active-leads") || document.querySelector('[data-metric="total-leads"]');
+            if (activeLeadsEl) {
+                activeLeadsEl.textContent = activeLeads.length;
+                const smallEl = activeLeadsEl.parentElement ? activeLeadsEl.parentElement.querySelector("small") : null;
+                if (smallEl) {
+                    const now = new Date();
+                    const localYmd = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+                    const addedToday = nonDeletedLeads.filter(function (l) {
+                        return l.created_at && l.created_at.slice(0, 10) === localYmd;
                     }).length;
-                    const el = document.querySelector(
-                        '[data-funnel-count="' + s + '"]',
-                    );
-                    if (el) el.textContent = count;
-                });
+                    smallEl.textContent = addedToday + " added today";
+                }
+            }
 
-                // Follow-ups & Overdue Calculations
-                const now = new Date();
-                const todayStr = now.toISOString().slice(0, 10);
+            // 1.2 Today's Followups & Overdue Calculations
+            const now = new Date();
+            const localYmd = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+            let followupsToday = 0;
+            let overdueLeads = [];
 
-                let overdueCount = 0;
-                let followupsToday = 0;
+            nonDeletedLeads.forEach(function (lead) {
+                if (lead.next_action_at && lead.stage !== "converted" && lead.stage !== "lost" && lead.stage !== "not_suitable") {
+                    const actDate = lead.next_action_at.slice(0, 10);
+                    if (actDate === localYmd) {
+                        followupsToday++;
+                    }
+                    if (new Date(lead.next_action_at) < now) {
+                        overdueLeads.push(lead);
+                    }
+                }
+            });
 
-                DATA.leads.forEach(function (lead) {
-                    if (lead.next_action_at) {
-                        const actDate = lead.next_action_at.slice(0, 10);
-                        if (actDate === todayStr) followupsToday++;
-                        if (
-                            new Date(lead.next_action_at) < now &&
-                            lead.stage !== "converted" &&
-                            lead.stage !== "lost"
-                        ) {
-                            overdueCount++;
+            if (DATA.tasks) {
+                DATA.tasks.forEach(function (task) {
+                    if (task.status !== "Completed" && task.status !== "Cancelled" && task.due_at) {
+                        const dStr = task.due_at.slice(0, 10);
+                        if (dStr === localYmd) {
+                            followupsToday++;
                         }
                     }
                 });
+            }
 
-                if (DATA.tasks) {
-                    DATA.tasks.forEach(function (task) {
-                        if (task.status !== "Completed" && task.due_at) {
-                            const dStr = task.due_at.slice(0, 10);
-                            if (dStr === todayStr) followupsToday++;
-                            if (new Date(task.due_at) < now) overdueCount++;
+            const dueEl = document.getElementById("today-followup") || document.querySelector('[data-metric="followups-today"]');
+            if (dueEl) dueEl.textContent = followupsToday;
+
+            // 1.3 Total Presentations
+            const totalPres = (DATA.presentations || []).filter(function (p) {
+                return !p.deleted_at;
+            }).length;
+            const presEl = document.getElementById("total-presentations") || document.querySelector('[data-metric="presentations-today"]');
+            if (presEl) presEl.textContent = totalPres;
+
+            // 1.4 Stage Funnel Counters & Percentage Bars
+            const funnelStages = [
+                "new",
+                "contacted",
+                "interested",
+                "qualified",
+                "presentation",
+                "follow_up",
+                "decision",
+                "converted",
+            ];
+            const totalPipelineLeads = nonDeletedLeads.length;
+
+            funnelStages.forEach(function (s) {
+                const count = nonDeletedLeads.filter(function (l) {
+                    return (l.stage || "new") === s;
+                }).length;
+                const pct = totalPipelineLeads > 0 ? Math.min(100, Math.round((count / totalPipelineLeads) * 100)) : 0;
+
+                const el = document.querySelector('[data-funnel-count="' + s + '"]');
+                if (el) el.textContent = count;
+
+                const barEl = document.querySelector('[data-funnel-bar="' + s + '"]');
+                if (barEl) barEl.style.width = pct + "%";
+
+                const pctEl = document.querySelector('[data-funnel-pct="' + s + '"]');
+                if (pctEl) pctEl.textContent = pct + "%";
+            });
+
+            // 1.5 Overdue Follow-ups List Hydration
+            const overdueBadge = document.getElementById("dashboard-overdue-badge") || document.querySelector('[data-metric="overdue-followups"]');
+            if (overdueBadge) {
+                overdueBadge.textContent = overdueLeads.length + " Overdue";
+            }
+            const overdueContainer = document.getElementById("dashboard-overdue-container");
+            const overdueEmpty = document.getElementById("dashboard-overdue-empty");
+            if (overdueContainer) {
+                overdueContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
+                    const lid = Number(el.getAttribute("data-lead-id"));
+                    const stillOverdue = overdueLeads.some(function (ol) { return Number(ol.id) === lid; });
+                    if (!stillOverdue) {
+                        el.remove();
+                    }
+                });
+                if (overdueContainer.querySelectorAll("[data-lead-id]").length === 0) {
+                    if (!overdueEmpty) {
+                        const emptyDiv = document.createElement("div");
+                        emptyDiv.id = "dashboard-overdue-empty";
+                        emptyDiv.className = "p-8 text-center text-slate-400 text-xs";
+                        emptyDiv.innerHTML = '<span class="text-2xl block mb-1">🎉</span><span class="font-semibold text-slate-600">Great job! No overdue follow-ups right now.</span>';
+                        overdueContainer.parentElement.appendChild(emptyDiv);
+                    } else {
+                        overdueEmpty.style.display = "";
+                    }
+                } else if (overdueEmpty) {
+                    overdueEmpty.style.display = "none";
+                }
+            }
+
+            // 1.6 Hot Priority Leads Hydration
+            const hotLeads = nonDeletedLeads.filter(function (l) {
+                return l.stage !== "converted" && l.stage !== "lost" && l.stage !== "not_suitable" &&
+                       (Number(l.score) >= 80 || l.temperature === "hot");
+            });
+            const hotBadge = document.getElementById("dashboard-hot-badge");
+            if (hotBadge) {
+                hotBadge.textContent = hotLeads.length + " hot";
+            }
+            const hotContainer = document.getElementById("dashboard-hot-container");
+            const hotEmpty = document.getElementById("dashboard-hot-empty");
+            if (hotContainer) {
+                hotContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
+                    const lid = Number(el.getAttribute("data-lead-id"));
+                    const stillHot = hotLeads.some(function (hl) { return Number(hl.id) === lid; });
+                    if (!stillHot) {
+                        el.remove();
+                    }
+                });
+                if (hotContainer.querySelectorAll("[data-lead-id]").length === 0) {
+                    if (!hotEmpty) {
+                        const emptyDiv = document.createElement("div");
+                        emptyDiv.id = "dashboard-hot-empty";
+                        emptyDiv.className = "py-6 text-center text-slate-400 text-xs";
+                        emptyDiv.textContent = "No leads scored as Hot (80+) yet.";
+                        hotContainer.parentElement.appendChild(emptyDiv);
+                    } else {
+                        hotEmpty.style.display = "";
+                    }
+                } else if (hotEmpty) {
+                    hotEmpty.style.display = "none";
+                }
+            }
+
+            // 1.7 Today's Tasks Hydration
+            if (DATA.tasks) {
+                const todayTasks = DATA.tasks.filter(function (t) {
+                    return t.due_at && t.due_at.slice(0, 10) === localYmd && t.status !== "Completed" && t.status !== "Cancelled";
+                });
+                const tasksContainer = document.getElementById("dashboard-tasks-container");
+                const tasksEmpty = document.getElementById("dashboard-tasks-empty");
+                if (tasksContainer) {
+                    tasksContainer.querySelectorAll("[data-task-id]").forEach(function (el) {
+                        const tid = Number(el.getAttribute("data-task-id"));
+                        const stillActive = todayTasks.some(function (tt) { return Number(tt.id) === tid; });
+                        if (!stillActive) {
+                            el.remove();
                         }
                     });
+                    if (tasksContainer.querySelectorAll("[data-task-id]").length === 0) {
+                        if (!tasksEmpty) {
+                            const emptyDiv = document.createElement("div");
+                            emptyDiv.id = "dashboard-tasks-empty";
+                            emptyDiv.className = "p-8 text-center text-slate-400 text-xs";
+                            emptyDiv.innerHTML = '<span class="text-2xl block mb-1">📅</span><span class="font-semibold text-slate-600">No pending tasks scheduled for today yet.</span>';
+                            tasksContainer.parentElement.appendChild(emptyDiv);
+                        } else {
+                            tasksEmpty.style.display = "";
+                        }
+                    } else if (tasksEmpty) {
+                        tasksEmpty.style.display = "none";
+                    }
                 }
-
-                const dueEl = document.querySelector(
-                    '[data-metric="followups-today"]',
-                );
-                if (dueEl) dueEl.textContent = followupsToday;
-
-                const overEl = document.querySelector(
-                    '[data-metric="overdue-followups"]',
-                );
-                if (overEl) overEl.textContent = overdueCount;
-
-                // Presentations Today
-                let presTodayCount = 0;
-                if (DATA.presentations) {
-                    DATA.presentations.forEach(function (p) {
-                        if (
-                            p.date_time &&
-                            p.date_time.slice(0, 10) === todayStr
-                        )
-                            presTodayCount++;
-                    });
-                }
-                const presEl = document.querySelector(
-                    '[data-metric="presentations-today"]',
-                );
-                if (presEl) presEl.textContent = presTodayCount;
             }
         }
+
 
         // 2. REPORTS SYNC - ONLY on /reports!
         if (curPath === "/reports" || curPath.startsWith("/reports?")) {

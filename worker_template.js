@@ -3233,7 +3233,49 @@ export default {
         let html = null;
 
         if (path === "/" || path === "/dashboard") {
-            html = PAGES.dashboard;
+            let dashHtml = PAGES.dashboard;
+            if (dashHtml) {
+                const nonDel = (liveLeads || []).filter(l => !l.deleted_at);
+                const activeCount = nonDel.filter(l => l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable').length;
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const addedTodayCount = nonDel.filter(l => l.created_at && l.created_at.slice(0, 10) === todayStr).length;
+
+                let dueTodayCount = 0;
+                nonDel.forEach(l => {
+                    if (l.next_action_at && l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable') {
+                        if (l.next_action_at.slice(0, 10) === todayStr) dueTodayCount++;
+                    }
+                });
+                (liveTasks || []).forEach(t => {
+                    if (t.status !== 'Completed' && t.status !== 'Cancelled' && t.due_at && t.due_at.slice(0, 10) === todayStr) {
+                        dueTodayCount++;
+                    }
+                });
+
+                const presCount = (livePresentations || []).filter(p => !p.deleted_at).length;
+
+                dashHtml = dashHtml.replace(/<strong id="active-leads">.*?<\/strong>/, `<strong id="active-leads">${activeCount}</strong>`);
+                dashHtml = dashHtml.replace(/<small>.*? added today<\/small>/, `<small>${addedTodayCount} added today</small>`);
+                dashHtml = dashHtml.replace(/<strong id="today-followup">.*?<\/strong>/, `<strong id="today-followup">${dueTodayCount}</strong>`);
+                dashHtml = dashHtml.replace(/<strong id="total-presentations">.*?<\/strong>/, `<strong id="total-presentations">${presCount}</strong>`);
+
+                const totalLeads = nonDel.length;
+                const stages = ['new', 'contacted', 'interested', 'qualified', 'presentation', 'follow_up', 'decision', 'converted'];
+                stages.forEach(s => {
+                    const cnt = nonDel.filter(l => (l.stage || 'new') === s).length;
+                    const pct = totalLeads > 0 ? Math.min(100, Math.round((cnt / totalLeads) * 100)) : 0;
+                    
+                    const countRegex = new RegExp(`(<span data-funnel-count="${s}"[^>]*>)[^<]*(<\\/span>)`);
+                    dashHtml = dashHtml.replace(countRegex, `$1${cnt}$2`);
+
+                    const barRegex = new RegExp(`(data-funnel-bar="${s}"[^>]*style="width:\\s*)[^%]+(%")`);
+                    dashHtml = dashHtml.replace(barRegex, `$1${pct}$2`);
+
+                    const pctRegex = new RegExp(`(<span data-funnel-pct="${s}"[^>]*>)[^<]*(<\\/span>)`);
+                    dashHtml = dashHtml.replace(pctRegex, `$1${pct}%$2`);
+                });
+            }
+            html = dashHtml;
         } else if (path === "/leads/create") {
             html = PAGES.leads_create;
         } else if (path.match(/^\/leads\/\d+\/edit$/)) {
