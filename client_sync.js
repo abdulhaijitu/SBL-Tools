@@ -1932,16 +1932,13 @@
 
         // 6. CONTACTS SYNC - ONLY on /contacts!
         if (curPath === "/contacts" || curPath.startsWith("/contacts?")) {
-            const contactsTbody = document.getElementById(
-                "contacts-table-body",
-            );
-            if (
-                contactsTbody &&
-                DATA.contacts &&
-                Array.isArray(DATA.contacts)
-            ) {
-                contactsTbody.innerHTML = DATA.contacts
-                    .map(function (c) {
+            const contactsTbody = document.getElementById("contacts-table-body");
+            const contactsMobileCards = document.getElementById("contacts-mobile-cards");
+
+            if (DATA.contacts && Array.isArray(DATA.contacts)) {
+                // Desktop Table Rendering
+                if (contactsTbody) {
+                    contactsTbody.innerHTML = DATA.contacts.map(function (c) {
                         const isPrimary = Number(c.is_primary) === 1;
                         const iconBg = isPrimary
                             ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
@@ -1962,126 +1959,85 @@
                               escapeHtml(c.description) +
                               "</p>"
                             : "";
-                        const cleanPhone = (c.phone || "").replace(
-                            /[^0-9]/g,
-                            "",
-                        );
-                        const cleanWa = (c.whatsapp || "").replace(
-                            /[^0-9]/g,
-                            "",
-                        );
+                        const cleanPhone = (c.phone || "").replace(/[^0-9+]/g, "");
+                        let cleanWa = (c.whatsapp || c.phone || "").replace(/[^0-9]/g, "");
+                        if (cleanWa.startsWith("01")) {
+                            cleanWa = "88" + cleanWa;
+                        }
 
-                        let personHtml =
-                            '<span class="text-slate-400 text-xs">—</span>';
+                        let personHtml = '<span class="text-slate-400 text-xs">—</span>';
                         if (c.contact_person) {
                             personHtml =
                                 '<div class="flex items-center gap-2 text-sm text-slate-800 font-medium">' +
                                 '<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>' +
-                                "<span>" +
-                                escapeHtml(c.contact_person) +
-                                "</span>" +
+                                "<span>" + escapeHtml(c.contact_person) + "</span>" +
                                 "</div>";
                         }
 
-                        let phoneHtml =
-                            '<span class="text-slate-400 text-xs">—</span>';
+                        let phoneHtml = '<span class="text-slate-400 text-xs">—</span>';
                         if (c.phone) {
                             phoneHtml =
                                 '<div class="flex items-center gap-2">' +
-                                '<span class="font-bold text-slate-900 text-sm font-mono">' +
-                                escapeHtml(c.phone) +
-                                "</span>" +
-                                '<button type="button" onclick="window.copyContactToClipboard(\' ' +
-                                escapeHtml(c.phone) +
-                                '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
+                                '<span class="font-bold text-slate-900 text-sm font-mono">' + escapeHtml(c.phone) + "</span>" +
+                                '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(c.phone) + '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
                                 "</button>" +
-                                '<a href="tel:' +
-                                cleanPhone +
-                                '" title="Direct Call" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 shadow-xs transition-colors active:scale-95">' +
+                                '<a href="tel:' + cleanPhone + '" title="সরাসরি ফোন কল করুন" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
+                                "<span>কল</span>" +
                                 "</a>" +
                                 "</div>";
                         }
 
-                        let waHtml =
-                            '<span class="text-slate-400 text-xs">—</span>';
-                        if (c.whatsapp) {
+                        const targetWa = c.whatsapp || c.phone;
+                        let waHtml = '<span class="text-slate-400 text-xs">—</span>';
+                        if (targetWa) {
                             waHtml =
                                 '<div class="flex items-center gap-2">' +
-                                '<span class="font-bold text-slate-900 text-sm font-mono">' +
-                                escapeHtml(c.whatsapp) +
-                                "</span>" +
-                                '<button type="button" onclick="window.copyContactToClipboard(\' ' +
-                                escapeHtml(c.whatsapp) +
-                                '\', \'WhatsApp number\')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
+                                '<span class="font-bold text-slate-900 text-sm font-mono">' + escapeHtml(targetWa) + "</span>" +
+                                '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(targetWa) + '\', \'WhatsApp number\')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
                                 "</button>" +
-                                '<a href="https://wa.me/' +
-                                cleanWa +
-                                "?text=" +
-                                encodeURIComponent(
-                                    "Hello, I would like to connect with SBL Helpdesk.",
-                                ) +
-                                '" target="_blank" rel="noopener noreferrer" title="Chat on WhatsApp" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors active:scale-95">' +
+                                '<a href="https://wa.me/' + cleanWa + '?text=' + encodeURIComponent('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') + '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে মেসেজ পাঠান" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
                                 '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
+                                "<span>মেসেজ</span>" +
+                                "</a>" +
+                                '<a href="https://wa.me/' + cleanWa + '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে কল / ডায়াল করুন" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors active:scale-95">' +
+                                "<span>📱 কল</span>" +
                                 "</a>" +
                                 "</div>";
                         }
 
-                        let emailHtml =
-                            '<span class="text-slate-400 text-xs">—</span>';
+                        let emailHtml = '<span class="text-slate-400 text-xs">—</span>';
                         if (c.email) {
                             emailHtml =
-                                '<a href="mailto:' +
-                                escapeHtml(c.email) +
-                                '" class="text-xs text-slate-700 hover:text-emerald-600 font-medium truncate max-w-[160px] inline-flex items-center gap-1.5" title="' +
-                                escapeHtml(c.email) +
-                                '">' +
+                                '<a href="mailto:' + escapeHtml(c.email) + '" class="text-xs text-slate-700 hover:text-emerald-600 font-medium truncate max-w-[160px] inline-flex items-center gap-1.5" title="' + escapeHtml(c.email) + '">' +
                                 '<svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>' +
-                                "<span>" +
-                                escapeHtml(c.email) +
-                                "</span>" +
+                                "<span>" + escapeHtml(c.email) + "</span>" +
                                 "</a>";
                         }
 
                         const hoursHtml =
                             '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium">' +
                             '<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' +
-                            "<span>" +
-                            escapeHtml(
-                                c.available_hours || "10:00 AM - 08:00 PM",
-                            ) +
-                            "</span>" +
+                            "<span>" + escapeHtml(c.available_hours || "10:00 AM - 08:00 PM") + "</span>" +
                             "</span>";
 
                         const searchData = (
-                            c.department +
-                            " " +
-                            (c.contact_person || "") +
-                            " " +
-                            c.phone +
-                            " " +
-                            (c.whatsapp || "") +
-                            " " +
-                            (c.email || "") +
-                            " " +
-                            (c.badge || "") +
-                            " " +
+                            (c.department || "") + " " +
+                            (c.contact_person || "") + " " +
+                            (c.phone || "") + " " +
+                            (c.whatsapp || "") + " " +
+                            (c.email || "") + " " +
+                            (c.badge || "") + " " +
                             (c.description || "")
                         ).toLowerCase();
 
                         return (
-                            '<tr data-contact-id="' +
-                            c.id +
-                            '" data-search="' +
-                            escapeHtml(searchData) +
-                            '" class="hover:bg-slate-50/75 transition-colors group">' +
+                            '<tr data-contact-id="' + c.id + '" data-search="' + escapeHtml(searchData) + '" class="hover:bg-slate-50/75 transition-colors group">' +
                             '<td class="py-4 px-4 align-middle">' +
                             '<div class="flex items-center gap-3">' +
-                            '<div class="w-10 h-10 rounded-xl ' +
-                            iconBg +
-                            ' flex items-center justify-center text-xl flex-shrink-0">' +
+                            '<div class="w-10 h-10 rounded-xl ' + iconBg + ' flex items-center justify-center text-xl flex-shrink-0">' +
                             escapeHtml(c.icon || "📞") +
                             "</div>" +
                             '<div class="min-w-0">' +
@@ -2095,31 +2051,17 @@
                             "</div>" +
                             "</div>" +
                             "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                            personHtml +
-                            "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                            phoneHtml +
-                            "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                            waHtml +
-                            "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                            emailHtml +
-                            "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                            hoursHtml +
-                            "</td>" +
+                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + personHtml + "</td>" +
+                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + phoneHtml + "</td>" +
+                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + waHtml + "</td>" +
+                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + emailHtml + "</td>" +
+                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + hoursHtml + "</td>" +
                             '<td class="py-4 px-4 align-middle text-right whitespace-nowrap">' +
                             '<div class="inline-flex items-center gap-1.5">' +
-                            '<button type="button" onclick="window.openContactEditModalById(' +
-                            c.id +
-                            ')" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="Edit Contact">' +
+                            '<button type="button" onclick="window.openContactEditModalById(' + c.id + ')" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="Edit Contact">' +
                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
                             "</button>" +
-                            '<form action="/contacts/' +
-                            c.id +
-                            '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
+                            '<form action="/contacts/' + c.id + '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
                             '<input type="hidden" name="_method" value="DELETE">' +
                             '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete Contact">' +
                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
@@ -2129,28 +2071,123 @@
                             "</td>" +
                             "</tr>"
                         );
-                    })
-                    .join("");
+                    }).join("");
+                }
+
+                // Mobile Cards Rendering
+                if (contactsMobileCards) {
+                    contactsMobileCards.innerHTML = DATA.contacts.map(function (c) {
+                        const isPrimary = Number(c.is_primary) === 1;
+                        const iconBg = isPrimary
+                            ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                            : "bg-slate-100 border border-slate-200 text-slate-700";
+                        const badgeHtml = c.badge
+                            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
+                              (isPrimary
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                  : "bg-slate-100 text-slate-700 border border-slate-200") +
+                              '">' +
+                              escapeHtml(c.badge) +
+                              "</span>"
+                            : "";
+                        const descHtml = c.description
+                            ? '<p class="text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">' +
+                              escapeHtml(c.description) +
+                              "</p>"
+                            : "";
+                        const cleanPhone = (c.phone || "").replace(/[^0-9+]/g, "");
+                        let cleanWa = (c.whatsapp || c.phone || "").replace(/[^0-9]/g, "");
+                        if (cleanWa.startsWith("01")) {
+                            cleanWa = "88" + cleanWa;
+                        }
+
+                        const personHtml = c.contact_person
+                            ? '<p class="text-xs text-slate-600 mt-0.5 flex items-center gap-1"><span>👤</span> ' + escapeHtml(c.contact_person) + '</p>'
+                            : '';
+
+                        const searchData = (
+                            (c.department || "") + " " +
+                            (c.contact_person || "") + " " +
+                            (c.phone || "") + " " +
+                            (c.whatsapp || "") + " " +
+                            (c.email || "") + " " +
+                            (c.badge || "") + " " +
+                            (c.description || "")
+                        ).toLowerCase();
+
+                        return (
+                            '<div data-contact-id="' + c.id + '" data-search="' + escapeHtml(searchData) + '" class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 transition-all">' +
+                            '<div class="flex items-start justify-between gap-3">' +
+                            '<div class="flex items-center gap-3">' +
+                            '<div class="w-11 h-11 rounded-2xl ' + iconBg + ' flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">' +
+                            escapeHtml(c.icon || "📞") +
+                            "</div>" +
+                            "<div>" +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                            '<h3 class="font-bold text-slate-900 text-sm">' + escapeHtml(c.department) + "</h3>" +
+                            badgeHtml +
+                            "</div>" +
+                            personHtml +
+                            "</div>" +
+                            "</div>" +
+                            '<div class="flex items-center gap-1">' +
+                            '<button type="button" onclick="window.openContactEditModalById(' + c.id + ')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
+                            "</button>" +
+                            '<form action="/contacts/' + c.id + '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
+                            '<input type="hidden" name="_method" value="DELETE">' +
+                            '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
+                            "</button>" +
+                            "</form>" +
+                            "</div>" +
+                            "</div>" +
+                            descHtml +
+                            '<div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">' +
+                            '<div class="flex items-center gap-1.5">' +
+                            '<span class="font-bold text-slate-900 font-mono">' + escapeHtml(c.phone) + "</span>" +
+                            '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(c.phone) + '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100">' +
+                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                            "</button>" +
+                            "</div>" +
+                            '<span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">🕒 ' + escapeHtml(c.available_hours || "10:00 AM - 08:00 PM") + "</span>" +
+                            "</div>" +
+                            '<div class="grid grid-cols-3 gap-2 pt-1">' +
+                            '<a href="tel:' + cleanPhone + '" title="Direct Phone Call" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-black text-emerald-400 shadow-xs active:scale-95 transition-all text-center">' +
+                            '<svg class="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
+                            '<span class="text-[11px] font-bold">ফোন কল</span>' +
+                            "</a>" +
+                            '<a href="https://wa.me/' + cleanWa + '?text=' + encodeURIComponent('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') + '" target="_blank" rel="noopener noreferrer" title="WhatsApp Message" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all text-center">' +
+                            '<svg class="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
+                            '<span class="text-[11px] font-bold">হোয়াটসঅ্যাপ</span>' +
+                            "</a>" +
+                            '<a href="https://wa.me/' + cleanWa + '" target="_blank" rel="noopener noreferrer" title="WhatsApp Call / Direct" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all text-center">' +
+                            '<span class="text-base mb-0.5 leading-tight">📱</span>' +
+                            '<span class="text-[11px] font-bold">ডায়াল / কল</span>' +
+                            "</a>" +
+                            "</div>" +
+                            "</div>"
+                        );
+                    }).join("");
+                }
             }
 
-            // Live search filter on input
-            const contactSearchInput = document.getElementById(
-                "contacts-search-input",
-            );
+            // Live search filter on input (filters BOTH table rows and mobile cards)
+            const contactSearchInput = document.getElementById("contacts-search-input");
             if (contactSearchInput && !contactSearchInput.__hasListener) {
                 contactSearchInput.__hasListener = true;
                 contactSearchInput.addEventListener("input", function (e) {
                     const q = (e.target.value || "").toLowerCase().trim();
-                    const rows = document.querySelectorAll(
-                        "#contacts-table-body tr[data-contact-id]",
+                    const items = document.querySelectorAll(
+                        "#contacts-table-body tr[data-contact-id], #contacts-mobile-cards div[data-contact-id]"
                     );
-                    rows.forEach(function (row) {
+                    items.forEach(function (el) {
                         const txt = (
-                            row.getAttribute("data-search") ||
-                            row.textContent ||
+                            el.getAttribute("data-search") ||
+                            el.textContent ||
                             ""
                         ).toLowerCase();
-                        row.style.display = !q || txt.includes(q) ? "" : "none";
+                        el.style.display = !q || txt.includes(q) ? "" : "none";
                     });
                 });
             }

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('page-title', 'Contact')
-@section('page-subtitle', 'Official Support Hotlines, Department Numbers & Instant WhatsApp Channels')
+@section('page-subtitle', 'এসবিএল প্রয়োজনীয় কন্টাক্ট নম্বর, সরাসরি ফোন কল ও হোয়াটসঅ্যাপ সার্ভিস')
 
 @section('content')
 <div class="space-y-6" x-data="{
@@ -25,7 +25,7 @@
     copyToClipboard(text, title) {
         if (navigator.clipboard) {
             navigator.clipboard.writeText(text).then(() => {
-                window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' copied to clipboard!', type: 'success' } }));
+                window.dispatchEvent(new CustomEvent('notify', { detail: { message: title + ' কপি হয়েছে!', type: 'success' } }));
             });
         }
     },
@@ -37,16 +37,15 @@
     }
 }">
 
+    <!-- Page Header -->
     <div class="section-heading">
         <div>
             <h2>Contact directory</h2>
-            <p>Support teams and business contacts, all in one place.</p>
+            <p>এসবিএল এর প্রয়োজনীয় হটলাইন ও কন্টাক্ট নাম্বার। এখান থেকেই সরাসরি ফোন ও হোয়াটসঅ্যাপ মেসেজ বা কল দিন।</p>
         </div>
-        @can('users.manage')
         <button type="button" @click="createModalOpen = true" class="btn-primary">
             <x-ui-icon name="plus" />Add contact
         </button>
-        @endcan
     </div>
 
     <!-- Search & Summary Bar -->
@@ -61,31 +60,139 @@
                    id="contacts-search-input"
                    x-model="searchQuery" 
                    placeholder="Search department, person, or phone..." 
-                   class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
+                   class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
             <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <button type="button" x-show="searchQuery" @click="searchQuery = ''" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold leading-none">✕</button>
         </div>
     </div>
 
-    <!-- Contacts Table View -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <!-- 1. Mobile Cards View (md:hidden) -->
+    <div id="contacts-mobile-cards" class="md:hidden space-y-3.5">
+        @forelse($contacts as $contact)
+        @php
+            $cleanPhone = $contact->clean_phone;
+            $cleanWa = $contact->clean_whatsapp;
+            $searchKey = mb_strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description);
+        @endphp
+        <div data-contact-id="{{ $contact->id }}" 
+             data-search="{{ $searchKey }}"
+             x-show="!searchQuery || {{ json_encode($searchKey) }}.includes(searchQuery.toLowerCase())"
+             class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 transition-all">
+            
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl {{ $contact->is_primary ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-slate-100 border border-slate-200 text-slate-700' }} flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">
+                        {{ $contact->icon ?: '📞' }}
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h3 class="font-bold text-slate-900 text-sm">{{ $contact->department }}</h3>
+                            @if($contact->badge)
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider {{ $contact->is_primary ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-700 border border-slate-200' }}">
+                                {{ $contact->badge }}
+                            </span>
+                            @endif
+                        </div>
+                        @if($contact->contact_person)
+                        <p class="text-xs text-slate-600 mt-0.5 flex items-center gap-1">
+                            <span>👤</span> {{ $contact->contact_person }}
+                        </p>
+                        @endif
+                    </div>
+                </div>
+
+                @if(Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin())
+                <div class="flex items-center gap-1">
+                    <button type="button" @click="openEditModal({{ json_encode($contact) }})" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </button>
+                    <form action="{{ route('contacts.destroy', $contact) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this contact?');" class="inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </form>
+                </div>
+                @endif
+            </div>
+
+            <!-- Description -->
+            @if($contact->description)
+            <p class="text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">
+                {{ $contact->description }}
+            </p>
+            @endif
+
+            <!-- Meta details (Phone & Hours) -->
+            <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">
+                <div class="flex items-center gap-1.5">
+                    <span class="font-bold text-slate-900 font-mono">{{ $contact->phone }}</span>
+                    <button type="button" @click="copyToClipboard('{{ $contact->phone }}', 'Phone number')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                </div>
+                <span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">
+                    🕒 {{ $contact->available_hours }}
+                </span>
+            </div>
+
+            <!-- Action Buttons: Phone Call, WhatsApp Message, WhatsApp Call -->
+            <div class="grid grid-cols-3 gap-2 pt-1">
+                <!-- 1. Direct Phone Call -->
+                <a href="tel:{{ $cleanPhone }}" title="Direct Phone Call" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-black text-emerald-400 shadow-xs active:scale-95 transition-all text-center">
+                    <svg class="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                    <span class="text-[11px] font-bold">ফোন কল</span>
+                </a>
+
+                <!-- 2. WhatsApp Message -->
+                <a href="https://wa.me/{{ $cleanWa }}?text={{ urlencode('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') }}" target="_blank" rel="noopener noreferrer" title="WhatsApp Message" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all text-center">
+                    <svg class="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>
+                    <span class="text-[11px] font-bold">হোয়াটসঅ্যাপ</span>
+                </a>
+
+                <!-- 3. WhatsApp Direct / Call -->
+                <a href="https://wa.me/{{ $cleanWa }}" target="_blank" rel="noopener noreferrer" title="WhatsApp Call / Direct" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all text-center">
+                    <span class="text-base mb-0.5 leading-tight">📱</span>
+                    <span class="text-[11px] font-bold">ডায়াল / কল</span>
+                </a>
+            </div>
+        </div>
+        @empty
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 text-center text-slate-500">
+            <div class="text-4xl mb-3">📞</div>
+            <h3 class="text-lg font-bold text-slate-800">No contacts found</h3>
+            <p class="text-sm mt-1">Add a new contact to get started.</p>
+        </div>
+        @endforelse
+    </div>
+
+    <!-- 2. Contacts Table View (Desktop md:block) -->
+    <div class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-600 border-collapse">
                 <thead class="bg-slate-50/90 text-slate-500 uppercase text-[11px] font-bold border-b border-slate-200/80 tracking-wider select-none">
                     <tr>
-                        <th class="py-3.5 px-4 min-w-[240px]">Department & Service</th>
-                        <th class="py-3.5 px-4 min-w-[160px]">Contact Person</th>
+                        <th class="py-3.5 px-4 min-w-[220px]">Department & Service</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Contact Person</th>
                         <th class="py-3.5 px-4 min-w-[180px]">Phone Hotline</th>
-                        <th class="py-3.5 px-4 min-w-[180px]">WhatsApp</th>
-                        <th class="py-3.5 px-4 min-w-[180px]">Email</th>
-                        <th class="py-3.5 px-4 min-w-[160px]">Available Hours</th>
-                        <th class="py-3.5 px-4 text-right min-w-[100px]">Actions</th>
+                        <th class="py-3.5 px-4 min-w-[230px]">WhatsApp Service</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Email</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Available Hours</th>
+                        <th class="py-3.5 px-4 text-right min-w-[80px]">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="contacts-table-body" class="divide-y divide-slate-100">
                     @forelse($contacts as $contact)
+                    @php
+                        $cleanPhone = $contact->clean_phone;
+                        $cleanWa = $contact->clean_whatsapp;
+                        $searchKey = mb_strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description);
+                    @endphp
                     <tr data-contact-id="{{ $contact->id }}" 
-                        data-search="{{ mb_strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description) }}"
-                        x-show="!searchQuery || {{ json_encode(mb_strtolower($contact->department . ' ' . $contact->contact_person . ' ' . $contact->phone . ' ' . $contact->whatsapp . ' ' . $contact->email . ' ' . $contact->badge . ' ' . $contact->description)) }}.includes(searchQuery.toLowerCase())"
+                        data-search="{{ $searchKey }}"
+                        x-show="!searchQuery || {{ json_encode($searchKey) }}.includes(searchQuery.toLowerCase())"
                         class="hover:bg-slate-50/75 transition-colors group">
                         
                         <!-- 1. Department & Service -->
@@ -133,22 +240,29 @@
                                 <button type="button" @click="copyToClipboard('{{ $contact->phone }}', 'Phone number')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                 </button>
-                                <a href="tel:{{ $contact->clean_phone }}" title="Direct Call" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 shadow-xs transition-colors active:scale-95">
+                                <a href="tel:{{ $cleanPhone }}" title="সরাসরি ফোন কল করুন" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 text-xs font-semibold shadow-xs transition-colors active:scale-95">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                    <span>কল</span>
                                 </a>
                             </div>
                         </td>
 
-                        <!-- 4. WhatsApp -->
+                        <!-- 4. WhatsApp Channels -->
                         <td class="py-4 px-4 align-middle whitespace-nowrap">
-                            @if($contact->whatsapp)
+                            @if($contact->whatsapp || $contact->phone)
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-slate-900 text-sm font-mono">{{ $contact->whatsapp }}</span>
-                                <button type="button" @click="copyToClipboard('{{ $contact->whatsapp }}', 'WhatsApp number')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors">
+                                <span class="font-bold text-slate-900 text-sm font-mono">{{ $contact->whatsapp ?: $contact->phone }}</span>
+                                <button type="button" @click="copyToClipboard('{{ $contact->whatsapp ?: $contact->phone }}', 'WhatsApp number')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                 </button>
-                                <a href="https://wa.me/{{ $contact->clean_whatsapp }}?text={{ urlencode('Hello, I would like to connect with SBL Helpdesk.') }}" target="_blank" rel="noopener noreferrer" title="Chat on WhatsApp" class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors active:scale-95">
+                                <!-- WhatsApp Message -->
+                                <a href="https://wa.me/{{ $cleanWa }}?text={{ urlencode('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') }}" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে মেসেজ পাঠান" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>
+                                    <span>মেসেজ</span>
+                                </a>
+                                <!-- WhatsApp Call / Direct -->
+                                <a href="https://wa.me/{{ $cleanWa }}" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে কল / ডায়াল করুন" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors active:scale-95">
+                                    <span>📱 কল</span>
                                 </a>
                             </div>
                             @else
@@ -178,7 +292,7 @@
 
                         <!-- 7. Actions -->
                         <td class="py-4 px-4 align-middle text-right whitespace-nowrap">
-                            @if(Auth::user()->can('users.manage'))
+                            @if(Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin())
                             <div class="inline-flex items-center gap-1.5">
                                 <button type="button" @click="openEditModal({{ json_encode($contact) }})" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit Contact">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -210,7 +324,7 @@
         </div>
     </div>
 
-    <!-- Create Contact Modal (Styled exactly as requested) -->
+    <!-- Create Contact Modal -->
     <div role="dialog" aria-modal="true" tabindex="-1" x-show="createModalOpen" 
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0"
@@ -224,9 +338,12 @@
              class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 space-y-5">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                <h3 class="text-lg font-bold text-slate-900 tracking-tight">
-                    Add / Edit Contact Information
-                </h3>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 tracking-tight">
+                        নতুন কন্টাক্ট নম্বর জমা রাখুন
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">এসবিএল হেল্পলাইন ও অফিসিয়াল যোগাযোগের তথ্য</p>
+                </div>
                 <button type="button" @click="createModalOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl font-semibold leading-none">&times;</button>
             </div>
 
@@ -235,7 +352,7 @@
                 
                 <!-- Row 1: Department -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department *</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department / Service *</label>
                     <input type="text" name="department" required placeholder="e.g. Customer Support / Merchant Helpdesk" 
                            class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all">
                 </div>
@@ -243,7 +360,7 @@
                 <!-- Row 2: Phone Number & WhatsApp Number -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number*</label>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number *</label>
                         <input type="text" name="phone" required placeholder="e.g. 01700000000" 
                                class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all">
                     </div>
@@ -270,7 +387,7 @@
 
                 <!-- Row 4: Description -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Description</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Description / Note</label>
                     <textarea name="description" rows="2" placeholder="Brief description of support services or helpline info..." 
                               class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all resize-none"></textarea>
                 </div>
@@ -329,7 +446,7 @@
         </div>
     </div>
 
-    <!-- Edit Contact Modal (Styled exactly as requested) -->
+    <!-- Edit Contact Modal -->
     <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModalOpen" 
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0"
@@ -343,9 +460,12 @@
              class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 space-y-5">
             
             <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                <h3 class="text-lg font-bold text-slate-900 tracking-tight">
-                    Add / Edit Contact Information
-                </h3>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 tracking-tight">
+                        কন্টাক্ট তথ্য সম্পাদনা করুন
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Edit Contact Information</p>
+                </div>
                 <button type="button" @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl font-semibold leading-none">&times;</button>
             </div>
 
@@ -355,7 +475,7 @@
                 
                 <!-- Row 1: Department -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department *</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department / Service *</label>
                     <input type="text" name="department" x-model="editingContact.department" required placeholder="e.g. Customer Support / Merchant Helpdesk" 
                            class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all">
                 </div>
@@ -363,7 +483,7 @@
                 <!-- Row 2: Phone Number & WhatsApp Number -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number*</label>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Phone Number *</label>
                         <input type="text" name="phone" x-model="editingContact.phone" required placeholder="e.g. 01700000000" 
                                class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all">
                     </div>
@@ -390,7 +510,7 @@
 
                 <!-- Row 4: Description -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Description</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Description / Note</label>
                     <textarea name="description" x-model="editingContact.description" rows="2" placeholder="Brief description of support services or helpline info..." 
                               class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none transition-all resize-none"></textarea>
                 </div>

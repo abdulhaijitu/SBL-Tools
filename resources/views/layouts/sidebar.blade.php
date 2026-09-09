@@ -99,7 +99,17 @@
         </div>
     </div>
 
-    <!-- 4. Super Admin SaaS Platform Administration -->
+    <!-- 4. Helplines & Contacts -->
+    <div class="pt-3 pb-1">
+        <a href="{{ route('contacts.index') }}" 
+           @if(request()->routeIs('contacts.*')) aria-current="page" @endif
+           class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('contacts.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <x-ui-icon name="phone" />
+            <span>Contacts & Hotline</span>
+        </a>
+    </div>
+
+    <!-- 5. Super Admin SaaS Platform Administration -->
     @if($isSuperAdmin || Auth::user()->can('users.view') || Auth::user()->can('roles.view'))
     <div class="pt-4 pb-1">
         <div class="px-3 py-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase text-slate-400">
@@ -123,13 +133,6 @@
                 <span>Roles & Permissions</span>
             </a>
             @endif
-
-            <a href="{{ route('contacts.index') }}" 
-               @if(request()->routeIs('contacts.*')) aria-current="page" @endif
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('contacts.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                <x-ui-icon name="phone" />
-                <span>Contacts</span>
-            </a>
         </div>
     </div>
     @endif
