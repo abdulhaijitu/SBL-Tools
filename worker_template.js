@@ -749,82 +749,184 @@ export default {
 
             // 4a. Leads Handlers
             if (path === "/leads" && effectiveMethod === "POST" && formData) {
+                let newLeadId = null;
+                let insertError = null;
+
                 if (db) {
                     try {
-                        const name = formData.get("name") || "Unnamed Lead";
-                        const mobile = formData.get("mobile") || "";
-                        const whatsapp = formData.get("whatsapp") || null;
-                        const email = formData.get("email") || null;
-                        const location = formData.get("location") || null;
-                        const profession =
-                            formData.get("profession_or_business") || null;
-                        const sourceId =
-                            Number(formData.get("lead_source_id")) || 1;
+                        const name = (formData.get("name") || "").trim() || "Unnamed Lead";
+                        const mobile = (formData.get("mobile") || "").trim();
+                        const whatsapp = (formData.get("whatsapp") || "").trim() || null;
+                        const email = (formData.get("email") || "").trim() || null;
+                        const location = (formData.get("location") || "").trim() || null;
+                        const profession = (formData.get("profession_or_business") || "").trim() || null;
+                        const rawSourceId = Number(formData.get("lead_source_id")) || 1;
                         const stage = formData.get("stage") || "new";
-                        const interests =
-                            formData.getAll("interest_types[]") || [];
+                        const interests = formData.getAll("interest_types[]") || [];
                         const interestsJson = JSON.stringify(interests);
-                        const nextActionType =
-                            formData.get("next_action_type") || null;
-                        const nextActionAt =
-                            formData.get("next_action_at") || null;
+                        const nextActionType = formData.get("next_action_type") || null;
+                        const nextActionAt = formData.get("next_action_at") || null;
                         const notes = formData.get("notes") || null;
-                        const score =
-                            (interests.length > 0 ? 20 : 0) +
-                            (nextActionAt ? 15 : 0);
-                        const temperature =
-                            score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
+                        const score = (interests.length > 0 ? 20 : 0) + (nextActionAt ? 15 : 0);
+                        const temperature = score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
 
-                        const photo = formData.get("photo") || null;
-                        const insRes = await db
-                            .prepare(
-                                "INSERT INTO leads (name, mobile, whatsapp, email, photo, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                            )
-                            .bind(
-                                name,
-                                mobile,
-                                whatsapp,
-                                email,
-                                photo,
-                                location,
-                                profession,
-                                sourceId,
-                                interestsJson,
-                                stage,
-                                temperature,
-                                score,
-                                currentUserId,
-                                nextActionType,
-                                nextActionAt,
-                                notes,
-                            )
-                            .run();
+                        // Verify owner user ID exists in DB to prevent foreign key errors
+                        let safeOwnerId = currentUserId || 1;
+                        try {
+                            const userCheck = await db.prepare("SELECT id FROM users WHERE id = ?").bind(safeOwnerId).first();
+                            if (!userCheck) {
+                                const firstUser = await db.prepare("SELECT id FROM users ORDER BY id ASC LIMIT 1").first();
+                                safeOwnerId = firstUser ? Number(firstUser.id) : 1;
+                            }
+                        } catch (e) {
+                            safeOwnerId = 1;
+                        }
 
-                        const newLeadId = insRes?.meta?.last_row_id;
-                        if (nextActionAt && newLeadId) {
-                            await db
+                        // Verify source ID exists in DB to prevent foreign key errors
+                        let safeSourceId = rawSourceId;
+                        try {
+                            const srcCheck = await db.prepare("SELECT id FROM lead_sources WHERE id = ?").bind(safeSourceId).first();
+                            if (!srcCheck) {
+                                const firstSrc = await db.prepare("SELECT id FROM lead_sources ORDER BY id ASC LIMIT 1").first();
+                                safeSourceId = firstSrc ? Number(firstSrc.id) : 1;
+                            }
+                        } catch (e) {
+                            safeSourceId = 1;
+                        }
+
+                        // Safe Photo handling: limit size to prevent D1 row/statement limits
+                        let photo = formData.get("photo") || null;
+                        if (photo && (typeof photo !== "string" || photo.length > 60000)) {
+                            console.warn("Photo payload exceeds 60KB, omitting photo to guarantee lead save");
+                            photo = null;
+                        }
+
+                        // TIER 1: Full insert with all columns and photo
+                        try {
+                            const insRes = await db
                                 .prepare(
-                                    "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                        "VALUES (?, ?, ?, 'Medium', ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    "INSERT INTO leads (name, mobile, whatsapp, email, photo, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
+                                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                 )
                                 .bind(
-                                    nextActionType
-                                        ? nextActionType + ": " + name
-                                        : "Follow-up: " + name,
-                                    nextActionType || "Follow-up",
+                                    name,
+                                    mobile,
+                                    whatsapp,
+                                    email,
+                                    photo,
+                                    location,
+                                    profession,
+                                    safeSourceId,
+                                    interestsJson,
+                                    stage,
+                                    temperature,
+                                    score,
+                                    safeOwnerId,
+                                    nextActionType,
                                     nextActionAt,
                                     notes,
-                                    newLeadId,
-                                    currentUserId,
                                 )
                                 .run();
+                            newLeadId = insRes?.meta?.last_row_id;
+                        } catch (e1) {
+                            console.error("D1 Leads Tier 1 insert error, attempting Tier 2 safe fallback:", e1);
+                            insertError = e1;
+
+                            // TIER 2: Safe Fallback insert (omitting photo & secondary columns)
+                            try {
+                                const fallbackRes = await db
+                                    .prepare(
+                                        "INSERT INTO leads (name, mobile, whatsapp, email, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, notes, created_at, updated_at) " +
+                                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    )
+                                    .bind(
+                                        name,
+                                        mobile,
+                                        whatsapp,
+                                        email,
+                                        location,
+                                        profession,
+                                        safeSourceId,
+                                        interestsJson,
+                                        stage,
+                                        temperature,
+                                        score,
+                                        safeOwnerId,
+                                        notes,
+                                    )
+                                    .run();
+                                newLeadId = fallbackRes?.meta?.last_row_id;
+                                insertError = null; // Successfully rescued and saved!
+                            } catch (e2) {
+                                console.error("D1 Leads Tier 2 fallback insert error:", e2);
+                                insertError = e2;
+                            }
+                        }
+
+                        // Isolated Secondary Operations (Tasks & Activities)
+                        if (newLeadId) {
+                            if (nextActionAt) {
+                                try {
+                                    await db
+                                        .prepare(
+                                            "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
+                                                "VALUES (?, ?, ?, 'Medium', ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                        )
+                                        .bind(
+                                            nextActionType
+                                                ? nextActionType + ": " + name
+                                                : "Follow-up: " + name,
+                                            nextActionType || "Follow-up",
+                                            nextActionAt,
+                                            notes,
+                                            newLeadId,
+                                            safeOwnerId,
+                                        )
+                                        .run();
+                                } catch (taskErr) {
+                                    console.error("Non-fatal secondary task insert error:", taskErr);
+                                }
+                            }
+
+                            try {
+                                await db
+                                    .prepare(
+                                        "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
+                                            "VALUES (?, ?, 'lead_created', 'New Lead Added', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    )
+                                    .bind(
+                                        newLeadId,
+                                        safeOwnerId,
+                                        "Lead created: " + name,
+                                    )
+                                    .run();
+                            } catch (actErr) {
+                                console.error("Non-fatal secondary activity insert error:", actErr);
+                            }
                         }
                     } catch (e) {
-                        console.error("D1 Leads create error:", e);
+                        console.error("D1 Leads create processing error:", e);
+                        insertError = e;
                     }
                 }
-                return Response.redirect(new URL("/leads", request.url), 302);
+
+                const wantsJson = request.headers.get("accept")?.includes("json") || contentType.includes("json");
+                if (wantsJson) {
+                    if (newLeadId) {
+                        return Response.json({ success: true, lead_id: newLeadId, message: "Lead created successfully" });
+                    } else {
+                        return Response.json({ success: false, error: insertError ? insertError.message : "Failed to create lead" }, { status: 422 });
+                    }
+                }
+
+                if (newLeadId) {
+                    return Response.redirect(new URL("/leads?saved=1&lead_id=" + newLeadId, request.url), 302);
+                } else if (insertError) {
+                    // Fail-safe: Redirect back to create with explicit error message so draft is restored
+                    return Response.redirect(new URL("/leads/create?error=" + encodeURIComponent(insertError.message || "Database insert error"), request.url), 302);
+                } else {
+                    return Response.redirect(new URL("/leads", request.url), 302);
+                }
             }
 
             if (path.startsWith("/leads/")) {

@@ -2645,10 +2645,44 @@
             }
         }
     }
+
+    function checkLeadSavedToast() {
+        try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.get("saved") === "1") {
+                try {
+                    localStorage.removeItem("sbl_lead_create_draft");
+                } catch (e) {}
+
+                const toast = document.createElement("div");
+                toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 font-bold text-sm transform transition-all duration-300 translate-y-10 opacity-0";
+                toast.innerHTML = '<span>✅</span> <span>নতুন লিড সফলভাবে সংরক্ষিত হয়েছে!</span>';
+                document.body.appendChild(toast);
+
+                requestAnimationFrame(() => {
+                    toast.classList.remove("translate-y-10", "opacity-0");
+                });
+
+                setTimeout(() => {
+                    toast.classList.add("translate-y-10", "opacity-0");
+                    setTimeout(() => toast.remove(), 400);
+                }, 4000);
+
+                url.searchParams.delete("saved");
+                url.searchParams.delete("lead_id");
+                window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ""));
+            }
+        } catch (e) {}
+    }
+
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", runSync);
+        document.addEventListener("DOMContentLoaded", function () {
+            runSync();
+            checkLeadSavedToast();
+        });
     } else {
         runSync();
+        checkLeadSavedToast();
     }
 
     // Re-sync dropdowns whenever user clicks to open any modal

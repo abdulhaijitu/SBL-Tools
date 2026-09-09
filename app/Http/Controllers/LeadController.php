@@ -155,38 +155,50 @@ class LeadController extends Controller
             $lead->calculateScoreAndTemperature();
             $lead->save();
 
-            // Save interests pivot
+            // Save interests pivot safely
             if (! empty($validated['interest_types'])) {
-                foreach ($validated['interest_types'] as $interest) {
-                    LeadInterest::create([
-                        'lead_id' => $lead->id,
-                        'interest' => $interest,
-                    ]);
+                try {
+                    foreach ($validated['interest_types'] as $interest) {
+                        LeadInterest::create([
+                            'lead_id' => $lead->id,
+                            'interest' => $interest,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \Log::warning('Secondary LeadInterest create failed: ' . $e->getMessage());
                 }
             }
 
-            // Create timeline activity
-            Activity::create([
-                'lead_id' => $lead->id,
-                'user_id' => Auth::id() ?: 1,
-                'type' => 'lead_created',
-                'title' => 'New Lead Added',
-                'description' => "Initial Stage: {$lead->stage->label()}, Source: " . ($lead->source->name ?? 'Direct'),
-                'performed_at' => now(),
-            ]);
-
-            // If next action is scheduled, create corresponding Task
-            if (! empty($validated['next_action_at'])) {
-                Task::create([
-                    'title' => ($validated['next_action_type'] ?? 'Follow-up') . ' with ' . $lead->name,
-                    'type' => TaskType::FOLLOW_UP,
-                    'related_lead_id' => $lead->id,
+            // Create timeline activity safely
+            try {
+                Activity::create([
+                    'lead_id' => $lead->id,
                     'user_id' => Auth::id() ?: 1,
-                    'due_at' => $validated['next_action_at'],
-                    'priority' => TaskPriority::HIGH,
-                    'status' => TaskStatus::PENDING,
-                    'notes' => $validated['notes'] ?? null,
+                    'type' => 'lead_created',
+                    'title' => 'New Lead Added',
+                    'description' => "Initial Stage: {$lead->stage->label()}, Source: " . ($lead->source->name ?? 'Direct'),
+                    'performed_at' => now(),
                 ]);
+            } catch (\Throwable $e) {
+                \Log::warning('Secondary Activity create failed: ' . $e->getMessage());
+            }
+
+            // If next action is scheduled, create corresponding Task safely
+            if (! empty($validated['next_action_at'])) {
+                try {
+                    Task::create([
+                        'title' => ($validated['next_action_type'] ?? 'Follow-up') . ' with ' . $lead->name,
+                        'type' => TaskType::FOLLOW_UP,
+                        'related_lead_id' => $lead->id,
+                        'user_id' => Auth::id() ?: 1,
+                        'due_at' => $validated['next_action_at'],
+                        'priority' => TaskPriority::HIGH,
+                        'status' => TaskStatus::PENDING,
+                        'notes' => $validated['notes'] ?? null,
+                    ]);
+                } catch (\Throwable $e) {
+                    \Log::warning('Secondary Task create failed: ' . $e->getMessage());
+                }
             }
         });
 
