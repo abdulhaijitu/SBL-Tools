@@ -16,7 +16,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Official Portals',
                 'badge' => 'Main Website',
                 'icon' => '🌐',
-                'description' => 'অফিসিয়াল কর্পোরেট ওয়েবসাইট, কোম্পানি পরিচিতি, ভিশন ও গ্লোবাল আপডেট।',
+                'description' => 'Official corporate website, company profile, vision, and global updates.',
                 'sort_order' => 1,
             ],
             [
@@ -25,7 +25,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Business & Commerce',
                 'badge' => 'Dropshipping Hub',
                 'icon' => '🛍️',
-                'description' => 'পণ্য স্টক না রেখেই ড্রপশিপিং ও ন্যাশনাল/ইন্টারন্যাশনাল রিসেলিং মার্কেটপ্লেস।',
+                'description' => 'Dropshipping and national/international reselling marketplace without holding stock.',
                 'sort_order' => 2,
             ],
             [
@@ -34,7 +34,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Business & Commerce',
                 'badge' => 'Crowdfunding',
                 'icon' => '📈',
-                'description' => '১২০,০০০/- ও ৫৫০,০০০/- টাকার ক্রাউডফান্ডিং প্যাকেজ, সাপ্তাহিক রিটার্ন ও লাইভ ট্র্যাকিং।',
+                'description' => 'Crowdfunding packages (120,000/- & 550,000/- BDT), weekly returns, and live tracking.',
                 'sort_order' => 3,
             ],
             [
@@ -43,7 +43,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Affiliate & Community',
                 'badge' => 'Backoffice',
                 'icon' => '👥',
-                'description' => 'অ্যাফিলিয়েট মেম্বার পোর্টাল, ১০ জেনারেশন রেফারেল নেটওয়ার্ক ও কমিশন স্টেটমেন্ট।',
+                'description' => 'Affiliate member portal, 10-generation referral network, and commission statements.',
                 'sort_order' => 4,
             ],
             [
@@ -52,7 +52,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Support & Training',
                 'badge' => 'Academy',
                 'icon' => '🎓',
-                'description' => 'ড্রপশিপিং ট্রেনিং, কাউন্সেলিং-১ গাইড এবং প্রেজেন্টেশন ভিডিও রিসোর্স।',
+                'description' => 'Dropshipping training, Counseling-1 guidance, and video presentation resources.',
                 'sort_order' => 5,
             ],
             [
@@ -61,7 +61,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Affiliate & Community',
                 'badge' => 'Facebook Group',
                 'icon' => '💬',
-                'description' => 'এসবিএল ড্রপশিপার, ইনভেস্টর ও মেম্বারদের অফিসিয়াল ফেসবুক ডিসকাশন কমিউনিটি।',
+                'description' => 'Official Facebook discussion community for SBL dropshippers, investors, and members.',
                 'sort_order' => 6,
             ],
             [
@@ -70,7 +70,7 @@ class EcosystemLinkSeeder extends Seeder
                 'category' => 'Support & Training',
                 'badge' => 'Helpdesk',
                 'icon' => '📱',
-                'description' => 'কাস্টমার কেয়ার, ইনস্ট্যান্ট টেকনিক্যাল সাপোর্ট ও মেম্বারশিপ সার্ভিস।',
+                'description' => 'Customer care, instant technical support, and membership assistance.',
                 'sort_order' => 7,
             ],
         ];

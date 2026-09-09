@@ -14,7 +14,7 @@ class AbbreviationCrudTest extends TestCase
         $this->actingAs(User::where('email', 'admin@sbl.test')->first());
         $this->get('/abbreviations')->assertOk()->assertSee('Add Abbreviation');
         $count = Abbreviation::count();
-        $data = ['code' => "QA'T", 'name' => 'Test term', 'category_slug' => 'marketing', 'meaning_bn' => 'পরীক্ষা', 'description_bn' => 'বাংলা ব্যবহার', 'icon' => '', 'tag' => ''];
+        $data = ['code' => "QA'T", 'name' => 'Test term', 'category_slug' => 'marketing', 'meaning_bn' => 'Test meaning', 'description_bn' => 'English usage test', 'icon' => '', 'tag' => ''];
         $id = $this->postJson('/abbreviations', $data)->assertCreated()->json('id');
         $this->postJson('/abbreviations', $data)->assertUnprocessable()->assertJsonValidationErrors('code');
         $this->putJson('/abbreviations/'.$id, array_merge($data, ['name' => 'Updated']))->assertOk()->assertJsonPath('name', 'Updated');

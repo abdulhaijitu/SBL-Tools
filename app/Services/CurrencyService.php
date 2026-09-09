@@ -57,7 +57,7 @@ class CurrencyService
     public static function getSymbol(string $currency = null): string
     {
         $currency = $currency ? strtoupper($currency) : self::getCurrency();
-        return $currency === self::BDT ? '৳' : '$';
+        return $currency === self::BDT ? 'BDT' : '$';
     }
 
     /**
@@ -96,7 +96,7 @@ class CurrencyService
         }
 
         return $targetCurrency === self::BDT
-            ? "{$formattedNumber} ৳"
+            ? "{$formattedNumber} BDT"
             : "{$symbol}{$formattedNumber}";
     }
 }

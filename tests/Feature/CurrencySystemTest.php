@@ -27,7 +27,7 @@ class CurrencySystemTest extends TestCase
     public function test_currency_conversion_to_bdt(): void
     {
         $this->assertEquals(12000.0, CurrencyService::convertFromUsd(100, 'BDT'));
-        $this->assertEquals('12,000 ৳', CurrencyService::format(100, 'BDT'));
+        $this->assertEquals('12,000 BDT', CurrencyService::format(100, 'BDT'));
     }
 
     public function test_authenticated_user_can_switch_currency_via_api(): void
@@ -42,7 +42,7 @@ class CurrencySystemTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'currency' => 'BDT',
-                'symbol' => '৳',
+                'symbol' => 'BDT',
                 'rate' => 120.0
             ]);
 

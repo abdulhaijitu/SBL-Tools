@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ const db = {prepare(sql) { let args = []; return {bind(...values) {args = values
 const env = {DB: db, ABBREVIATIONS_ADMIN_PASSWORD: 'test-only-password'};
 const call = (path, method, body, extra = {}) => worker.fetch(new Request('https://example.test'+path, {method, headers: {Origin: 'https://example.test', Authorization: 'Basic '+btoa('admin:test-only-password'), 'Content-Type': 'application/json', ...extra}, body: body ? JSON.stringify(body) : undefined}), env, {});
 test('Worker CRUD persists changes and rejects duplicate terms', async () => {
- const data = {code: 'TEST', name: "A 'quoted' <term>", category_slug: 'finance', meaning_bn: 'পরীক্ষা', description_bn: 'ব্যবহার'};
+ const data = {code: 'TEST', name: "A 'quoted' <term>", category_slug: 'finance', meaning_bn: 'Test meaning', description_bn: 'Usage description'};
  let response = await call('/abbreviations','POST',data); assert.equal(response.status,201); const term = await response.json();
  assert.equal((await call('/abbreviations','POST',data)).status,422);
  response = await call('/abbreviations/'+term.id,'PUT',{...data,name:'Updated'}); assert.equal(response.status,200); assert.equal((await response.json()).name,'Updated');

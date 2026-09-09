@@ -24,3 +24,5 @@ Homestead.yaml
 Thumbs.db
 /.wrangler
 /storage/*.png
+/.playwright-cli
+/output

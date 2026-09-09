@@ -2,6 +2,8 @@
 // Serves the exact, 100% pixel-perfect compiled Laravel Blade views and handles real D1 CRUD on the edge.
 
 const SBL_LOGO_BASE64 = __SBL_LOGO_BASE64__;
+const SBL_PACKAGES_QR_BASE64 = __SBL_PACKAGES_QR_BASE64__;
+const SBL_PACKAGES_SHEET_BASE64 = __SBL_PACKAGES_SHEET_BASE64__;
 const CSS_CONTENT = __CSS_CONTENT__;
 const JS_CONTENT = __JS_CONTENT__;
 const CSS_PATH = __CSS_PATH__;
@@ -51,6 +53,36 @@ export default {
             path === "/apple-touch-icon.png"
         ) {
             const binaryString = atob(SBL_LOGO_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
+        if (path === "/images/sbl-packages-qr.png") {
+            const binaryString = atob(SBL_PACKAGES_QR_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
+        if (path === "/images/sbl-packages-sheet.png") {
+            const binaryString = atob(SBL_PACKAGES_SHEET_BASE64);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
             for (let i = 0; i < len; i++) {
@@ -2294,7 +2326,7 @@ export default {
             html = PAGES.profile || PAGES.dashboard;
         } else if (path === "/presentations") {
             html = PAGES.presentations;
-        } else if (path === "/toolkit") {
+        } else if (path === "/toolkit" || path === "/packages") {
             html = PAGES.toolkit;
         } else if (path === "/tasks") {
             html = PAGES.tasks;

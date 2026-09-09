@@ -764,9 +764,9 @@ function teamExplorerData() {
                         <label class="block text-xs font-black text-slate-900 mb-1.5 flex items-center justify-between">
                             <span class="flex items-center gap-1.5 text-orange-950">
                                 <span>🔗</span>
-                                <span>Member Connector (কানেক্টর / Placement Upline) <span class="text-rose-500">*</span></span>
+                                <span>Member Connector (Placement Upline) <span class="text-rose-500">*</span></span>
                             </span>
-                            <span class="text-[10px] text-orange-700 font-semibold bg-orange-100 px-2 py-0.5 rounded-full">কার সরাসরি নিচে বসবে</span>
+                            <span class="text-[10px] text-orange-700 font-semibold bg-orange-100 px-2 py-0.5 rounded-full">Direct Upline</span>
                         </label>
                         <select name="parent_id" 
                                 x-model="selectedParentId" 
@@ -778,7 +778,7 @@ function teamExplorerData() {
                                 "
                                 required 
                                 class="w-full text-xs bg-white border border-orange-300 rounded-xl p-2.5 focus:ring-2 focus:ring-orange-500 font-bold text-slate-800 shadow-xs">
-                            <option value="">-- Select Member Connector (কানেক্টর নির্বাচন করুন) --</option>
+                            <option value="">-- Select Member Connector --</option>
                             @foreach($allNodes as $nodeOption)
                                 <option value="{{ $nodeOption->id }}" 
                                         data-name="{{ $nodeOption->member_name }}" 
@@ -789,21 +789,21 @@ function teamExplorerData() {
                             @endforeach
                         </select>
                         <p class="text-[10px] text-slate-500 mt-1">
-                            এই মেম্বারটির ডাউনলাইনে নির্ধারিত ব্রাঞ্চ ও স্লটে নতুন মেম্বার যুক্ত হবে।
+                            The new member will be placed under this connector in the specified branch and slot.
                         </p>
                     </div>
 
                     <!-- Connector Placement Slot Selector (Branch & Slot 1-5) -->
                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-orange-200/70">
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Placement Side (ব্রাঞ্চ)</label>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Placement Side (Branch)</label>
                             <select name="branch" x-model="selectedBranch" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs">
                                 <option value="LEFT">👈 LEFT TEAM</option>
                                 <option value="RIGHT">👉 RIGHT TEAM</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Slot Number (স্লট ১-৫)</label>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Slot Number (Slot 1-5)</label>
                             <select name="slot_number" x-model="selectedSlotNumber" class="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 shadow-xs">
                                 <option value="1">Slot-1</option>
                                 <option value="2">Slot-2</option>
@@ -869,8 +869,8 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                            <span>Sponsor (স্পন্সর মেম্বার)</span>
-                            <span class="text-[10px] text-slate-400 font-normal">রেফারার</span>
+                            <span>Sponsor (Referrer)</span>
+                            <span class="text-[10px] text-slate-400 font-normal">Referrer</span>
                         </label>
                         <input type="text" 
                                name="sponsor_name" 

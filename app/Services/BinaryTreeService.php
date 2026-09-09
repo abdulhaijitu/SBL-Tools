@@ -751,7 +751,7 @@ class BinaryTreeService
         DB::transaction(function () use ($node, $cascade) {
             $hasChildren = $node->children()->exists();
             if ($hasChildren && !$cascade) {
-                throw new InvalidArgumentException("এই মেম্বারের ডাউনলাইনে সক্রিয় টিম মেম্বার রয়েছে। ট্রি স্ট্রাকচার অক্ষুণ্ণ রাখতে ডাউনলাইন মেম্বারসহ নোড সরাসরি মুছে ফেলা যাবে না। সম্পূর্ণ ব্রাঞ্চ মুছে ফেলতে Cascade ডিলিট অপশন ব্যবহার করুন।");
+                throw new InvalidArgumentException("This member has active downline team members. To preserve tree integrity, nodes with downlines cannot be deleted directly. Use the cascade delete option to remove the entire branch.");
             }
 
             $parent = $node->parent_id ? BinaryNode::find($node->parent_id) : null;

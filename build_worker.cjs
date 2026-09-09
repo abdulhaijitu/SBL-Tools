@@ -18,8 +18,14 @@ const cssContent = fs.readFileSync(path.join(__dirname, 'public', 'build', cssFi
 const jsContent = fs.readFileSync(path.join(__dirname, 'public', 'build', jsFileName), 'utf8');
 const clientSyncJs = fs.readFileSync(path.join(__dirname, 'client_sync.js'), 'utf8');
 
-// 3. Read logo base64
+// 3. Read logo base64 and package assets
 const logoBase64 = fs.readFileSync(path.join(__dirname, 'storage', 'logo_base64.txt'), 'utf8').trim();
+const qrBase64 = fs.existsSync(path.join(__dirname, 'public', 'images', 'sbl-packages-qr.png'))
+    ? fs.readFileSync(path.join(__dirname, 'public', 'images', 'sbl-packages-qr.png')).toString('base64')
+    : '';
+const sheetBase64 = fs.existsSync(path.join(__dirname, 'public', 'images', 'sbl-packages-sheet.png'))
+    ? fs.readFileSync(path.join(__dirname, 'public', 'images', 'sbl-packages-sheet.png')).toString('base64')
+    : '';
 
 // 4. Clean up and standardize rendered HTML
 for (const key of Object.keys(renderedPages)) {
@@ -47,6 +53,8 @@ let workerContent = fs.readFileSync(templatePath, 'utf8');
 
 workerContent = workerContent
   .replace('__SBL_LOGO_BASE64__', () => JSON.stringify(logoBase64))
+  .replace('__SBL_PACKAGES_QR_BASE64__', () => JSON.stringify(qrBase64))
+  .replace('__SBL_PACKAGES_SHEET_BASE64__', () => JSON.stringify(sheetBase64))
   .replace('__CSS_CONTENT__', () => JSON.stringify(cssContent))
   .replace('__JS_CONTENT__', () => JSON.stringify(jsContent))
   .replace('__CSS_PATH__', () => JSON.stringify('/build/' + cssFileName))

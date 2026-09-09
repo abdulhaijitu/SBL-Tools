@@ -58,8 +58,9 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     Route::put('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'update'])->name('abbreviations.update');
     Route::delete('/abbreviations/{abbreviation}', [\App\Http\Controllers\AbbreviationController::class, 'destroy'])->name('abbreviations.destroy');
 
-    // SBL Plans & Toolkit (From PDF)
+    // SBL Toolkit & Packages
     Route::get('/toolkit', [\App\Http\Controllers\SblToolkitController::class, 'index'])->name('toolkit.index');
+    Route::redirect('/packages', '/toolkit?tab=packages')->name('packages.index');
 
     // SBL Ecosystem Directory & Links CRUD
     Route::get('/ecosystem', [\App\Http\Controllers\EcosystemController::class, 'index'])->name('ecosystem.index');

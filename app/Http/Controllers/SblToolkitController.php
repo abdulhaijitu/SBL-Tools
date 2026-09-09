@@ -20,18 +20,18 @@ class SblToolkitController extends Controller
 
         // Market vs SBL 20k Dropshipping Comparison (PDF Page 4)
         $marketComparisons = [
-            ['service' => 'ওয়েবসাইট ডেভেলপমেন্ট এবং ডোমেইন, হোস্টিং ক্রয়', 'market' => '৫০,০০০ থেকে ৩ লক্ষ টাকা'],
-            ['service' => 'পণ্য সোর্সিং (বাছাইকৃত ও ভেরিফাইড মার্চেন্ট থেকে)', 'market' => '৫০,০০০ থেকে ১ লক্ষ টাকা'],
-            ['service' => 'শপিফাই ই-কমার্স ওয়েবসাইট', 'market' => 'মাসে ৩০০০ টাকা'],
-            ['service' => 'ফেসবুক পেজ সেটআপ', 'market' => '৫০০০ থেকে ১০০০০ টাকা'],
-            ['service' => 'ভিডিও/ইমেজ বিজ্ঞাপন কন্টেন্ট তৈরি', 'market' => '২০০০ থেকে ৫০০০ টাকা'],
-            ['service' => 'ফেসবুক এড ক্যাম্পেইন পরিচালনা', 'market' => '৫০,০০০ থেকে ১ লক্ষ টাকা'],
-            ['service' => 'প্রোডাক্ট প্যাকেজিং ও ডেলিভারি সাপোর্ট', 'market' => '২০,০০০ থেকে ৫০,০০০ টাকা'],
-            ['service' => 'পেজ মডারেশন এবং কাস্টমার সার্ভিস', 'market' => '১৫,০০০ থেকে ৩০,০০০ টাকা'],
-            ['service' => 'বিক্রয় বিশ্লেষণ এবং রিপোর্টিং', 'market' => '৫০,০০০ থেকে ১ লক্ষ টাকা'],
-            ['service' => 'পেমেন্ট এবং অর্ডার প্রসেসিং অটোমেশন', 'market' => '৫০০০ থেকে ১০০০০ টাকা'],
-            ['service' => 'স্টক ম্যানেজমেন্ট', 'market' => '২০,০০০ থেকে ৫০,০০০ টাকা'],
-            ['service' => 'অনলাইন মার্কেটিং (ফেসবুক বুস্ট) বাজেট', 'market' => '২ লক্ষ থেকে ৫ লক্ষ টাকা'],
+            ['service' => 'Website Development, Domain & Hosting Setup', 'market' => '50,000 to 300,000 BDT'],
+            ['service' => 'Product Sourcing (Curated & Verified Merchants)', 'market' => '50,000 to 100,000 BDT'],
+            ['service' => 'Shopify E-Commerce Website & Maintenance', 'market' => '3,000 BDT / month'],
+            ['service' => 'Professional Facebook Business Page Setup', 'market' => '5,000 to 10,000 BDT'],
+            ['service' => 'Video & Creative Image Ad Production', 'market' => '2,000 to 5,000 BDT'],
+            ['service' => 'Facebook Ad Campaign Management & Optimization', 'market' => '50,000 to 100,000 BDT'],
+            ['service' => 'Product Packaging & Delivery Logistics Support', 'market' => '20,000 to 50,000 BDT'],
+            ['service' => 'Page Moderation & Dedicated Customer Support', 'market' => '15,000 to 30,000 BDT'],
+            ['service' => 'Sales Analytics, Insights & Performance Reporting', 'market' => '50,000 to 100,000 BDT'],
+            ['service' => 'Automated Payment Gateway & Order Processing', 'market' => '5,000 to 10,000 BDT'],
+            ['service' => 'Inventory & Stock Management', 'market' => '20,000 to 50,000 BDT'],
+            ['service' => 'Online Marketing Budget (Facebook Boosting)', 'market' => '200,000 to 500,000 BDT'],
         ];
 
         // 6-Month Trajectory (PDF Page 4)
@@ -47,20 +47,20 @@ class SblToolkitController extends Controller
         // Counseling 1: Investor vs Networker Comparison (PDF Page 6)
         $counselingPoints = [
             [
-                'investor' => 'বিনিয়োগের নিরাপত্তা (নিরাপদ মূলধন ও সাপ্তাহিক রিটার্ন)',
-                'networker' => 'একাধিক সেন্টার নেয়ার সুবিধা (মাল্টিপল আইডি ইনকাম)',
+                'investor' => 'Investment Security (Protected capital & steady weekly returns)',
+                'networker' => 'Multiple Center Advantage (Multiply earnings with multiple IDs)',
             ],
             [
-                'investor' => 'লিগ্যাল এবং অথেন্টিক বিজনেস মডেল',
-                'networker' => 'আগে আসার সুবিধা (টিম স্পিলওভার ও পজিশন বেনিফিট)',
+                'investor' => 'Legal & Authentic Business Model',
+                'networker' => 'Early Mover Advantage (Binary team spillover & position benefits)',
             ],
             [
-                'investor' => 'নিজের বিজনেস ব্র্যান্ডিং - স্থায়ী ইনকাম',
-                'networker' => 'ডেইলি ৫০০০০ টাকা ইনকাম করার সুযোগ (Pair Reward)',
+                'investor' => 'Personal Business Branding & Long-term Income',
+                'networker' => 'Daily Income Potential up to 50,000 BDT (Pair Reward)',
             ],
             [
-                'investor' => 'ডিজিটাল এসেট এর কন্ট্রোলিং এবং ভ্যালু বৃদ্ধি',
-                'networker' => 'স্থায়ী ইনকাম এর সুযোগ - টিম ওয়ার্ক ও প্যাসিভ আর্নিং',
+                'investor' => 'Digital Asset Ownership & Valuation Growth',
+                'networker' => 'Sustainable Income & Long-term Teamwork / Passive Earnings',
             ],
         ];
 

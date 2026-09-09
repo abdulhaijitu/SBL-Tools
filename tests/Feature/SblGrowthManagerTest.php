@@ -340,7 +340,7 @@ class SblGrowthManagerTest extends TestCase
 
         $response = $this->actingAs($this->user)->get('/toolkit');
         $response->assertStatus(200);
-        $response->assertSee('Plans &amp; Toolkit', false);
+        $response->assertSee('SBL Toolkit', false);
         $response->assertSee('National Package');
         $response->assertSee('Field Marketing Executive');
         $response->assertSee('Counseling Guide');

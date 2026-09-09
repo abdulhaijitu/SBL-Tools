@@ -1,4 +1,4 @@
-﻿export function registerAbbreviations(Alpine) {
+export function registerAbbreviations(Alpine) {
     Alpine.data('abbreviationManager', () => ({
         terms: [], canManage: false, category: 'all', search: '', editing: false, busy: false, error: '', form: {},
         init() {
@@ -14,7 +14,7 @@
         edit(term) {
             this.form = term ? {...term} : {code: '', name: '', category_slug: 'ecommerce', meaning_bn: '', description_bn: '', icon: '', tag: ''};
             this.error = ''; this.editing = true;
-            this.$nextTick(() => this.$el.querySelector('form input').focus());
+            this.$nextTick(() => this.$refs.editor.querySelector('input').focus());
         },
         async request(path, method, body) {
             const response = await fetch(path, {method, headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''}, body: body ? JSON.stringify(body) : undefined});

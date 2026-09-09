@@ -3,12 +3,12 @@ export function registerShell(Alpine) {
         code: document.documentElement.dataset.currency || 'USD',
         rate: Number(document.documentElement.dataset.exchangeRate) || 120,
         busy: false,
-        symbol() { return this.code === 'BDT' ? '৳' : '$'; },
+        symbol() { return this.code === 'BDT' ? 'BDT' : '$'; },
         convert(value) { return (Number(value) || 0) * (this.code === 'BDT' ? this.rate : 1); },
         format(value, includeSymbol = true) {
             const amount = this.convert(value);
             const result = new Intl.NumberFormat(document.documentElement.lang || 'en', {maximumFractionDigits: 2}).format(amount);
-            return includeSymbol ? (this.code === 'BDT' ? `${result} ৳` : `$${result}`) : result;
+            return includeSymbol ? (this.code === 'BDT' ? `${result} BDT` : `$${result}`) : result;
         },
         async set(value) {
             if (this.busy || !['USD', 'BDT'].includes(value)) return;

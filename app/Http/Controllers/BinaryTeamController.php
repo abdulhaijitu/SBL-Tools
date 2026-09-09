@@ -49,9 +49,9 @@ class BinaryTeamController extends Controller
         $treeData = $this->treeService->getVisualTree($nodeId ? (int)$nodeId : null, $ownerId, 2);
 
         $packages = [
-            ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'ন্যাশনাল প্যাকেজ (১২০,০০০/-) - ১০০ BV'],
-            ['name' => 'International 550k', 'price' => 550000, 'bv' => 500, 'label' => 'ইন্টারন্যাশনাল প্যাকেজ (৫৫০,০০০/-) - ৫০০ BV'],
-            ['name' => 'Executive Starter', 'price' => 25000, 'bv' => 25, 'label' => 'স্টার্টার প্যাক (২৫,০০০/-) - ২৫ BV'],
+            ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'National Package (120,000/-) - 100 BV'],
+            ['name' => 'International 550k', 'price' => 550000, 'bv' => 500, 'label' => 'International Package (550,000/-) - 500 BV'],
+            ['name' => 'Executive Starter', 'price' => 25000, 'bv' => 25, 'label' => 'Starter Pack (25,000/-) - 25 BV'],
         ];
 
         $nodesQuery = BinaryNode::orderBy('member_name');
@@ -177,12 +177,12 @@ class BinaryTeamController extends Controller
         try {
             $node = $this->treeService->placeMember($validated);
             $parent = BinaryNode::find($validated['parent_id']);
-            $branchText = $validated['branch'] === 'LEFT' ? 'বাম টিমে (Left)' : 'ডান টিমে (Right)';
-            $slotText = "{$branchText} স্লট-{$validated['slot_number']}";
+            $branchText = $validated['branch'] === 'LEFT' ? 'Left Team' : 'Right Team';
+            $slotText = "{$branchText} Slot-{$validated['slot_number']}";
 
             $msg = $node->is_target
-                ? "পরিকল্পিত টার্গেট মেম্বার '{$node->member_name}' সফলভাবে {$parent->member_name}-এর {$slotText}-এ সংরক্ষিত হয়েছে।"
-                : "মেম্বার '{$node->member_name}' ({$node->member_code}) সফলভাবে {$parent->member_name}-এর {$slotText}-এ যুক্ত করা হয়েছে।";
+                ? "Target member '{$node->member_name}' has been successfully saved to {$parent->member_name}'s {$slotText}."
+                : "Member '{$node->member_name}' ({$node->member_code}) has been successfully added to {$parent->member_name}'s {$slotText}.";
 
             return redirect()->route('team.show', ['memberId' => $parent->id])
                 ->with('success', $msg);
@@ -198,7 +198,7 @@ class BinaryTeamController extends Controller
     {
         try {
             $this->treeService->convertToActive($node);
-            return redirect()->back()->with('success', "মেম্বার '{$node->member_name}' সফলভাবে টার্গেট থেকে অ্যাক্টিভ মেম্বারে রূপান্তরিত হয়েছে।");
+            return redirect()->back()->with('success', "Member '{$node->member_name}' was successfully converted from target to active member.");
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
@@ -255,7 +255,7 @@ class BinaryTeamController extends Controller
             $this->treeService->updateMember($node, $validated);
 
             return redirect()->back()
-                ->with('success', "মেম্বার '{$node->member_name}' ({$node->member_code})-এর তথ্য সফলভাবে আপডেট করা হয়েছে।");
+                ->with('success', "Member '{$node->member_name}' ({$node->member_code}) information has been successfully updated.");
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
@@ -277,7 +277,7 @@ class BinaryTeamController extends Controller
             $targetUrl = $parentId ? route('team.show', ['memberId' => $parentId]) : route('team.index');
 
             return redirect($targetUrl)
-                ->with('success', "মেম্বার '{$name}' ({$code}) সফলভাবে টিম থেকে রিমুভ করা হয়েছে।");
+                ->with('success', "Member '{$name}' ({$code}) was successfully removed from the team.");
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
@@ -309,7 +309,7 @@ class BinaryTeamController extends Controller
             return redirect()->route('team.show', ['memberId' => $node->id]);
         }
 
-        return redirect()->back()->with('error', "'{$query}' দিয়ে কোনো টিম মেম্বার খুঁজে পাওয়া যায়নি।");
+        return redirect()->back()->with('error', "No team member found matching '{$query}'.");
     }
 
     /**

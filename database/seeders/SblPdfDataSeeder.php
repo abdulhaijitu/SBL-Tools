@@ -21,7 +21,7 @@ class SblPdfDataSeeder extends Seeder
                 'weekly_return_percent' => 1.75,
                 'duration_weeks' => 100,
                 'crowdfunding_limit' => 1000000.00, // 10 Lac
-                'lifetime_profit_sharing' => '৫,০০০ থেকে ২০,০০০ টাকা / মাস',
+                'lifetime_profit_sharing' => '5,000 to 20,000 BDT / month',
                 'features' => [
                     'Branded Shopify Store and Product',
                     'Own Packaging',
@@ -43,7 +43,7 @@ class SblPdfDataSeeder extends Seeder
                 'weekly_return_percent' => 2.00,
                 'duration_weeks' => 100,
                 'crowdfunding_limit' => 5000000.00, // 50 Lac
-                'lifetime_profit_sharing' => '২৫,০০০ থেকে ১,০০,০০০ টাকা / মাস',
+                'lifetime_profit_sharing' => '25,000 to 100,000 BDT / month',
                 'features' => [
                     'Dedicated Team for Project Management',
                     'Unlimited UGC Content',
@@ -114,31 +114,31 @@ class SblPdfDataSeeder extends Seeder
                 'name' => 'Spot Commission',
                 'code' => 'spot',
                 'rate_description' => '10% on Investment',
-                'description' => 'SBL এ আপনার রেফারেন্সে যত প্রজেক্ট ডেভেলপমেন্ট হবে তার বিনিয়োগকৃত অ্যামাউন্ট থেকে ১০% মার্কেটিং কমিশন।',
+                'description' => '10% marketing commission on the invested capital of any project developed under your referral in SBL.',
             ],
             [
                 'name' => 'Refer Return',
                 'code' => 'refer_return',
                 'rate_description' => '0.25% per week for 100 weeks',
-                'description' => 'আপনার রেফারেন্সের বিনিয়োগকৃত অ্যামাউন্টের উপর ০.২৫% করে প্রতি সপ্তাহে পাবেন ১০০ সপ্তাহ পর্যন্ত।',
+                'description' => '0.25% weekly return on the referred project investment amount, paid weekly for up to 100 weeks.',
             ],
             [
                 'name' => 'Pair Reward',
                 'code' => 'pair_reward',
                 'rate_description' => '500 Tk/Pair (Daily max 100 PR = 50,000 Tk)',
-                'description' => 'আপনার রেফারেন্স ও সেলস টিম গঠন করে প্রতিদিন সর্বোচ্চ ১০০ পেয়ার কমিশন। পেয়ারের কোনো নির্দিষ্ট লিমিট নেই।',
+                'description' => 'Earn 500 BDT per binary pair up to a maximum of 100 pairs daily by developing your referral and sales team.',
             ],
             [
                 'name' => 'Unity Development Commission (UDR)',
                 'code' => 'udr',
                 'rate_description' => '5% across sales team',
-                'description' => 'আপনার রেফারেন্স ও সেলস টিম গঠন করে অতিরিক্ত ৫% পর্যন্ত কমিশন পাবেন।',
+                'description' => 'Earn up to an additional 5% commission across your sales team development.',
             ],
             [
                 'name' => 'Rank Reward',
                 'code' => 'rank_reward',
                 'rate_description' => 'Up to 40,00,000 Tk Cash Incentive',
-                'description' => 'আপনার রেফারেন্সে সেলস টিম গঠন করে বিভিন্ন পদবী অর্জনের মাধ্যমে ৪০ লক্ষ টাকা পর্যন্ত পুরস্কার পাবেন।',
+                'description' => 'Earn cash incentives and rank achievement bonuses up to 4,000,000 BDT through team progression.',
             ],
         ];
 

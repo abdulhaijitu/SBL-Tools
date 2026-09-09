@@ -108,11 +108,11 @@
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
             <!-- D-Pad Directional Pan Buttons (Up-Down, Left-Right) -->
             <div class="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200 gap-0.5" title="Pan in direction">
-                <button type="button" @click="pan(-180, 0)" title="Pan Left (বাম)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">←</button>
-                <button type="button" @click="pan(0, -140)" title="Pan Up (উপরে)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">↑</button>
-                <button type="button" @click="pan(0, 140)" title="Pan Down (নিচে)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">↓</button>
-                <button type="button" @click="pan(180, 0)" title="Pan Right (ডান)" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">→</button>
-                <button type="button" @click="focusRoot()" title="Center to Root Member (মাঝখানে আনুন)" class="px-1.5 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-[11px] text-orange-700 font-bold transition-all">🎯 Center</button>
+                <button type="button" @click="pan(-180, 0)" title="Pan Left" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">←</button>
+                <button type="button" @click="pan(0, -140)" title="Pan Up" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">↑</button>
+                <button type="button" @click="pan(0, 140)" title="Pan Down" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">↓</button>
+                <button type="button" @click="pan(180, 0)" title="Pan Right" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-slate-700 transition-all font-bold">→</button>
+                <button type="button" @click="focusRoot()" title="Center to Root Member" class="px-1.5 h-7 flex items-center justify-center rounded-lg hover:bg-white active:scale-90 text-[11px] text-orange-700 font-bold transition-all">🎯 Center</button>
             </div>
 
             <!-- Mouse Wheel Mode Toggle -->
@@ -160,17 +160,17 @@
     </div>
     <div class="border-t border-slate-200 px-5 py-2.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
         <div class="flex items-center gap-3 text-[11px] text-slate-600">
-            <span class="font-semibold text-slate-800">🖱️ মাউস ও স্ক্রলিং শর্টকাট:</span>
-            <span><strong>Wheel:</strong> Up-Down (উপরে-নিচে)</span>
+            <span class="font-semibold text-slate-800">🖱️ Mouse & Scroll Shortcuts:</span>
+            <span><strong>Wheel:</strong> Up-Down</span>
             <span>•</span>
-            <span><strong>Shift + Wheel:</strong> Left-Right (ডান-বাম)</span>
+            <span><strong>Shift + Wheel:</strong> Left-Right</span>
             <span>•</span>
-            <span><strong>Ctrl + Wheel:</strong> Zoom (জুম ইন-আউট)</span>
+            <span><strong>Ctrl + Wheel:</strong> Zoom In/Out</span>
             <span>•</span>
-            <span><strong>Click & Drag:</strong> Free Pan (যেকোনো দিকে ড্র্যাগ)</span>
+            <span><strong>Click & Drag:</strong> Free Pan</span>
         </div>
         <div class="text-[11px] text-slate-400">
-            Deeper generation দেখতে মেম্বার কার্ডের <strong>View team</strong> লিংকে ক্লিক করুন।
+            Click <strong>View team</strong> on any member card to view deeper generations.
         </div>
     </div>
 </section>

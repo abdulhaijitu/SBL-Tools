@@ -30,7 +30,7 @@ class SblContactTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Contact directory');
-        $response->assertSee('কাস্টমার কেয়ার ও সাপোর্ট সেল');
+        $response->assertSee('Customer Care & Support Cell');
         $response->assertSee('01700000000');
         $response->assertSee('tel:01700000000');
         $response->assertSee('https://wa.me/8801700000000', false);
@@ -39,22 +39,22 @@ class SblContactTest extends TestCase
     public function test_admin_can_create_new_contact(): void
     {
         $response = $this->actingAs($this->admin)->post(route('contacts.store'), [
-            'department' => 'জরুরি সাপোর্ট হটলাইন',
-            'contact_person' => 'ডিউটি ম্যানেজার',
+            'department' => 'Emergency Support Hotline',
+            'contact_person' => 'Duty Manager',
             'phone' => '01300000099',
             'whatsapp' => '01300000099',
             'email' => 'emergency@sbl.com.bd',
-            'available_hours' => '২৪ ঘণ্টা',
-            'description' => 'জরুরি যোগাযোগ ও এসওএস সেবা।',
+            'available_hours' => '24 Hours',
+            'description' => 'Emergency contact and SOS service desk.',
             'icon' => '🚨',
-            'badge' => 'জরুরি সেবা',
+            'badge' => 'Emergency Service',
             'is_primary' => '1',
             'sort_order' => 0,
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('sbl_contacts', [
-            'department' => 'জরুরি সাপোর্ট হটলাইন',
+            'department' => 'Emergency Support Hotline',
             'phone' => '01300000099',
             'whatsapp' => '01300000099',
         ]);
@@ -65,22 +65,22 @@ class SblContactTest extends TestCase
         $contact = SblContact::first();
 
         $response = $this->actingAs($this->admin)->put(route('contacts.update', $contact), [
-            'department' => 'আপডেটেড কাস্টমার কেয়ার সেল',
-            'contact_person' => 'সিনিয়র সাপোর্ট স্পেশালিস্ট',
+            'department' => 'Updated Customer Care Cell',
+            'contact_person' => 'Senior Support Specialist',
             'phone' => '01711223344',
             'whatsapp' => '01711223344',
             'email' => 'support_updated@sbl.com.bd',
-            'available_hours' => '২৪/৭',
-            'description' => 'আপডেটেড তথ্য বিবরণী।',
+            'available_hours' => '24/7',
+            'description' => 'Updated service details and helpline info.',
             'icon' => '📞',
-            'badge' => 'হটলাইন',
+            'badge' => 'Hotline',
             'sort_order' => 1,
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('sbl_contacts', [
             'id' => $contact->id,
-            'department' => 'আপডেটেড কাস্টমার কেয়ার সেল',
+            'department' => 'Updated Customer Care Cell',
             'phone' => '01711223344',
         ]);
     }
@@ -88,7 +88,7 @@ class SblContactTest extends TestCase
     public function test_admin_can_delete_contact(): void
     {
         $contact = SblContact::create([
-            'department' => 'টেম্প ডিলিট ডিপার্টমেন্ট',
+            'department' => 'Temporary Delete Department',
             'phone' => '01999999999',
             'whatsapp' => '01999999999',
         ]);

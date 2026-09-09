@@ -1,5 +1,5 @@
-লোকাল URL: http://127.0.0.1:8000
-লগইন URL: http://127.0.0.1:8000/login
-🔑 ডেমো লগইন তথ্য:
+Local URL: http://127.0.0.1:8000
+Login URL: http://127.0.0.1:8000/login
+Demo Credentials:
 Email: admin@sbl.test
 Password: password
