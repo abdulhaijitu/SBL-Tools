@@ -6,7 +6,9 @@
 @section('meta-description', 'SBL Ecosystem-এর Membership ও Dropshipping package, সুবিধা, service details, ownership note এবং গুরুত্বপূর্ণ শর্ত এক জায়গায় দেখুন।')
 
 @section('content')
-<div class="space-y-6" x-data="{ 
+<div class="space-y-6" 
+    x-on:switch-to-calculator.window="activeTab = 'calculator'"
+    x-data="{ 
     activeTab: @js(in_array(request('tab'), ['packages','compensation','counseling','calculator','ecosystem']) ? request('tab') : 'packages'), 
     createWebsiteModalOpen: false,
     editWebsiteModalOpen: false,
@@ -88,7 +90,7 @@
         @include('toolkit.partials.membership-package')
 
         <!-- MAIN PACKAGE SHEET (Identical structure and text to uploaded image) -->
-        <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 shadow-xl p-5 sm:p-10 max-w-4xl mx-auto text-slate-900 print:shadow-none print:border-none print:p-0">
+        <div id="package-comparison-sheet" class="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 shadow-xl p-5 sm:p-10 max-w-4xl mx-auto text-slate-900 print:shadow-none print:border-none print:p-0 scroll-mt-6">
             
             <!-- Document Header -->
             <div class="text-center pb-6 sm:pb-8">
@@ -518,6 +520,7 @@
 
     <!-- TAB 4: LIVE INTERACTIVE CALCULATOR (PDF Page 1, 2, 3, 7) -->
     <div x-show="activeTab === 'calculator'" class="space-y-6" x-cloak 
+         x-on:switch-to-calculator.window="packageType = $event.detail.type; packageAmount = $event.detail.amount; window.scrollTo({ top: 0, behavior: 'smooth' });"
          x-data="{
             packageType: 'national',
             packageAmount: 120000,
