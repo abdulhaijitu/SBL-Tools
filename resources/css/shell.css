@@ -5,6 +5,19 @@
     --line: #e2e8f0;
     --canvas: #f6f7f9;
     --radius: 14px;
+
+    /* SBL Package Brand Design Tokens */
+    --sbl-red: #AB2925;
+    --sbl-red-dark: #8F211E;
+    --sbl-orange: #C2410C;
+    --sbl-orange-bright: #E65A2A;
+    --sbl-warm-50: #FFF7F3;
+    --sbl-warm-100: #FDEDE7;
+    --sbl-ink: #111827;
+    --sbl-text: #374151;
+    --sbl-muted: #6B7280;
+    --sbl-line: #E5E7EB;
+    --sbl-white: #FFFFFF;
 }
 * {
     box-sizing: border-box;
@@ -589,3 +602,79 @@ button:not(:disabled):active {
     -ms-overflow-style: none !important;
     scrollbar-width: none !important;
 }
+
+/* SBL Package UI Styles */
+.sbl-ribbon {
+    height: 6px;
+    width: 100%;
+    background: linear-gradient(90deg, #AB2925 0%, #C2410C 65%, #E65A2A 100%);
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .sbl-card-hover {
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .sbl-card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px -6px rgba(17, 24, 39, 0.09), 0 6px 12px -4px rgba(17, 24, 39, 0.04);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sbl-card-hover,
+    .sbl-card-hover:hover,
+    .sbl-modal-anim {
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
+.btn-sbl-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 12px;
+    background-color: var(--sbl-red);
+    color: #ffffff;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-sbl-primary:hover {
+    background-color: var(--sbl-red-dark);
+}
+.btn-sbl-primary:focus-visible {
+    outline: 3px solid #f97316;
+    outline-offset: 3px;
+}
+
+.btn-sbl-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 12px;
+    background-color: #ffffff;
+    border: 1px solid var(--sbl-line);
+    color: var(--sbl-text);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-sbl-secondary:hover {
+    background-color: var(--sbl-warm-50);
+    border-color: #fbd5c8;
+    color: var(--sbl-ink);
+}
+.btn-sbl-secondary:focus-visible {
+    outline: 3px solid #f97316;
+    outline-offset: 3px;
+}
+

@@ -4,12 +4,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f97316">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SBL Tools">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-    <title>@yield('page-title', 'Profile') · SBL Growth Manager</title>
+    <title>
+        @hasSection('meta-title')
+            @yield('meta-title')
+        @else
+            @yield('page-title', 'Profile') · SBL Growth Manager
+        @endif
+    </title>
+    @hasSection('meta-description')
+        <meta name="description" content="@yield('meta-description')">
+    @endif
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="preload" as="image" href="{{ asset('images/sbl-logo.webp') }}" type="image/webp" fetchpriority="high">
     @vite(['resources/css/app.css', 'resources/js/app.js'])

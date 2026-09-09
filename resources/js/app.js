@@ -1,5 +1,6 @@
 import { registerAbbreviations } from './abbreviations';
 import './bootstrap';
+import './toolkit-analytics';
 
 import Alpine from 'alpinejs';
 import Sortable from 'sortablejs';

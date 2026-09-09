@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
-@section('page-title', 'SBL Toolkit')
+@section('meta-title', 'SBL Packages & Toolkit | SBLTool')
+@section('page-title', 'SBL Packages & Toolkit')
 @section('page-subtitle', 'Official Business Packages, Compensation Models & Counseling Cheatsheet')
+@section('meta-description', 'SBL Ecosystem-এর Membership ও Dropshipping package, সুবিধা, service details, ownership note এবং গুরুত্বপূর্ণ শর্ত এক জায়গায় দেখুন।')
 
 @section('content')
 <div class="space-y-6" x-data="{ 
@@ -81,6 +83,9 @@
                 </button>
             </div>
         </div>
+
+        <!-- SBL MEMBERSHIP PACKAGE (৳১০,০০০ Starter Membership) -->
+        @include('toolkit.partials.membership-package')
 
         <!-- MAIN PACKAGE SHEET (Identical structure and text to uploaded image) -->
         <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 shadow-xl p-5 sm:p-10 max-w-4xl mx-auto text-slate-900 print:shadow-none print:border-none print:p-0">
