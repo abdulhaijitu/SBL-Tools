@@ -5,6 +5,7 @@ import './toolkit-analytics';
 import Alpine from 'alpinejs';
 import Sortable from 'sortablejs';
 import { registerShell } from './shell';
+import { registerSearch } from './search';
 import { enhanceAccessibility } from './accessibility';
 
 window.Alpine = Alpine;
@@ -12,5 +13,6 @@ window.Sortable = Sortable;
 
 registerAbbreviations(Alpine);
 registerShell(Alpine);
+registerSearch(Alpine);
 Alpine.start();
 enhanceAccessibility(Alpine);

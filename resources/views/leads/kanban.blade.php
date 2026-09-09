@@ -8,8 +8,16 @@
 
     <!-- Top Action & Filter Bar -->
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500">Drag lead cards between stages to update progress.</span>
+        <div class="flex items-center gap-2 flex-1 max-w-sm" x-data="{ kanbanSearch: '' }">
+            <div class="relative w-full">
+                <input type="text" 
+                       x-model="kanbanSearch" 
+                       @input="window.filterLeadsLive ? window.filterLeadsLive(kanbanSearch) : null" 
+                       placeholder="Filter board leads live..." 
+                       class="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-slate-50/50">
+                <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <button type="button" x-show="kanbanSearch" @click="kanbanSearch = ''; window.filterLeadsLive('');" class="absolute right-2 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+            </div>
         </div>
 
         <div class="flex items-center gap-2 self-end sm:self-auto">

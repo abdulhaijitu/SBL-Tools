@@ -8,6 +8,7 @@
 @section('content')
 <div class="space-y-6"
      x-data="{
+        linkSearch: '',
         createWebsiteModalOpen: false,
         editWebsiteModalOpen: false,
         editingWebsite: { id: null, title: '', url: '', category: 'Official Portals', badge: '', description: '', icon: '🌐', sort_order: 0 },
@@ -46,13 +47,27 @@
             </div>
         </div>
 
+        <!-- Live Search Bar -->
+        <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs flex items-center gap-3">
+            <div class="relative flex-1">
+                <input type="text" 
+                       x-model="linkSearch" 
+                       placeholder="Search links by name, URL, category, or keywords (live)..." 
+                       class="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <button type="button" x-show="linkSearch" @click="linkSearch = ''" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+            </div>
+        </div>
+
         @php
             $ecosystemLinks = \App\Models\EcosystemLink::where('is_active', true)->orderBy('sort_order')->get();
         @endphp
 
         <div id="toolkit-websites-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             @foreach($ecosystemLinks as $el)
-            <div data-link-id="{{ $el->id }}" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-orange-200 transition-all group">
+            <div data-link-id="{{ $el->id }}" 
+                 x-show="!linkSearch || '{{ strtolower(addslashes($el->title . ' ' . $el->url . ' ' . $el->category . ' ' . $el->description)) }}'.includes(linkSearch.toLowerCase())"
+                 class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-orange-200 transition-all group">
                 <div class="space-y-3">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">

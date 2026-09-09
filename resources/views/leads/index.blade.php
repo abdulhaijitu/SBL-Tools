@@ -16,14 +16,19 @@
                 @if(request('stage') === 'converted')
                     <input type="hidden" name="stage" value="converted">
                 @endif
-                <div class="relative flex-1">
+                <div class="relative flex-1" x-data="{ localSearch: '{{ addslashes(request('search', '')) }}' }">
                     <input aria-label="Search leads by name, mobile, whatsapp, location..." type="text" 
                            name="search" 
+                           id="lead-live-search-input"
+                           x-model="localSearch"
+                           @input="window.filterLeadsLive ? window.filterLeadsLive(localSearch) : null"
                            value="{{ request('search') }}" 
-                           placeholder="Search leads by name, mobile, whatsapp, location..." 
-                           class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-slate-50/50">
+                           placeholder="Search leads by name, mobile, whatsapp, location... (live)" 
+                           class="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-slate-50/50">
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <button type="button" x-show="localSearch" @click="localSearch = ''; window.filterLeadsLive(''); $el.previousElementSibling.previousElementSibling.focus()" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full text-xs font-bold cursor-pointer" title="Clear">✕</button>
                 </div>
+                <span id="leads-live-counter" class="hidden px-2.5 py-1.5 text-xs font-semibold bg-orange-100 text-orange-800 rounded-xl whitespace-nowrap"></span>
                 <button type="submit" class="px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800">
                     Search
                 </button>

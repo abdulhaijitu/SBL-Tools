@@ -125,6 +125,9 @@ Route::middleware(['auth', \App\Http\Middleware\EnforceApplicationAccess::class]
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Unified Global Search API
+    Route::get('/api/search', [\App\Http\Controllers\SearchController::class, 'search'])->name('api.search');
 });
 
 require __DIR__ . '/auth.php';

@@ -345,24 +345,44 @@ class BinaryTeamController extends Controller
     /**
      * Search member by name, code, phone, or username to open in Team Explorer.
      */
-    public function search(Request $request): RedirectResponse
+    public function search(Request $request)
     {
-        $query = trim((string)$request->input('search'));
+        $query = trim((string)$request->input('search', $request->input('q', '')));
         if (! $query) {
+            if ($request->wantsJson() || $request->ajax() || $request->boolean('json')) {
+                return response()->json([]);
+            }
             return redirect()->route('team.index');
         }
 
         $cleanQuery = ltrim($query, '@');
 
         $ownerId = auth()->user()->isSuperAdmin() ? ($request->integer('owner_id') ?: auth()->id()) : auth()->id();
-        $node = BinaryNode::where('tree_owner_id', $ownerId)
+        $queryBuilder = BinaryNode::where('tree_owner_id', $ownerId)
             ->where(function ($builder) use ($query, $cleanQuery) {
                 $builder->where('member_code', 'like', "%{$query}%")
                     ->orWhere('member_code', 'like', "%{$cleanQuery}%")
                     ->orWhere('member_name', 'like', "%{$query}%")
                     ->orWhere('phone', 'like', "%{$query}%");
-            })
-            ->first();
+            });
+
+        if ($request->wantsJson() || $request->ajax() || $request->boolean('json')) {
+            $nodes = $queryBuilder->limit(10)->get()->map(function ($node) {
+                return [
+                    'id' => $node->id,
+                    'member_name' => $node->member_name,
+                    'member_code' => $node->member_code,
+                    'phone' => $node->phone,
+                    'rank_title' => $node->rank_title,
+                    'slot_position' => $node->slot_position,
+                    'side' => $node->side,
+                    'url' => route('team.show', ['memberId' => $node->id]),
+                ];
+            });
+            return response()->json($nodes);
+        }
+
+        $node = $queryBuilder->first();
 
         if ($node) {
             return redirect()->route('team.show', ['memberId' => $node->id]);

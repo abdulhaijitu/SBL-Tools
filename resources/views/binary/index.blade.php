@@ -352,9 +352,43 @@ function teamExplorerData() {
             </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
-            <form action="{{ route('team.search') }}" method="GET" class="flex flex-1 min-w-0 gap-2">
+            <form action="{{ route('team.search') }}" method="GET" class="flex flex-1 min-w-0 gap-2 relative" x-data="memberLiveSearch()">
                 <input type="hidden" name="owner_id" value="{{ $ownerId }}">
-                <input type="search" name="search" aria-label="Search members" placeholder="Name, member code or phone" list="team_search_datalist" class="min-w-0 w-full rounded-xl border-slate-200 text-sm" required>
+                <div class="relative flex-1 min-w-0">
+                    <input type="search" 
+                           name="search" 
+                           x-model="searchQuery" 
+                           @input="onInput()" 
+                           @keydown.escape="open = false" 
+                           @focus="if(searchQuery.length > 0 && results.length > 0) open = true" 
+                           aria-label="Search members" 
+                           placeholder="Search member name, code or phone (live)..." 
+                           list="team_search_datalist" 
+                           class="min-w-0 w-full rounded-xl border-slate-200 text-sm pl-9 pr-8" 
+                           autocomplete="off" 
+                           required>
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <button type="button" x-show="searchQuery" @click="searchQuery = ''; results = []; open = false" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+
+                    <!-- Live Member Dropdown Results -->
+                    <div x-show="open && results.length > 0" 
+                         @click.away="open = false" 
+                         class="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto divide-y divide-slate-100" 
+                         x-cloak>
+                        <template x-for="item in results" :key="item.id">
+                            <a :href="item.url" class="flex items-center justify-between px-3.5 py-2.5 hover:bg-orange-50 transition-colors">
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                        <span x-text="item.member_name"></span>
+                                        <span class="px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-700 rounded font-mono font-semibold" x-text="item.member_code"></span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5 truncate" x-text="(item.phone ? '📞 ' + item.phone : '') + (item.rank_title ? ' • ' + item.rank_title : '') + (item.side ? ' • ' + item.side.toUpperCase() : '')"></div>
+                                </div>
+                                <span class="text-xs text-orange-600 font-semibold flex-shrink-0 ml-2">View Tree →</span>
+                            </a>
+                        </template>
+                    </div>
+                </div>
                 <datalist id="team_search_datalist">@foreach($allNodes as $an)<option value="{{ $an->member_code }}">{{ $an->member_name }}</option>@endforeach</datalist>
                 <button class="btn-primary">Search</button>
             </form>
@@ -408,7 +442,7 @@ function teamExplorerData() {
             </div>
 
             <!-- Search Form -->
-            <form action="{{ route('team.index') }}" method="GET" class="w-full sm:w-80 flex items-center gap-2">
+            <form action="{{ route('team.index') }}" method="GET" class="w-full sm:w-96 flex items-center gap-2" x-data="{ dirSearch: '{{ addslashes(request('search', '')) }}' }">
                 <input type="hidden" name="view" value="table">
                 @if(request('owner_id'))
                 <input type="hidden" name="owner_id" value="{{ request('owner_id') }}">
@@ -416,11 +450,15 @@ function teamExplorerData() {
                 <div class="relative flex-1">
                     <input aria-label="Search name, code, phone..." type="text" 
                            name="search" 
+                           x-model="dirSearch"
+                           @input="window.filterDirectoryLive ? window.filterDirectoryLive(dirSearch) : null"
                            value="{{ request('search') }}"
-                           placeholder="Search name, code, phone..." 
-                           class="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
+                           placeholder="Search name, code, phone... (live)" 
+                           class="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
                     <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <button type="button" x-show="dirSearch" @click="dirSearch = ''; window.filterDirectoryLive('');" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
                 </div>
+                <span id="directory-live-counter" class="hidden px-2 py-1 text-[11px] font-semibold bg-orange-100 text-orange-800 rounded-lg whitespace-nowrap"></span>
                 <button type="submit" class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
                     Search
                 </button>

@@ -2683,6 +2683,8 @@ export default {
         let liveContentItems = [];
         let liveActivities = [];
         let liveRoles = [];
+        let liveResources = [];
+        let liveAbbreviations = [];
         let sourcesMap = {
             1: "Direct Inbound",
             2: "Facebook Page",
@@ -2801,6 +2803,16 @@ export default {
                 if (actRes?.results) liveActivities = actRes.results;
                 if (rolesRes?.results) liveRoles = rolesRes.results;
 
+                try {
+                    const mRes = await db.prepare("SELECT * FROM marketing_resources WHERE is_active = 1 ORDER BY sort_order ASC, id DESC").all();
+                    if (mRes?.results) liveResources = mRes.results;
+                } catch (e) {}
+
+                try {
+                    const abbRes = await db.prepare("SELECT * FROM abbreviations ORDER BY term ASC").all();
+                    if (abbRes?.results) liveAbbreviations = abbRes.results;
+                } catch (e) {}
+
                 if (sourcesRes?.results) {
                     for (const s of sourcesRes.results) {
                         sourcesMap[s.id] = s.name;
@@ -2907,6 +2919,174 @@ export default {
                     "Set-Cookie":
                         "sbl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure",
                 },
+            });
+        }
+
+        // 5c. Unified Search API Endpoint
+        if (path === "/api/search") {
+            const query = (url.searchParams.get("q") || "").trim().toLowerCase();
+            if (!query) {
+                return new Response(JSON.stringify({ query: "", total: 0, results: {} }), {
+                    headers: { "Content-Type": "application/json; charset=utf-8" }
+                });
+            }
+
+            const results = {
+                tools: [],
+                leads: [],
+                team: [],
+                resources: [],
+                abbreviations: [],
+                contacts: [],
+                links: []
+            };
+
+            // 1. Navigation Tools
+            const navTools = [
+                { title: 'Packages', category: 'Tool', url: '/packages', description: 'SBL Product & Investment Packages' },
+                { title: 'Ranks', category: 'Tool', url: '/ranks', description: 'Ranks, Badges & Criteria' },
+                { title: 'Counseling Guide', category: 'Tool', url: '/counseling', description: 'Step-by-step Client Counseling Scripts' },
+                { title: 'Commission Calculator', category: 'Tool', url: '/commission', description: 'Sales & Team Binary Commission Simulator' },
+                { title: 'Official Links', category: 'Tool', url: '/links', description: 'Ecosystem Portals & Links Directory' },
+                { title: 'Resources', category: 'Tool', url: '/resources', description: 'Marketing Leaflets, Pitch Decks & Documents' },
+                { title: 'Team Explorer', category: 'Tool', url: '/team', description: 'Binary Tree, Network Structure & Directory' },
+                { title: 'Abbreviations', category: 'Tool', url: '/abbreviations', description: 'SBL Business Terms & Glossary' },
+                { title: 'Contacts & Helplines', category: 'Tool', url: '/contacts', description: 'Customer Support, Management & Office Directory' },
+                { title: 'Leads CRM', category: 'CRM', url: '/leads', description: 'Client Pipelines, Warm Leads & Conversion' },
+                { title: 'Dashboard', category: 'Navigation', url: '/dashboard', description: 'Performance Overview & Metric Cards' },
+                { title: 'Users & Roles', category: 'Administration', url: '/users', description: 'Manage Team Members & Access Permissions' }
+            ];
+
+            for (const item of navTools) {
+                if (item.title.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query))) {
+                    results.tools.push(item);
+                }
+            }
+
+            // 2. Leads (scoped to user unless superadmin)
+            const isSuperAdmin = (authUser && (authUser.role === 'super-admin' || authUser.id === 1 || authUser.role_slug === 'super-admin'));
+            const userLeads = (liveLeads || []).filter(l => {
+                if (!isSuperAdmin) {
+                    return Number(l.assigned_to) === Number(authUser.id) || Number(l.owner_user_id) === Number(authUser.id);
+                }
+                return true;
+            });
+
+            for (const lead of userLeads) {
+                const searchStr = `${lead.name || ''} ${lead.mobile || ''} ${lead.whatsapp || ''} ${lead.location || ''} ${lead.profession_or_business || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.leads.push({
+                        id: lead.id,
+                        title: lead.name,
+                        subtitle: `${lead.mobile || ''} • ${lead.stage || 'lead'}`,
+                        category: 'Lead',
+                        url: `/leads/${lead.id}`,
+                        stage: lead.stage,
+                        mobile: lead.mobile
+                    });
+                    if (results.leads.length >= 8) break;
+                }
+            }
+
+            // 3. Team Nodes
+            const userNodes = (liveNodes || []).filter(n => {
+                if (!isSuperAdmin) {
+                    return Number(n.tree_owner_id) === Number(authUser.id);
+                }
+                return true;
+            });
+
+            for (const node of userNodes) {
+                const searchStr = `${node.member_name || ''} ${node.member_code || ''} ${node.phone || ''} ${node.rank_title || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.team.push({
+                        id: node.id,
+                        title: node.member_name,
+                        subtitle: `${node.member_code} • ${node.phone || ''}`,
+                        category: 'Team Member',
+                        url: `/team?search=${encodeURIComponent(node.member_code)}`,
+                        member_code: node.member_code,
+                        side: node.side
+                    });
+                    if (results.team.length >= 8) break;
+                }
+            }
+
+            // 4. Resources
+            for (const res of (liveResources || [])) {
+                const searchStr = `${res.title || ''} ${res.category || ''} ${res.description || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.resources.push({
+                        id: res.id,
+                        title: res.title,
+                        subtitle: res.category || 'Resource',
+                        category: 'Resource',
+                        url: res.file_url || '/resources',
+                        file_type: res.file_type
+                    });
+                    if (results.resources.length >= 6) break;
+                }
+            }
+
+            // 5. Abbreviations
+            for (const abbr of (liveAbbreviations || [])) {
+                const searchStr = `${abbr.term || ''} ${abbr.meaning || ''} ${abbr.description || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.abbreviations.push({
+                        id: abbr.id,
+                        title: abbr.term,
+                        subtitle: abbr.meaning,
+                        category: 'Abbreviation',
+                        url: `/abbreviations#term-${encodeURIComponent(abbr.term)}`
+                    });
+                    if (results.abbreviations.length >= 6) break;
+                }
+            }
+
+            // 6. Helplines & Contacts
+            for (const c of (liveContacts || [])) {
+                const searchStr = `${c.department || ''} ${c.contact_person || ''} ${c.phone || ''} ${c.mobile || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.contacts.push({
+                        id: c.id,
+                        title: c.department || c.contact_person,
+                        subtitle: `${c.contact_person ? c.contact_person + ' • ' : ''}${c.phone || c.mobile || ''}`,
+                        category: 'Contact',
+                        url: '/contacts'
+                    });
+                    if (results.contacts.length >= 6) break;
+                }
+            }
+
+            // 7. Official Links
+            for (const l of (liveEcosystem || [])) {
+                const searchStr = `${l.title || ''} ${l.category || ''} ${l.url || ''} ${l.description || ''}`.toLowerCase();
+                if (searchStr.includes(query)) {
+                    results.links.push({
+                        id: l.id,
+                        title: l.title,
+                        subtitle: l.category || l.url,
+                        category: 'Link',
+                        url: l.url
+                    });
+                    if (results.links.length >= 6) break;
+                }
+            }
+
+            let total = 0;
+            for (const cat in results) {
+                total += results[cat].length;
+            }
+
+            return new Response(JSON.stringify({
+                query,
+                total,
+                results
+            }), {
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "private, no-cache"
+                }
             });
         }
 
@@ -3317,6 +3497,8 @@ export default {
             contentItems: liveContentItems,
             activities: liveActivities,
             roles: liveRoles,
+            resources: liveResources,
+            abbreviations: liveAbbreviations,
         };
 
         const dataScript =

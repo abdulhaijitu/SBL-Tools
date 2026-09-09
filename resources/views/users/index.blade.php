@@ -55,14 +55,18 @@
         
         <!-- Search & Role Dropdown Filters -->
         <form aria-label="Filter users" method="GET" action="{{ route('users.index') }}" class="w-full md:w-auto flex-1 flex flex-wrap items-center gap-3">
-            <div class="relative flex-1 min-w-0 w-full">
+            <div class="relative flex-1 min-w-0 w-full" x-data="{ userSearch: '{{ addslashes(request('search', '')) }}' }">
                 <input aria-label="Search by name, email, phone..." type="text" 
                        name="search" 
+                       x-model="userSearch"
+                       @input="window.filterUsersLive ? window.filterUsersLive(userSearch) : null"
                        value="{{ request('search') }}" 
-                       placeholder="Search by name, email, phone..." 
-                       class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
+                       placeholder="Search by name, email, phone... (live)" 
+                       class="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all">
                 <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <button type="button" x-show="userSearch" @click="userSearch = ''; window.filterUsersLive('');" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
             </div>
+            <span id="users-live-counter" class="hidden px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-800 rounded-lg whitespace-nowrap"></span>
 
             <select name="role" onchange="this.form.submit()" class="text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:outline-none">
                 <option value="">All Roles</option>

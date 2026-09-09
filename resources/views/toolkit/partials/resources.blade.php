@@ -52,11 +52,12 @@
         <div class="relative sm:w-64">
             <input type="text" 
                    x-model="resourceSearch" 
-                   placeholder="রিসোর্স খুঁজুন..." 
-                   class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                   placeholder="রিসোর্স খুঁজুন... (live)" 
+                   class="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
             <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
+            <button type="button" x-show="resourceSearch" @click="resourceSearch = ''" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
         </div>
     </div>
 
