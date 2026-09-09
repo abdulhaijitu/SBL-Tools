@@ -89,6 +89,29 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
+let schemaMigrated = false;
+async function ensureD1Schema(db) {
+    if (schemaMigrated || !db) return;
+    try {
+        await db.prepare("ALTER TABLE leads ADD COLUMN photo TEXT").run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "CREATE TABLE IF NOT EXISTS marketing_resources (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, title TEXT, category TEXT, type TEXT, url TEXT, file_path TEXT, description TEXT, is_active INTEGER DEFAULT 1, created_at DATETIME, updated_at DATETIME)",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "CREATE TABLE IF NOT EXISTS abbreviations (id INTEGER PRIMARY KEY AUTOINCREMENT, short_form TEXT UNIQUE, full_form TEXT, meaning TEXT, category TEXT, created_at DATETIME, updated_at DATETIME)",
+            )
+            .run();
+    } catch (e) {}
+    schemaMigrated = true;
+}
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
@@ -613,6 +636,16 @@ export default {
             });
         }
 
+        await ensureD1Schema(db);
+
+        // Authenticate Session Cookie early so all POST/PUT/DELETE handlers have the authenticated user ID
+        const sessionCookie = getCookie(
+            "sbl_session",
+            request.headers.get("Cookie") || "",
+        );
+        const authUserId = await verifySession(sessionCookie, APP_SECRET);
+        const currentUserId = authUserId ? Number(authUserId) : 1;
+
         // 4. Handle POST, PUT, PATCH, DELETE Form Actions on Cloudflare D1
         if (
             request.method === "POST" ||
@@ -746,7 +779,7 @@ export default {
                         const insRes = await db
                             .prepare(
                                 "INSERT INTO leads (name, mobile, whatsapp, email, photo, location, profession_or_business, lead_source_id, interest_types, stage, temperature, score, is_manual_score, owner_user_id, next_action_type, next_action_at, last_contact_at, notes, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 name,
@@ -761,6 +794,7 @@ export default {
                                 stage,
                                 temperature,
                                 score,
+                                currentUserId,
                                 nextActionType,
                                 nextActionAt,
                                 notes,
@@ -772,7 +806,7 @@ export default {
                             await db
                                 .prepare(
                                     "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                        "VALUES (?, ?, ?, 'Medium', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                        "VALUES (?, ?, ?, 'Medium', ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                 )
                                 .bind(
                                     nextActionType
@@ -782,6 +816,7 @@ export default {
                                     nextActionAt,
                                     notes,
                                     newLeadId,
+                                    currentUserId,
                                 )
                                 .run();
                         }
@@ -973,9 +1008,9 @@ export default {
                             await db
                                 .prepare(
                                     "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                                        "VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                 )
-                                .bind(leadId, actType, title, description)
+                                .bind(leadId, currentUserId, actType, title, description)
                                 .run();
 
                             await db
@@ -989,7 +1024,7 @@ export default {
                                 await db
                                     .prepare(
                                         "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                            "VALUES (?, ?, ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                            "VALUES (?, ?, ?, 'High', ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                     )
                                     .bind(
                                         (nextActionType || "Follow-up") +
@@ -999,6 +1034,7 @@ export default {
                                         nextActionAt,
                                         description,
                                         leadId,
+                                        currentUserId,
                                     )
                                     .run();
                             }
@@ -1856,9 +1892,9 @@ export default {
                         await db
                             .prepare(
                                 "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
-                            .bind(title, type, dueAt, priority, notes, leadId)
+                            .bind(title, type, dueAt, priority, notes, leadId, currentUserId)
                             .run();
 
                         if (leadId) {
@@ -1931,7 +1967,7 @@ export default {
                                     await db
                                         .prepare(
                                             "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                                "VALUES (?, 'Follow-up', ?, 'High', ?, ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                                "VALUES (?, 'Follow-up', ?, 'High', ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                         )
                                         .bind(
                                             nextAction || "Follow-up",
@@ -1939,6 +1975,7 @@ export default {
                                             "Generated from outcome: " +
                                                 outcome,
                                             leadId,
+                                            currentUserId,
                                         )
                                         .run();
                                 }
@@ -1946,10 +1983,11 @@ export default {
                                 await db
                                     .prepare(
                                         "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                                            "VALUES (?, 1, 'task_completed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                            "VALUES (?, ?, 'task_completed', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                     )
                                     .bind(
                                         leadId,
+                                        currentUserId,
                                         "Task Completed: " +
                                             (taskRec.title || "Follow-up"),
                                         "Outcome: " +
@@ -2277,10 +2315,11 @@ export default {
                         await db
                             .prepare(
                                 "INSERT INTO presentations (lead_id, user_id, date_time, type, topic, questions, objections, outcome, next_follow_up_at, notes, created_at, updated_at) " +
-                                    "VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 leadId,
+                                currentUserId,
                                 dateTime,
                                 type,
                                 topic,
@@ -2302,10 +2341,11 @@ export default {
                             await db
                                 .prepare(
                                     "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
-                                        "VALUES (?, 1, 'presentation', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                        "VALUES (?, ?, 'presentation', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                 )
                                 .bind(
                                     leadId,
+                                    currentUserId,
                                     "Presentation Conducted: " + type,
                                     topic ||
                                         notes ||
@@ -2317,12 +2357,13 @@ export default {
                                 await db
                                     .prepare(
                                         "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
-                                            "VALUES (?, 'Follow-up', ?, 'High', 'Follow up on presentation session', ?, 1, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                            "VALUES (?, 'Follow-up', ?, 'High', 'Follow up on presentation session', ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                     )
                                     .bind(
                                         "Follow-up: Presentation discussion",
                                         nextFollowUpAt,
                                         leadId,
+                                        currentUserId,
                                     )
                                     .run();
                             }
@@ -2408,7 +2449,7 @@ export default {
                         await db
                             .prepare(
                                 "INSERT INTO content_items (title, platform, status, scheduled_at, topic, caption, cta, reach, engagement, inbox_count, leads_generated, conversions, notes, user_id, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 title,
@@ -2424,6 +2465,7 @@ export default {
                                 leadsGenerated,
                                 conversions,
                                 notes,
+                                currentUserId,
                             )
                             .run();
                     } catch (e) {
@@ -2841,12 +2883,7 @@ export default {
             }
         }
 
-        // 5b. Authenticate Session Cookie
-        const sessionCookie = getCookie(
-            "sbl_session",
-            request.headers.get("Cookie") || "",
-        );
-        const authUserId = await verifySession(sessionCookie, APP_SECRET);
+        // 5b. Authenticate Session Cookie (resolved early before form routes)
         let authUser = null;
         if (authUserId) {
             authUser = liveUsers.find(
