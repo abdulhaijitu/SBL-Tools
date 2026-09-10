@@ -45,23 +45,7 @@
                 <h1 id="app-page-title">@yield('page-title', 'Profile')</h1>
             </div>
 
-            <!-- Global Omnisearch Trigger (Desktop & Tablet) -->
-            <div class="header-search-wrap hidden md:flex flex-1 max-w-xs lg:max-w-md mx-3">
-                <button type="button" 
-                        @click="$dispatch('open-global-search')" 
-                        class="w-full flex items-center justify-between gap-2 px-3.5 py-1.5 text-xs text-slate-400 bg-slate-50 hover:bg-slate-100/90 border border-slate-200/90 hover:border-orange-300 rounded-xl transition-all shadow-2xs group cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-orange-500/30">
-                    <span class="flex items-center gap-2.5 min-w-0">
-                        <svg class="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <span class="text-slate-500 group-hover:text-slate-700 truncate font-medium">Search leads, members, tools...</span>
-                    </span>
-                    <kbd class="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 bg-white border border-slate-200 rounded-md shadow-2xs">
-                        <span class="text-xs">Ctrl</span>K
-                    </kbd>
-                </button>
-            </div>
-
             <div class="flex shrink-0 items-center gap-2">
-                <button type="button" @click="$dispatch('open-global-search')" class="icon-button md:hidden" aria-label="Search" title="Search (Ctrl+K)"><x-ui-icon name="search" /></button>
                 <label class="sr-only" for="display-currency">Display currency</label>
                 <select id="display-currency" class="currency-select" :value="$store.currency.code" :disabled="$store.currency.busy" @change="$store.currency.set($event.target.value)" title="Display Currency (Fixed baseline: 1 USD = 120 BDT)">
                     <option value="USD">USD ($)</option><option value="BDT">BDT (৳120/$)</option>
@@ -98,6 +82,5 @@
             });
         }
     </script>
-    @include('layouts.omnisearch')
 </body>
 </html>

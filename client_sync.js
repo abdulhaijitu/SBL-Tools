@@ -2942,12 +2942,5 @@
     document.addEventListener("click", function () {
         setTimeout(syncEntityDropdowns, 50);
     });
-
-    // Global Omnisearch Hotkey & Trigger Listener
-    window.addEventListener("keydown", function (e) {
-        if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent("open-global-search"));
-        }
-    });
 })();
+

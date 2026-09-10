@@ -29,22 +29,7 @@ export function registerSearch(Alpine) {
         activeTab: 'all',
 
         init() {
-            // Global keyboard shortcuts (Ctrl+K, Cmd+K, /)
-            window.addEventListener('keydown', (e) => {
-                if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-                    e.preventDefault();
-                    this.toggleModal();
-                } else if (e.key === 'Escape' && this.open) {
-                    this.closeModal();
-                }
-            });
-
-            // Listen for custom trigger events from header buttons
-            window.addEventListener('open-global-search', () => {
-                this.openModal();
-            });
-
-            this.resetToQuickLinks();
+            // Omnisearch modal disabled
         },
 
         toggleModal() {
