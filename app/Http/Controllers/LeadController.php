@@ -141,6 +141,18 @@ class LeadController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // Guard against rapid duplicate submissions (e.g. double-click) within 15 seconds
+        $existingRecent = Lead::where('name', $validated['name'])
+            ->where('mobile', $validated['mobile'])
+            ->where('owner_user_id', Auth::id() ?: 1)
+            ->where('created_at', '>=', now()->subSeconds(15))
+            ->first();
+
+        if ($existingRecent) {
+            return redirect()->route('leads.show', $existingRecent->id)
+                ->with('status', 'Lead record already created.');
+        }
+
         DB::transaction(function () use ($validated, $request, &$lead) {
             $stage = ! empty($validated['stage']) ? (LeadStage::tryFrom($validated['stage']) ?? LeadStage::NEW) : LeadStage::NEW;
 

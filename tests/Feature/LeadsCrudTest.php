@@ -95,6 +95,29 @@ class LeadsCrudTest extends TestCase
         $response->assertRedirect(route('leads.show', $lead->id));
     }
 
+    public function test_rapid_duplicate_lead_submission_is_debounced(): void
+    {
+        $payload = [
+            'name' => 'Nazmul Huda',
+            'mobile' => '01719876543',
+            'lead_source_id' => $this->source->id,
+            'stage' => LeadStage::NEW->value,
+        ];
+
+        // First submission
+        $res1 = $this->actingAs($this->user)->post(route('leads.store'), $payload);
+        $firstLead = Lead::where('mobile', '01719876543')->first();
+        $this->assertNotNull($firstLead);
+        $res1->assertRedirect(route('leads.show', $firstLead->id));
+
+        // Rapid second submission (same payload within 15 seconds)
+        $res2 = $this->actingAs($this->user)->post(route('leads.store'), $payload);
+        $res2->assertRedirect(route('leads.show', $firstLead->id));
+
+        // Ensure only 1 record exists in database
+        $this->assertEquals(1, Lead::where('mobile', '01719876543')->count());
+    }
+
     public function test_user_can_view_lead_details(): void
     {
         $lead = Lead::create([

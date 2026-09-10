@@ -311,6 +311,30 @@
 
         // 1. DASHBOARD SYNC - ONLY on / or /dashboard!
         if (curPath === "/" || curPath === "/dashboard") {
+            // Helper for Asia/Dhaka YYYY-MM-DD
+            function getDhakaYmd() {
+                try {
+                    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+                } catch (e) {
+                    const d = new Date();
+                    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+                }
+            }
+
+            // Hydrate current date in Asia/Dhaka locale
+            const dateEl = document.getElementById("dashboard-current-date");
+            if (dateEl) {
+                try {
+                    dateEl.textContent = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Dhaka',
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }).format(new Date());
+                } catch (e) {}
+            }
+
             const nonDeletedLeads = (DATA.leads || []).filter(function (l) {
                 return !l.deleted_at;
             });
@@ -320,12 +344,11 @@
 
             // 1.1 Total Active Leads & Added Today
             const activeLeadsEl = document.getElementById("active-leads") || document.querySelector('[data-metric="total-leads"]');
+            const localYmd = getDhakaYmd();
             if (activeLeadsEl) {
                 activeLeadsEl.textContent = activeLeads.length;
                 const smallEl = activeLeadsEl.parentElement ? activeLeadsEl.parentElement.querySelector("small") : null;
                 if (smallEl) {
-                    const now = new Date();
-                    const localYmd = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
                     const addedToday = nonDeletedLeads.filter(function (l) {
                         return l.created_at && l.created_at.slice(0, 10) === localYmd;
                     }).length;
@@ -333,9 +356,8 @@
                 }
             }
 
-            // 1.2 Today's Followups & Overdue Calculations
+            // 1.2 Today's Followups & Overdue Follow-ups (ONLY Leads)
             const now = new Date();
-            const localYmd = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
             let followupsToday = 0;
             let overdueLeads = [];
 
@@ -351,28 +373,32 @@
                 }
             });
 
+            const dueEl = document.getElementById("today-followup") || document.querySelector('[data-metric="followups-today"]');
+            if (dueEl) dueEl.textContent = followupsToday;
+
+            // 1.3 Today's Tasks Calculation
+            let tasksTodayList = [];
             if (DATA.tasks) {
                 DATA.tasks.forEach(function (task) {
                     if (task.status !== "Completed" && task.status !== "Cancelled" && task.due_at) {
                         const dStr = task.due_at.slice(0, 10);
                         if (dStr === localYmd) {
-                            followupsToday++;
+                            tasksTodayList.push(task);
                         }
                     }
                 });
             }
+            const tasksKpiEl = document.getElementById("today-tasks-kpi");
+            if (tasksKpiEl) tasksKpiEl.textContent = tasksTodayList.length;
 
-            const dueEl = document.getElementById("today-followup") || document.querySelector('[data-metric="followups-today"]');
-            if (dueEl) dueEl.textContent = followupsToday;
-
-            // 1.3 Total Presentations
+            // 1.4 Total Presentations
             const totalPres = (DATA.presentations || []).filter(function (p) {
                 return !p.deleted_at;
             }).length;
             const presEl = document.getElementById("total-presentations") || document.querySelector('[data-metric="presentations-today"]');
             if (presEl) presEl.textContent = totalPres;
 
-            // 1.4 Stage Funnel Counters & Percentage Bars
+            // 1.5 Stage Funnel Counters & Percentage Bars
             const funnelStages = [
                 "new",
                 "contacted",
@@ -398,40 +424,136 @@
                 if (barEl) barEl.style.width = pct + "%";
 
                 const pctEl = document.querySelector('[data-funnel-pct="' + s + '"]');
-                if (pctEl) pctEl.textContent = pct + "%";
+                if (pctEl) pctEl.textContent = pct + "% share";
             });
 
-            // 1.5 Overdue Follow-ups List Hydration
+            // 1.6 Overdue Follow-ups List Hydration (Dual-State DOM)
             const overdueBadge = document.getElementById("dashboard-overdue-badge") || document.querySelector('[data-metric="overdue-followups"]');
             if (overdueBadge) {
                 overdueBadge.textContent = overdueLeads.length + " Overdue";
             }
             const overdueContainer = document.getElementById("dashboard-overdue-container");
             const overdueEmpty = document.getElementById("dashboard-overdue-empty");
-            if (overdueContainer) {
-                overdueContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
-                    const lid = Number(el.getAttribute("data-lead-id"));
-                    const stillOverdue = overdueLeads.some(function (ol) { return Number(ol.id) === lid; });
-                    if (!stillOverdue) {
-                        el.remove();
-                    }
-                });
-                if (overdueContainer.querySelectorAll("[data-lead-id]").length === 0) {
-                    if (!overdueEmpty) {
-                        const emptyDiv = document.createElement("div");
-                        emptyDiv.id = "dashboard-overdue-empty";
-                        emptyDiv.className = "p-8 text-center text-slate-400 text-xs";
-                        emptyDiv.innerHTML = '<span class="text-2xl block mb-1">🎉</span><span class="font-semibold text-slate-600">Great job! No overdue follow-ups right now.</span>';
-                        overdueContainer.parentElement.appendChild(emptyDiv);
-                    } else {
-                        overdueEmpty.style.display = "";
-                    }
-                } else if (overdueEmpty) {
-                    overdueEmpty.style.display = "none";
+
+            if (overdueLeads.length === 0) {
+                if (overdueEmpty) overdueEmpty.style.display = "";
+                if (overdueContainer) {
+                    overdueContainer.style.display = "none";
+                    overdueContainer.innerHTML = "";
+                }
+            } else {
+                if (overdueEmpty) overdueEmpty.style.display = "none";
+                if (overdueContainer) {
+                    overdueContainer.style.display = "";
+                    // Remove elements that are no longer overdue
+                    overdueContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
+                        const lid = Number(el.getAttribute("data-lead-id"));
+                        if (!overdueLeads.some(function (ol) { return Number(ol.id) === lid; })) {
+                            el.remove();
+                        }
+                    });
+                    // Add overdue leads not already in the container
+                    overdueLeads.forEach(function (lead) {
+                        if (!overdueContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
+                            const cleanWa = (lead.whatsapp || lead.mobile || "").replace(/\D/g, "");
+                            const tempClasses = lead.temperature === "hot" ? "bg-rose-100 text-rose-800" : (lead.temperature === "warm" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800");
+                            const tempLabel = lead.temperature ? (lead.temperature.charAt(0).toUpperCase() + lead.temperature.slice(1)) : "Warm";
+                            const initial = (lead.name || "L").charAt(0).toUpperCase();
+
+                            const item = document.createElement("div");
+                            item.setAttribute("data-lead-id", lead.id);
+                            item.className = "p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
+                            item.innerHTML = 
+                                '<div class="flex items-start gap-3 min-w-0">' +
+                                    '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-black flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' +
+                                        initial +
+                                    '</div>' +
+                                    '<div class="min-w-0">' +
+                                        '<div class="flex items-center gap-2 flex-wrap">' +
+                                            '<a href="/leads/' + lead.id + '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate">' +
+                                                (lead.name || "") +
+                                            '</a>' +
+                                            '<span class="text-xs font-mono text-slate-400 font-normal">#' + lead.id + '</span>' +
+                                            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full ' + tempClasses + '">' +
+                                                tempLabel +
+                                            '</span>' +
+                                        '</div>' +
+                                        '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3">' +
+                                            '<span class="font-medium text-slate-700">📞 ' + (lead.mobile || "") + '</span>' +
+                                            '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded text-[10px]">Overdue Action</span>' +
+                                        '</div>' +
+                                        (lead.next_action_type ? '<div class="text-[11px] font-semibold text-slate-600 mt-0.5">Action: <span class="text-orange-600 font-bold">' + lead.next_action_type + '</span></div>' : '') +
+                                    '</div>' +
+                                '</div>' +
+                                '<div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">' +
+                                    (cleanWa ? '<a href="https://wa.me/' + cleanWa + '" target="_blank" title="WhatsApp Message" aria-label="WhatsApp ' + (lead.name || "") + '" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors text-xs font-bold flex items-center gap-1"><span>💬</span></a>' : '') +
+                                    (lead.mobile ? '<a href="tel:' + lead.mobile + '" title="Phone Call" aria-label="Call ' + (lead.name || "") + '" class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors text-xs font-bold flex items-center gap-1"><span>📞</span></a>' : '') +
+                                    '<a href="/leads/' + lead.id + '" class="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">Take Action</a>' +
+                                '</div>';
+                            overdueContainer.appendChild(item);
+                        }
+                    });
                 }
             }
 
-            // 1.6 Hot Priority Leads Hydration
+            // 1.7 Today's Tasks Hydration (Dual-State DOM)
+            const tasksContainer = document.getElementById("dashboard-tasks-container");
+            const tasksEmpty = document.getElementById("dashboard-tasks-empty");
+
+            if (tasksTodayList.length === 0) {
+                if (tasksEmpty) tasksEmpty.style.display = "";
+                if (tasksContainer) {
+                    tasksContainer.style.display = "none";
+                    tasksContainer.innerHTML = "";
+                }
+            } else {
+                if (tasksEmpty) tasksEmpty.style.display = "none";
+                if (tasksContainer) {
+                    tasksContainer.style.display = "";
+                    // Remove tasks no longer due today
+                    tasksContainer.querySelectorAll("[data-task-id]").forEach(function (el) {
+                        const tid = Number(el.getAttribute("data-task-id"));
+                        if (!tasksTodayList.some(function (tt) { return Number(tt.id) === tid; })) {
+                            el.remove();
+                        }
+                    });
+                    // Add tasks not already present
+                    tasksTodayList.forEach(function (task) {
+                        if (!tasksContainer.querySelector('[data-task-id="' + task.id + '"]')) {
+                            const prio = task.priority || "Medium";
+                            const prioClass = prio === "Urgent" ? "bg-rose-100 text-rose-800" : (prio === "High" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-800");
+                            const dueTime = task.due_at ? task.due_at.slice(11, 16) : "";
+                            const leadName = task.lead ? task.lead.name : (task.lead_name || "");
+                            const leadId = task.lead ? task.lead.id : (task.lead_id || "");
+
+                            const item = document.createElement("div");
+                            item.setAttribute("data-task-id", task.id);
+                            item.className = "p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
+                            item.innerHTML = 
+                                '<div class="flex items-center gap-3 min-w-0">' +
+                                    '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ' + prioClass + ' flex-shrink-0">' +
+                                        prio +
+                                    '</span>' +
+                                    '<div class="min-w-0">' +
+                                        '<div class="text-sm font-bold text-slate-900 truncate">' + (task.title || "") + '</div>' +
+                                        '<div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">' +
+                                            '<span class="font-semibold text-slate-700">' + (task.type || "Task") + '</span>' +
+                                            (leadName ? '<span>•</span><a href="/leads/' + leadId + '" class="text-orange-600 hover:underline font-bold truncate">' + leadName + ' <span class="text-slate-400 font-normal">#' + leadId + '</span></a>' : '') +
+                                            (dueTime ? '<span>• Due ' + dueTime + '</span>' : '') +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<form action="/tasks/' + task.id + '/complete" method="POST" class="flex-shrink-0">' +
+                                    '<input type="hidden" name="outcome" value="Completed successfully as planned">' +
+                                    '<button type="submit" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-bold text-slate-700 transition-colors shadow-2xs">✓ Done</button>' +
+                                '</form>';
+                            tasksContainer.appendChild(item);
+                        }
+                    });
+                }
+            }
+
+            // 1.8 Hot Priority Leads Hydration
             const hotLeads = nonDeletedLeads.filter(function (l) {
                 return l.stage !== "converted" && l.stage !== "lost" && l.stage !== "not_suitable" &&
                        (Number(l.score) >= 80 || l.temperature === "hot");
@@ -443,56 +565,84 @@
             const hotContainer = document.getElementById("dashboard-hot-container");
             const hotEmpty = document.getElementById("dashboard-hot-empty");
             if (hotContainer) {
-                hotContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
-                    const lid = Number(el.getAttribute("data-lead-id"));
-                    const stillHot = hotLeads.some(function (hl) { return Number(hl.id) === lid; });
-                    if (!stillHot) {
-                        el.remove();
-                    }
-                });
-                if (hotContainer.querySelectorAll("[data-lead-id]").length === 0) {
-                    if (!hotEmpty) {
-                        const emptyDiv = document.createElement("div");
-                        emptyDiv.id = "dashboard-hot-empty";
-                        emptyDiv.className = "py-6 text-center text-slate-400 text-xs";
-                        emptyDiv.textContent = "No leads scored as Hot (80+) yet.";
-                        hotContainer.parentElement.appendChild(emptyDiv);
-                    } else {
-                        hotEmpty.style.display = "";
-                    }
-                } else if (hotEmpty) {
-                    hotEmpty.style.display = "none";
-                }
-            }
-
-            // 1.7 Today's Tasks Hydration
-            if (DATA.tasks) {
-                const todayTasks = DATA.tasks.filter(function (t) {
-                    return t.due_at && t.due_at.slice(0, 10) === localYmd && t.status !== "Completed" && t.status !== "Cancelled";
-                });
-                const tasksContainer = document.getElementById("dashboard-tasks-container");
-                const tasksEmpty = document.getElementById("dashboard-tasks-empty");
-                if (tasksContainer) {
-                    tasksContainer.querySelectorAll("[data-task-id]").forEach(function (el) {
-                        const tid = Number(el.getAttribute("data-task-id"));
-                        const stillActive = todayTasks.some(function (tt) { return Number(tt.id) === tid; });
-                        if (!stillActive) {
+                if (hotLeads.length === 0) {
+                    if (hotEmpty) hotEmpty.style.display = "";
+                    hotContainer.style.display = "none";
+                    hotContainer.innerHTML = "";
+                } else {
+                    if (hotEmpty) hotEmpty.style.display = "none";
+                    hotContainer.style.display = "";
+                    hotContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
+                        const lid = Number(el.getAttribute("data-lead-id"));
+                        if (!hotLeads.some(function (hl) { return Number(hl.id) === lid; })) {
                             el.remove();
                         }
                     });
-                    if (tasksContainer.querySelectorAll("[data-task-id]").length === 0) {
-                        if (!tasksEmpty) {
-                            const emptyDiv = document.createElement("div");
-                            emptyDiv.id = "dashboard-tasks-empty";
-                            emptyDiv.className = "p-8 text-center text-slate-400 text-xs";
-                            emptyDiv.innerHTML = '<span class="text-2xl block mb-1">📅</span><span class="font-semibold text-slate-600">No pending tasks scheduled for today yet.</span>';
-                            tasksContainer.parentElement.appendChild(emptyDiv);
-                        } else {
-                            tasksEmpty.style.display = "";
+                    hotLeads.forEach(function (lead) {
+                        if (!hotContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
+                            const item = document.createElement("a");
+                            item.setAttribute("data-lead-id", lead.id);
+                            item.setAttribute("href", "/leads/" + lead.id);
+                            item.className = "block p-3 rounded-xl border border-slate-100 hover:border-orange-300 hover:bg-orange-50/30 transition-all shadow-2xs group";
+                            item.innerHTML = 
+                                '<div class="flex items-center justify-between">' +
+                                    '<span class="text-xs font-bold text-slate-900 group-hover:text-orange-700 truncate">' +
+                                        (lead.name || "") + ' <span class="font-mono text-slate-400 font-normal">#' + lead.id + '</span>' +
+                                    '</span>' +
+                                    '<span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-orange-600 text-white shadow-2xs">' +
+                                        (lead.score || 0) + ' pts' +
+                                    '</span>' +
+                                '</div>' +
+                                '<div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">' +
+                                    '<span class="font-medium text-slate-600">' + (lead.stage || "new") + '</span>' +
+                                    '<span>' + (lead.mobile || "") + '</span>' +
+                                '</div>';
+                            hotContainer.appendChild(item);
                         }
-                    } else if (tasksEmpty) {
-                        tasksEmpty.style.display = "none";
-                    }
+                    });
+                }
+            }
+
+            // 1.9 Stale Leads Hydration (Disambiguate duplicates via #ID & mobile)
+            const staleLeads = nonDeletedLeads.filter(function (l) {
+                if (l.stage === "converted" || l.stage === "lost" || l.stage === "not_suitable") return false;
+                const contactDate = l.last_contact_at || l.created_at;
+                if (!contactDate) return true;
+                const daysDiff = (now - new Date(contactDate)) / (1000 * 60 * 60 * 24);
+                return daysDiff >= 7;
+            });
+            const staleContainer = document.getElementById("dashboard-stale-container");
+            const staleEmpty = document.getElementById("dashboard-stale-empty");
+            if (staleContainer) {
+                if (staleLeads.length === 0) {
+                    if (staleEmpty) staleEmpty.style.display = "";
+                    staleContainer.style.display = "none";
+                    staleContainer.innerHTML = "";
+                } else {
+                    if (staleEmpty) staleEmpty.style.display = "none";
+                    staleContainer.style.display = "";
+                    staleContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
+                        const lid = Number(el.getAttribute("data-lead-id"));
+                        if (!staleLeads.some(function (sl) { return Number(sl.id) === lid; })) {
+                            el.remove();
+                        }
+                    });
+                    staleLeads.forEach(function (lead) {
+                        if (!staleContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
+                            const item = document.createElement("div");
+                            item.setAttribute("data-lead-id", lead.id);
+                            item.className = "flex items-center justify-between p-2.5 bg-white border border-purple-100 rounded-xl text-xs shadow-2xs";
+                            item.innerHTML = 
+                                '<div class="min-w-0 pr-2">' +
+                                    '<a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-purple-700 block truncate">' +
+                                        (lead.name || "") + ' <span class="text-[11px] font-mono text-purple-600 font-normal">#' + lead.id + '</span>' +
+                                    '</a>' +
+                                    '<div class="text-[10px] text-slate-400 mt-0.5">📞 ' + (lead.mobile || "") + ' • ID #' + lead.id + '</div>' +
+                                '</div>' +
+                                '<a href="/leads/' + lead.id + '" class="text-[11px] font-bold text-purple-700 hover:underline flex-shrink-0">Re-engage →</a>';
+                            staleContainer.appendChild(item);
+                        }
+                    });
                 }
             }
         }
@@ -971,6 +1121,9 @@
 
                 const nameEl = document.getElementById("lead-show-name");
                 if (nameEl) nameEl.textContent = lead.name;
+
+                const idEl = document.getElementById("lead-show-id");
+                if (idEl) idEl.textContent = "#" + lead.id;
 
                 const avatarEl = document.getElementById("lead-show-avatar");
                 if (avatarEl) {

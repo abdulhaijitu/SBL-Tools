@@ -63,8 +63,8 @@
             <div class="flex shrink-0 items-center gap-2">
                 <button type="button" @click="$dispatch('open-global-search')" class="icon-button md:hidden" aria-label="Search" title="Search (Ctrl+K)"><x-ui-icon name="search" /></button>
                 <label class="sr-only" for="display-currency">Display currency</label>
-                <select id="display-currency" class="currency-select" :value="$store.currency.code" :disabled="$store.currency.busy" @change="$store.currency.set($event.target.value)">
-                    <option value="USD">USD</option><option value="BDT">BDT</option>
+                <select id="display-currency" class="currency-select" :value="$store.currency.code" :disabled="$store.currency.busy" @change="$store.currency.set($event.target.value)" title="Display Currency (Fixed baseline: 1 USD = 120 BDT)">
+                    <option value="USD">USD ($)</option><option value="BDT">BDT (৳120/$)</option>
                 </select>
                 @can('leads.create')<a href="{{ route('leads.create') }}" class="btn-primary hidden sm:inline-flex"><x-ui-icon name="plus" /> New lead</a>@endcan
                 <a href="{{ route('profile.edit') }}" class="profile-avatar" aria-label="Your profile">{{ mb_substr(Auth::user()->name, 0, 1) }}</a>

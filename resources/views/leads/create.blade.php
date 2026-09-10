@@ -158,6 +158,10 @@
         },
 
         validateAndSubmit(e) {
+            if (this.isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
             this.errorMessage = '';
             const trimmedName = (this.name || '').trim();
             const trimmedMobile = (this.mobile || '').trim();

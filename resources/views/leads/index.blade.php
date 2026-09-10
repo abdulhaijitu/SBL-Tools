@@ -116,9 +116,12 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                                            {{ $lead->name }}
-                                        </a>
+                                        <div class="flex items-center gap-1.5">
+                                            <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
+                                                {{ $lead->name }}
+                                            </a>
+                                            <span class="text-xs font-mono text-slate-400 font-normal">#{{ $lead->id }}</span>
+                                        </div>
                                         <div class="text-[11px] text-slate-400">
                                             {{ $lead->location ?? 'No location' }} 
                                             @if($lead->profession_or_business) • {{ $lead->profession_or_business }} @endif
@@ -284,9 +287,12 @@
                                 @endif
                             </div>
                             <div>
-                                <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
-                                    {{ $lead->name }}
-                                </a>
+                                <div class="flex items-center gap-1.5">
+                                    <a href="{{ route('leads.show', $lead->id) }}" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">
+                                        {{ $lead->name }}
+                                    </a>
+                                    <span class="text-xs font-mono text-slate-400 font-normal">#{{ $lead->id }}</span>
+                                </div>
                                 <div class="text-[11px] text-slate-400 mt-0.5">
                                     {{ $lead->location ?? 'No location' }} 
                                     @if($lead->profession_or_business) • {{ $lead->profession_or_business }} @endif

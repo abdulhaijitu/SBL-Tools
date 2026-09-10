@@ -29,6 +29,7 @@
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 id="lead-show-name" class="text-xl font-bold text-slate-900">{{ $lead->name }}</h2>
+                        <span id="lead-show-id" class="text-sm font-mono text-slate-400 font-normal">#{{ $lead->id }}</span>
                         <span id="lead-show-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $lead->stage->badgeClasses() }}">
                             {{ $lead->stage->label() }}
                         </span>

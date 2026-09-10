@@ -770,6 +770,21 @@ export default {
                         const score = (interests.length > 0 ? 20 : 0) + (nextActionAt ? 15 : 0);
                         const temperature = score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
 
+                        // Debounce duplicate submissions within 15 seconds to prevent double-click duplicates
+                        try {
+                            const recentDup = await db.prepare(
+                                "SELECT id FROM leads WHERE name = ? AND mobile = ? AND datetime(created_at) >= datetime('now', '-15 seconds') LIMIT 1"
+                            ).bind(name, mobile).first();
+                            if (recentDup && recentDup.id) {
+                                console.warn(`Debounced duplicate lead submission for ${name} (${mobile}), reusing existing ID #${recentDup.id}`);
+                                const wantsJson = request.headers.get("accept")?.includes("json") || contentType.includes("json");
+                                if (wantsJson) {
+                                    return Response.json({ success: true, lead_id: recentDup.id, message: "Lead already created", debounced: true });
+                                }
+                                return Response.redirect(new URL("/leads?saved=1&lead_id=" + recentDup.id, request.url), 302);
+                            }
+                        } catch (eDup) {}
+
                         // Verify owner user ID exists in DB to prevent foreign key errors
                         let safeOwnerId = currentUserId || 1;
                         try {
@@ -3235,29 +3250,54 @@ export default {
         if (path === "/" || path === "/dashboard") {
             let dashHtml = PAGES.dashboard;
             if (dashHtml) {
+                // Compute today's date in Asia/Dhaka (UTC+6)
+                let todayStr;
+                let dhakaFormattedDate;
+                try {
+                    todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+                    dhakaFormattedDate = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'Asia/Dhaka',
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }).format(new Date());
+                } catch (e) {
+                    const dhakaTime = new Date(Date.now() + 6 * 3600 * 1000);
+                    todayStr = dhakaTime.toISOString().slice(0, 10);
+                    dhakaFormattedDate = dhakaTime.toDateString();
+                }
+
                 const nonDel = (liveLeads || []).filter(l => !l.deleted_at);
                 const activeCount = nonDel.filter(l => l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable').length;
-                const todayStr = new Date().toISOString().slice(0, 10);
                 const addedTodayCount = nonDel.filter(l => l.created_at && l.created_at.slice(0, 10) === todayStr).length;
 
-                let dueTodayCount = 0;
+                let dueFollowupsToday = 0;
+                let overdueCount = 0;
+                const nowUtc = new Date();
                 nonDel.forEach(l => {
                     if (l.next_action_at && l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable') {
-                        if (l.next_action_at.slice(0, 10) === todayStr) dueTodayCount++;
+                        if (l.next_action_at.slice(0, 10) === todayStr) dueFollowupsToday++;
+                        if (new Date(l.next_action_at) < nowUtc) overdueCount++;
                     }
                 });
+
+                let tasksTodayCount = 0;
                 (liveTasks || []).forEach(t => {
                     if (t.status !== 'Completed' && t.status !== 'Cancelled' && t.due_at && t.due_at.slice(0, 10) === todayStr) {
-                        dueTodayCount++;
+                        tasksTodayCount++;
                     }
                 });
 
                 const presCount = (livePresentations || []).filter(p => !p.deleted_at).length;
 
+                dashHtml = dashHtml.replace(/<p id="dashboard-current-date">.*?<\/p>/, `<p id="dashboard-current-date">${dhakaFormattedDate}</p>`);
                 dashHtml = dashHtml.replace(/<strong id="active-leads">.*?<\/strong>/, `<strong id="active-leads">${activeCount}</strong>`);
-                dashHtml = dashHtml.replace(/<small>.*? added today<\/small>/, `<small>${addedTodayCount} added today</small>`);
-                dashHtml = dashHtml.replace(/<strong id="today-followup">.*?<\/strong>/, `<strong id="today-followup">${dueTodayCount}</strong>`);
+                dashHtml = dashHtml.replace(/<small id="added-today-count">.*?<\/small>|<small>.*? added today<\/small>/, `<small id="added-today-count">${addedTodayCount} added today</small>`);
+                dashHtml = dashHtml.replace(/<strong id="today-followup">.*?<\/strong>/, `<strong id="today-followup">${dueFollowupsToday}</strong>`);
+                dashHtml = dashHtml.replace(/<strong id="today-tasks-kpi">.*?<\/strong>/, `<strong id="today-tasks-kpi">${tasksTodayCount}</strong>`);
                 dashHtml = dashHtml.replace(/<strong id="total-presentations">.*?<\/strong>/, `<strong id="total-presentations">${presCount}</strong>`);
+                dashHtml = dashHtml.replace(/<span id="dashboard-overdue-badge"[^>]*>.*?<\/span>/, `<span id="dashboard-overdue-badge" class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">${overdueCount} Overdue</span>`);
 
                 const totalLeads = nonDel.length;
                 const stages = ['new', 'contacted', 'interested', 'qualified', 'presentation', 'follow_up', 'decision', 'converted'];
@@ -3272,7 +3312,7 @@ export default {
                     dashHtml = dashHtml.replace(barRegex, `$1${pct}$2`);
 
                     const pctRegex = new RegExp(`(<span data-funnel-pct="${s}"[^>]*>)[^<]*(<\\/span>)`);
-                    dashHtml = dashHtml.replace(pctRegex, `$1${pct}%$2`);
+                    dashHtml = dashHtml.replace(pctRegex, `$1${pct}% share$2`);
                 });
             }
             html = dashHtml;
