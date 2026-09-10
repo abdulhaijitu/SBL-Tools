@@ -9,8 +9,9 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="SBL Tools">
         <link rel="manifest" href="/manifest.webmanifest">
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-        <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+        <link rel="shortcut icon" href="/favicon.ico">
 
         <title>@hasSection('title')@yield('title') - {{ config('app.name', 'SBL Tools') }}@else{{ config('app.name', 'SBL Tools') }} - Authentication & Access @endif</title>
 

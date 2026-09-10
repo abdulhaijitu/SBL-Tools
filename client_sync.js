@@ -1419,11 +1419,14 @@
                     lead.mobile ||
                     ""
                 ).replace(/[^0-9]/g, "");
-                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                if (
+                    cleanWhatsapp.startsWith("01") &&
+                    cleanWhatsapp.length === 11
+                ) {
                     cleanWhatsapp = "88" + cleanWhatsapp;
                 }
 
-                document.title = lead.name + " - SBL Growth Manager";
+                document.title = lead.name + " · SBL Marketing";
 
                 const pageTitleEl = document.getElementById("app-page-title");
                 if (pageTitleEl) pageTitleEl.textContent = lead.name;
@@ -1434,19 +1437,28 @@
                 const idEl = document.getElementById("lead-show-id");
                 if (idEl) idEl.textContent = "#" + lead.id;
 
+                const taskTitleInput = document.querySelector(
+                    "#lead-show-task-form input[name='title']",
+                );
+                if (taskTitleInput)
+                    taskTitleInput.value = "Follow-up with " + lead.name;
+
                 const avatarEl = document.getElementById("lead-show-avatar");
                 if (avatarEl) {
                     if (lead.photo) {
                         avatarEl.className =
                             "w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50";
                         avatarEl.innerHTML =
-                            '<img src="' +
+                            '<img id="lead-show-photo" src="' +
                             escapeHtml(lead.photo) +
                             '" class="w-full h-full object-cover">';
                     } else {
                         avatarEl.className =
                             "w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs";
-                        avatarEl.textContent = initialLetter;
+                        avatarEl.innerHTML =
+                            '<span id="lead-show-initial">' +
+                            initialLetter +
+                            "</span>";
                     }
                 }
 
@@ -1454,11 +1466,6 @@
                     "lead-show-stage-badge",
                 );
                 if (stageBadge) stageBadge.textContent = stageLabel;
-
-                const tempBadge = document.getElementById(
-                    "lead-show-temp-badge",
-                );
-                if (tempBadge) tempBadge.textContent = temp;
 
                 const mobileBtn = document.getElementById(
                     "lead-show-mobile-btn",
@@ -1481,8 +1488,6 @@
                     "lead-show-location-text",
                 );
                 if (locBox && locTxt) {
-                    if (lead.location) {
-                        locTxt.textContent = lead.location;
                     const loc = (lead.location || "").trim();
                     const isValidLoc =
                         loc &&
@@ -1496,14 +1501,6 @@
                         locBox.style.display = "none";
                     }
                 }
-
-                const scoreTxt = document.getElementById(
-                    "lead-show-score-text",
-                );
-                if (scoreTxt) scoreTxt.textContent = score + " / 100";
-
-                const scoreBar = document.getElementById("lead-show-score-bar");
-                if (scoreBar) scoreBar.style.width = score + "%";
 
                 const sourceTxt = document.getElementById(
                     "lead-show-source-text",
@@ -2988,7 +2985,10 @@
                 if (totalEl) totalEl.textContent = DATA.presentations.length;
 
                 if (DATA.presentations.length === 0) {
-                    if (presGrid && !document.querySelector(".empty-presentations-notice")) {
+                    if (
+                        presGrid &&
+                        !document.querySelector(".empty-presentations-notice")
+                    ) {
                         const emptyNotice = document.createElement("div");
                         emptyNotice.className =
                             "col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs empty-presentations-notice";
@@ -3009,12 +3009,17 @@
                             .forEach(function (pres) {
                                 if (
                                     document.querySelector(
-                                        '[data-presentation-id="' + pres.id + '"]',
+                                        '[data-presentation-id="' +
+                                            pres.id +
+                                            '"]',
                                     )
                                 )
                                     return;
                                 const card = document.createElement("div");
-                                card.setAttribute("data-presentation-id", pres.id);
+                                card.setAttribute(
+                                    "data-presentation-id",
+                                    pres.id,
+                                );
                                 card.className =
                                     "bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between";
 
@@ -3424,15 +3429,25 @@
             const lang = localStorage.getItem("sbl_lang") || "en";
             document.documentElement.lang = lang;
             document.documentElement.dataset.lang = lang;
-            document.querySelectorAll("[data-en][data-bn]").forEach(function(el) {
-                const text = lang === "bn" ? el.getAttribute("data-bn") : el.getAttribute("data-en");
-                if (text !== null && text !== undefined) {
-                    el.textContent = text;
-                }
-            });
-            document.querySelectorAll("[data-lang-content]").forEach(function(el) {
-                el.style.display = el.getAttribute("data-lang-content") === lang ? "" : "none";
-            });
+            document
+                .querySelectorAll("[data-en][data-bn]")
+                .forEach(function (el) {
+                    const text =
+                        lang === "bn"
+                            ? el.getAttribute("data-bn")
+                            : el.getAttribute("data-en");
+                    if (text !== null && text !== undefined) {
+                        el.textContent = text;
+                    }
+                });
+            document
+                .querySelectorAll("[data-lang-content]")
+                .forEach(function (el) {
+                    el.style.display =
+                        el.getAttribute("data-lang-content") === lang
+                            ? ""
+                            : "none";
+                });
         } catch (e) {}
     }
 
@@ -3448,7 +3463,7 @@
         checkLeadSavedToast();
     }
 
-    window.addEventListener("lang-changed", function() {
+    window.addEventListener("lang-changed", function () {
         applyLanguage();
     });
 

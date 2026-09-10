@@ -83,16 +83,16 @@ class DatabaseSeeder extends Seeder
         // 4. Sample Leads
         $leadsData = [
             [
-                'name' => 'Rafiqul Islam',
-                'mobile' => '01711001122',
-                'whatsapp' => '01711001122',
-                'email' => 'rafiq@example.com',
-                'facebook_url' => 'https://facebook.com/rafiq.demo',
+                'name' => 'Md. Nayim',
+                'mobile' => '01777000001',
+                'whatsapp' => '01777000001',
+                'email' => 'nayim@example.com',
+                'facebook_url' => 'https://facebook.com/nayim.demo',
                 'location' => 'Dhaka, Mirpur',
-                'profession_or_business' => 'Retail Shop Owner',
+                'profession_or_business' => 'Entrepreneur',
                 'lead_source' => 'Facebook Page',
                 'interests' => ['E-commerce', 'Dropshipping'],
-                'lead_tag' => 'E1',
+                'lead_tag' => null,
                 'stage' => LeadStage::INTERESTED,
                 'temperature' => LeadTemperature::WARM,
                 'score' => 65,
@@ -101,7 +101,7 @@ class DatabaseSeeder extends Seeder
                 'next_action_type' => 'Follow-up Call',
                 'next_action_at' => now()->addDay()->setHour(11)->setMinute(0),
                 'last_contact_at' => now()->subDay(),
-                'notes' => 'Looking to expand his retail business to online dropshipping.',
+                'notes' => 'Looking to expand his business to online dropshipping.',
             ],
             [
                 'name' => 'Farhana Akter',

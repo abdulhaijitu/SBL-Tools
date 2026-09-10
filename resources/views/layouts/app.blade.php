@@ -9,7 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SBL Marketing">
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
     <title>
         @hasSection('meta-title')
             @yield('meta-title')
@@ -20,7 +22,6 @@
     @hasSection('meta-description')
         <meta name="description" content="@yield('meta-description')">
     @endif
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="preload" as="image" href="{{ asset('images/sbl-logo.webp') }}" type="image/webp" fetchpriority="high">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

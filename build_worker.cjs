@@ -42,11 +42,44 @@ const clientSyncJs = fs.readFileSync(
 const logoBase64 = fs
     .readFileSync(path.join(__dirname, "storage", "logo_base64.txt"), "utf8")
     .trim();
-const qrBase64 = fs.existsSync(path.join(__dirname, "public", "images", "sbl-packages-qr.png"))
-    ? fs.readFileSync(path.join(__dirname, "public", "images", "sbl-packages-qr.png")).toString("base64")
+const appIconBase64 = fs.existsSync(
+    path.join(__dirname, "public", "icons", "icon-512x512.png"),
+)
+    ? fs
+          .readFileSync(
+              path.join(__dirname, "public", "icons", "icon-512x512.png"),
+          )
+          .toString("base64")
     : "";
-const sheetBase64 = fs.existsSync(path.join(__dirname, "public", "images", "sbl-packages-sheet.png"))
-    ? fs.readFileSync(path.join(__dirname, "public", "images", "sbl-packages-sheet.png")).toString("base64")
+const faviconBase64 = fs.existsSync(
+    path.join(__dirname, "public", "favicon.png"),
+)
+    ? fs
+          .readFileSync(path.join(__dirname, "public", "favicon.png"))
+          .toString("base64")
+    : "";
+const qrBase64 = fs.existsSync(
+    path.join(__dirname, "public", "images", "sbl-packages-qr.png"),
+)
+    ? fs
+          .readFileSync(
+              path.join(__dirname, "public", "images", "sbl-packages-qr.png"),
+          )
+          .toString("base64")
+    : "";
+const sheetBase64 = fs.existsSync(
+    path.join(__dirname, "public", "images", "sbl-packages-sheet.png"),
+)
+    ? fs
+          .readFileSync(
+              path.join(
+                  __dirname,
+                  "public",
+                  "images",
+                  "sbl-packages-sheet.png",
+              ),
+          )
+          .toString("base64")
     : "";
 const manifestContent = fs.readFileSync(
     path.join(__dirname, "public", "manifest.webmanifest"),
@@ -105,6 +138,8 @@ let workerContent = fs.readFileSync(templatePath, "utf8");
 
 workerContent = workerContent
     .replace("__SBL_LOGO_BASE64__", () => JSON.stringify(logoBase64))
+    .replace("__SBL_APP_ICON_BASE64__", () => JSON.stringify(appIconBase64))
+    .replace("__SBL_FAVICON_BASE64__", () => JSON.stringify(faviconBase64))
     .replace("__SBL_PACKAGES_QR_BASE64__", () => JSON.stringify(qrBase64))
     .replace("__SBL_PACKAGES_SHEET_BASE64__", () => JSON.stringify(sheetBase64))
     .replace("__CSS_CONTENT__", () => JSON.stringify(cssContent))

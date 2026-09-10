@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 // Serves the exact, 100% pixel-perfect compiled Laravel Blade views and handles real D1 CRUD on the edge.
 
 const SBL_LOGO_BASE64 = __SBL_LOGO_BASE64__;
+const SBL_APP_ICON_BASE64 = __SBL_APP_ICON_BASE64__;
+const SBL_FAVICON_BASE64 = __SBL_FAVICON_BASE64__;
 const SBL_PACKAGES_QR_BASE64 = __SBL_PACKAGES_QR_BASE64__;
 const SBL_PACKAGES_SHEET_BASE64 = __SBL_PACKAGES_SHEET_BASE64__;
 const CSS_CONTENT = __CSS_CONTENT__;
@@ -140,10 +142,43 @@ export default {
         // 3. Logo & Static Images
         if (
             path === "/images/sbl-logo.png" ||
-            path === "/favicon.png" ||
-            path === "/apple-touch-icon.png"
+            path === "/images/sbl-logo.webp"
         ) {
             const binaryString = atob(SBL_LOGO_BASE64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
+        if (path === "/favicon.png" || path === "/favicon.ico") {
+            const binaryString = atob(
+                SBL_FAVICON_BASE64 || SBL_APP_ICON_BASE64,
+            );
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes.buffer, {
+                headers: {
+                    "Content-Type": path.endsWith(".ico")
+                        ? "image/x-icon"
+                        : "image/png",
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            });
+        }
+
+        if (path === "/apple-touch-icon.png" || path.startsWith("/icons/")) {
+            const binaryString = atob(SBL_APP_ICON_BASE64);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
             for (let i = 0; i < len; i++) {
@@ -211,21 +246,6 @@ export default {
                 headers: {
                     "Content-Type": "text/html; charset=utf-8",
                     "Cache-Control": "public, max-age=3600",
-                },
-            });
-        }
-
-        if (path.startsWith("/icons/")) {
-            const binaryString = atob(SBL_LOGO_BASE64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return new Response(bytes.buffer, {
-                headers: {
-                    "Content-Type": "image/png",
-                    "Cache-Control": "public, max-age=31536000, immutable",
                 },
             });
         }
@@ -3773,7 +3793,10 @@ export default {
                     currentLead.mobile ||
                     ""
                 ).replace(/[^0-9]/g, "");
-                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                if (
+                    cleanWhatsapp.startsWith("01") &&
+                    cleanWhatsapp.length === 11
+                ) {
                     cleanWhatsapp = "88" + cleanWhatsapp;
                 }
 
@@ -3839,34 +3862,34 @@ export default {
                         `value="${currentLead.id}" name="related_lead_id"`,
                     )
                     .replace(
-                        /<title>.*?<\/title>/,
-                        `<title>${escapedName} - SBL Growth Manager</title>`,
+                        /<title>[\s\S]*?<\/title>/,
+                        `<title>${escapedName} · SBL Marketing</title>`,
                     )
                     .replace(
-                        /<h1 id="app-page-title"[^>]*>[\s\S]*?<\/h1>/,
+                        /<h1 id="app-page-title"[^>]*>[\s\S]*?<\/h1>/g,
                         `<h1 id="app-page-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">${escapedName}</h1>`,
                     )
                     .replace(
-                        /<h1 class="text-base sm:text-lg font-bold[^"]*"[^>]*>[\s\S]*?<\/h1>/,
+                        /<h1 class="text-base sm:text-lg font-bold[^"]*"[^>]*>[\s\S]*?<\/h1>/g,
                         `<h1 id="app-page-title" class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none truncate max-w-[200px] sm:max-w-md">${escapedName}</h1>`,
                     )
                     .replace(
-                        /<h2 id="lead-show-name"[^>]*>.*?<\/h2>/,
+                        /<h2 id="lead-show-name"[^>]*>[\s\S]*?<\/h2>/,
                         `<h2 id="lead-show-name" class="text-xl font-bold text-slate-900">${escapedName}</h2>`,
                     )
                     .replace(
-                        /<div id="lead-show-avatar"[^>]*>.*?<\/div>/,
+                        /<span id="lead-show-id"[^>]*>[\s\S]*?<\/span>/g,
+                        `<span id="lead-show-id" class="text-xs font-mono text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">#${currentLead.id}</span>`,
+                    )
+                    .replace(
+                        /<div id="lead-show-avatar"[^>]*>[\s\S]*?<\/div>/,
                         currentLead.photo
-                            ? `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50"><img src="${escapeHtml(currentLead.photo)}" alt="${escapedName}" class="w-full h-full object-cover"></div>`
-                            : `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs">${initialLetter}<\/div>`,
+                            ? `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50"><img id="lead-show-photo" src="${escapeHtml(currentLead.photo)}" alt="${escapedName}" class="w-full h-full object-cover"></div>`
+                            : `<div id="lead-show-avatar" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-xl flex items-center justify-center flex-shrink-0 shadow-xs overflow-hidden border border-orange-200/50"><span id="lead-show-initial">${initialLetter}</span></div>`,
                     )
                     .replace(
                         /id="lead-show-stage-badge">.*?<\/span>/,
                         `id="lead-show-stage-badge">${stageLabel}</span>`,
-                    )
-                    .replace(
-                        /id="lead-show-temp-badge">.*?<\/span>/,
-                        `id="lead-show-temp-badge">${temp}</span>`,
                     )
                     .replace(
                         /id="lead-show-mobile-btn" href="[^"]*"/,
@@ -3881,17 +3904,20 @@ export default {
                         `id="lead-show-wa-btn" href="https://wa.me/${cleanWhatsapp}"`,
                     )
                     .replace(
-                        /id="lead-show-score-text">.*?<\/span>/,
-                        `id="lead-show-score-text">${score} / 100</span>`,
-                    )
-                    .replace(
-                        /id="lead-show-score-bar"[^>]*style="[^"]*"/,
-                        `id="lead-show-score-bar" style="width: ${score}%"`,
-                    )
-                    .replace(
                         /id="lead-show-source-text">.*?<\/span>/,
                         `id="lead-show-source-text">${escapeHtml(sourceName)}</span>`,
+                    )
+                    .replace(
+                        /value="Follow-up with [^"]*"/g,
+                        `value="Follow-up with ${escapedName}"`,
                     );
+
+                if (currentLead.facebook_url) {
+                    pageHtml = pageHtml.replace(
+                        /id="lead-show-fb-link" href="[^"]*"/,
+                        `id="lead-show-fb-link" href="${escapeHtml(currentLead.facebook_url)}"`,
+                    );
+                }
 
                 const validLocation =
                     currentLead.location &&
@@ -3909,11 +3935,10 @@ export default {
                             `id="lead-show-location-text">${escapeHtml(currentLead.location)}</span>`,
                         );
                 } else {
-                    pageHtml = pageHtml
-                        .replace(
-                            /id="lead-show-location-container"/,
-                            'id="lead-show-location-container" style="display: none;"',
-                        );
+                    pageHtml = pageHtml.replace(
+                        /id="lead-show-location-container"/,
+                        'id="lead-show-location-container" style="display: none;"',
+                    );
                 }
             }
             html = pageHtml;
