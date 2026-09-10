@@ -2670,10 +2670,7 @@ export default {
                         }
                     }
                     return Response.redirect(
-                        new URL(
-                            "/presentations?deleted_pres=" + presId,
-                            request.url,
-                        ),
+                        new URL("/presentations", request.url),
                         302,
                     );
                 }
@@ -3868,6 +3865,10 @@ export default {
                         `id="lead-show-stage-badge">${stageLabel}</span>`,
                     )
                     .replace(
+                        /id="lead-show-temp-badge">.*?<\/span>/,
+                        `id="lead-show-temp-badge">${temp}</span>`,
+                    )
+                    .replace(
                         /id="lead-show-mobile-btn" href="[^"]*"/,
                         `id="lead-show-mobile-btn" href="tel:${escapedMobile}"`,
                     )
@@ -3878,6 +3879,14 @@ export default {
                     .replace(
                         /id="lead-show-wa-btn" href="[^"]*"/,
                         `id="lead-show-wa-btn" href="https://wa.me/${cleanWhatsapp}"`,
+                    )
+                    .replace(
+                        /id="lead-show-score-text">.*?<\/span>/,
+                        `id="lead-show-score-text">${score} / 100</span>`,
+                    )
+                    .replace(
+                        /id="lead-show-score-bar"[^>]*style="[^"]*"/,
+                        `id="lead-show-score-bar" style="width: ${score}%"`,
                     )
                     .replace(
                         /id="lead-show-source-text">.*?<\/span>/,
@@ -3914,7 +3923,13 @@ export default {
         } else if (path === "/profile") {
             html = PAGES.profile || PAGES.dashboard;
         } else if (path === "/presentations") {
-            html = PAGES.presentations;
+            let pageHtml = PAGES.presentations;
+            const presCount = (livePresentations || []).length;
+            pageHtml = pageHtml.replace(
+                /<strong id="total-presentations">.*?<\/strong>/,
+                `<strong id="total-presentations">${presCount}</strong>`,
+            );
+            html = pageHtml;
         } else if (path === "/toolkit") {
             const rawTab = url.searchParams.get("tab") || "packages";
             const tabMap = {

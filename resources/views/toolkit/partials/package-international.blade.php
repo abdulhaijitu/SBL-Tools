@@ -35,12 +35,12 @@
                     <!-- Price Block -->
                     <div class="p-4 bg-amber-50/50 rounded-2xl border border-amber-100">
                         <div class="flex items-baseline gap-2">
-                            <span class="text-3xl sm:text-4xl font-extrabold text-[#111827] tracking-tight">৳৫,৫০,০০০</span>
+                            <span class="text-3xl sm:text-4xl font-extrabold text-[#111827] tracking-tight">৳550,000</span>
                             <span class="text-xs font-bold uppercase tracking-wider text-[#6B7280]">BDT</span>
                         </div>
                         <div class="mt-1 flex flex-col text-xs space-y-0.5">
-                            <span class="font-bold text-amber-800">৫,০০,০০০ Tk ইনভেস্টমেন্ট + ৫০,০০০ Tk কনটেন্ট ও ওয়েব ফি</span>
-                            <span class="text-[#6B7280]">বিনিয়োগ সীমা: ৫,০০,০০০ Tk – আনলিমিটেড</span>
+                            <span class="font-bold text-amber-800" data-en="500,000 Tk Capital + 50,000 Tk Content & Web Fee" data-bn="৫,০০,০০০ Tk ইনভেস্টমেন্ট + ৫০,০০০ Tk কনটেন্ট ও ওয়েব ফি">500,000 Tk Capital + 50,000 Tk Content & Web Fee</span>
+                            <span class="text-[#6B7280]" data-en="Investment Range: 500,000 Tk – Unlimited" data-bn="বিনিয়োগ সীমা: ৫,০০,০০০ Tk – আনলিমিটেড">Investment Range: 500,000 Tk – Unlimited</span>
                         </div>
                     </div>
 
@@ -49,27 +49,27 @@
                         <h3 id="pkg-title-international" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
                             International Package
                         </h3>
-                        <p class="text-sm font-semibold text-amber-700 mt-1">
-                            গ্লোবাল মার্কেটপ্লেস ও ডেডিকেটেড টিম ড্রপশিপিং
+                        <p class="text-sm font-semibold text-amber-700 mt-1" data-en="Global Marketplace & Dedicated Team Dropshipping" data-bn="গ্লোবাল মার্কেটপ্লেস ও ডেডিকেটেড টিম ড্রপশিপিং">
+                            Global Marketplace & Dedicated Team Dropshipping
                         </p>
                     </div>
 
                     <!-- Description -->
-                    <p class="text-xs sm:text-sm text-[#374151] leading-relaxed">
-                        ডেডিকেটেড প্রজেক্ট টিম, আনলিমিটেড ইউজিসি কনটেন্ট এবং ৫০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সহ বিশ্বমানের আন্তর্জাতিক ড্রপশিপিং প্যাকেজ।
+                    <p class="text-xs sm:text-sm text-[#374151] leading-relaxed" data-en="World-class international dropshipping package with dedicated project team, unlimited UGC content, and crowdfunding up to 50 Lac BDT." data-bn="ডেডিকেটেড প্রজেক্ট টিম, আনলিমিটেড ইউজিসি কনটেন্ট এবং ৫০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সহ বিশ্বমানের আন্তর্জাতিক ড্রপশিপিং প্যাকেজ।">
+                        World-class international dropshipping package with dedicated project team, unlimited UGC content, and crowdfunding up to 50 Lac BDT.
                     </p>
 
                     <!-- Key Financial Highlights -->
                     <div class="grid grid-cols-2 gap-2 pt-1">
                         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                            <span class="text-[10px] font-bold uppercase text-slate-500 block">সাপ্তাহিক রিটার্ন</span>
-                            <span class="text-sm sm:text-base font-extrabold text-[#AB2925]">২.০% / সপ্তাহ</span>
-                            <span class="text-[10px] text-slate-600 block">১০০ সপ্তাহে ১০,০০,০০০ Tk</span>
+                            <span class="text-[10px] font-bold uppercase text-slate-500 block" data-en="Weekly Return" data-bn="সাপ্তাহিক রিটার্ন">Weekly Return</span>
+                            <span class="text-sm sm:text-base font-extrabold text-[#AB2925]" data-en="2.0% / Week" data-bn="২.০% / সপ্তাহ">2.0% / Week</span>
+                            <span class="text-[10px] text-slate-600 block" data-en="1,000,000 Tk in 100 Weeks" data-bn="১০০ সপ্তাহে ১০,০০,০০০ Tk">1,000,000 Tk in 100 Weeks</span>
                         </div>
                         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                            <span class="text-[10px] font-bold uppercase text-slate-500 block">ক্রাউডফান্ডিং সীমা</span>
-                            <span class="text-sm sm:text-base font-extrabold text-amber-700">৫০ লাখ Tk পর্যন্ত</span>
-                            <span class="text-[10px] text-slate-600 block">গ্লোবাল স্কেল সুবিধা</span>
+                            <span class="text-[10px] font-bold uppercase text-slate-500 block" data-en="Crowdfunding Limit" data-bn="ক্রাউডফান্ডিং সীমা">Crowdfunding Limit</span>
+                            <span class="text-sm sm:text-base font-extrabold text-amber-700" data-en="Up to 50 Lac Tk" data-bn="৫০ লাখ Tk পর্যন্ত">Up to 50 Lac Tk</span>
+                            <span class="text-[10px] text-slate-600 block" data-en="Global Scale Advantage" data-bn="গ্লোবাল স্কেল সুবিধা">Global Scale Advantage</span>
                         </div>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                         data-component-variant="international"
                         data-cta-location="card"
                     >
-                        <span>International Package শুরু করুন</span>
+                        <span data-en="Get Started with International Package" data-bn="International Package শুরু করুন">Get Started with International Package</span>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                         </svg>
@@ -106,24 +106,24 @@
                             data-package-price="550000"
                             data-component-variant="international"
                             data-cta-location="card"
-                            aria-label="International প্যাকেজের বিস্তারিত দেখুন"
+                            aria-label="View International Package details"
                         >
-                            <span>প্যাকেজের বিস্তারিত দেখুন</span>
+                            <span data-en="View Package Details" data-bn="প্যাকেজের বিস্তারিত দেখুন">View Package Details</span>
                         </button>
 
                         <button 
                             type="button" 
                             @click="openCalculator('international', 550000)"
                             class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-xl transition min-h-[44px] flex items-center justify-center gap-1.5 text-center"
-                            aria-label="ক্যালকুলেটরে হিসাব দেখুন"
+                            aria-label="Calculate ROI"
                         >
-                            <span>🧮 ROI ক্যালকুলেটর</span>
+                            <span data-en="🧮 ROI Calculator" data-bn="🧮 ROI ক্যালকুলেটর">🧮 ROI Calculator</span>
                         </button>
                     </div>
 
                     <!-- Trust Note (Desktop) -->
-                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1">
-                        গ্লোবাল স্কেল • স্বচ্ছ শর্ত • Official SBL International পলিসি অনুযায়ী
+                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1" data-en="Global Scale • Clear Terms • According to Official SBL International Policy" data-bn="গ্লোবাল স্কেল • স্বচ্ছ শর্ত • Official SBL International পলিসি অনুযায়ী">
+                        Global Scale • Clear Terms • According to Official SBL International Policy
                     </p>
                 </div>
 
@@ -133,8 +133,8 @@
             <div class="lg:w-7/12 flex flex-col justify-between space-y-5">
                 <div>
                     <div class="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-                        <h4 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#111827]">
-                            International প্যাকেজের ৮টি প্রধান সুবিধা
+                        <h4 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#111827]" data-en="8 Core Features of International Package" data-bn="International প্যাকেজের ৮টি প্রধান সুবিধা">
+                            8 Core Features of International Package
                         </h4>
                         <span class="text-xs font-semibold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
                             Global Enterprise
@@ -152,7 +152,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Dedicated Team for Project Management</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">প্রজেক্ট পরিচালনার জন্য সম্পূর্ণ ডেডিকেটেড টিম</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Fully dedicated team for project management" data-bn="প্রজেক্ট পরিচালনার জন্য সম্পূর্ণ ডেডিকেটেড টিম">Fully dedicated team for project management</p>
                             </div>
                         </li>
 
@@ -165,7 +165,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Unlimited UGC Content</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">আনলিমিটেড হাই-কনভার্টিং ইউজার ভিডিও ও ক্রিয়েটিভ</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Unlimited high-converting user videos & creatives" data-bn="আনলিমিটেড হাই-কনভার্টিং ইউজার ভিডিও ও ক্রিয়েটিভ">Unlimited high-converting user videos & creatives</p>
                             </div>
                         </li>
 
@@ -178,7 +178,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">International Shopify Store</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">মাল্টি-কারেন্সি গ্লোবাল পেমেন্ট ও মার্কেটপ্লেস সেটআপ</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Multi-currency global payments & marketplace setup" data-bn="মাল্টি-কারেন্সি গ্লোবাল পেমেন্ট ও মার্কেটপ্লেস সেটআপ">Multi-currency global payments & marketplace setup</p>
                             </div>
                         </li>
 
@@ -191,7 +191,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Crowdfunding up to 50 Lac</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">৫০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সম্প্রসারণ সুবিধা</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Business expansion crowdfunding up to 50 Lac BDT" data-bn="৫০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সম্প্রসারণ সুবিধা">Business expansion crowdfunding up to 50 Lac BDT</p>
                             </div>
                         </li>
 
@@ -204,7 +204,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Weekly 2% for 100 Weeks</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">প্রতি সপ্তাহে ১০০০০ Tk করে মোট ১০,০০,০০০ Tk রিটার্ন</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="10,000 Tk/week totaling 1,000,000 Tk return" data-bn="প্রতি সপ্তাহে ১০০০০ Tk করে মোট ১০,০০,০০০ Tk রিটার্ন">10,000 Tk/week totaling 1,000,000 Tk return</p>
                             </div>
                         </li>
 
@@ -217,7 +217,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Lifetime Profit Sharing</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">১০০ সপ্তাহ পর মাসে ২৫,০০০ থেকে ১,০০,০০০ Tk পর্যন্ত</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="25,000 to 100,000 Tk monthly after 100 weeks" data-bn="১০০ সপ্তাহ পর মাসে ২৫,০০০ থেকে ১,০০,০০০ Tk পর্যন্ত">25,000 to 100,000 Tk monthly after 100 weeks</p>
                             </div>
                         </li>
 
@@ -230,7 +230,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">500 BV Binary Placement</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">এলিট বাইনারি পয়েন্ট ও হাইয়ার র‍্যাংক বোনাস সুবিধা</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Elite binary points & higher rank bonus" data-bn="এলিট বাইনারি পয়েন্ট ও হাইয়ার র‍্যাংক বোনাস সুবিধা">Elite binary points & higher rank bonus</p>
                             </div>
                         </li>
 
@@ -243,7 +243,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-xs sm:text-sm font-bold text-[#111827] leading-snug">Priority Escalation & Merchant Network</p>
-                                <p class="text-[11px] text-[#6B7280] leading-normal">এক্সিকিউটিভ সাপোর্ট, গ্লোবাল মার্চেন্ট ও ডিরেক্টরি এক্সেস</p>
+                                <p class="text-[11px] text-[#6B7280] leading-normal" data-en="Executive support, global merchant & directory access" data-bn="এক্সিকিউটিভ সাপোর্ট, গ্লোবাল মার্চেন্ট ও ডিরেক্টরি এক্সেস">Executive support, global merchant & directory access</p>
                             </div>
                         </li>
                     </ul>
@@ -251,8 +251,8 @@
 
                 <!-- Ownership / Policy Notice -->
                 <div class="p-3 sm:p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80 text-[11px] sm:text-xs text-[#374151] leading-relaxed">
-                    <span class="font-bold text-[#111827]">অফিসিয়াল পলিসি নোট:</span>
-                    আন্তর্জাতিক ড্রপশিপিং অপারেশন ও টিম ম্যানেজমেন্ট SBL গ্লোবাল এন্টারপ্রাইজ পলিসি এবং প্রযোজ্য শর্ত অনুযায়ী পরিচালিত হবে।
+                    <span class="font-bold text-[#111827]" data-en="Official Policy Note:" data-bn="অফিসিয়াল পলিসি নোট:">Official Policy Note:</span>
+                    <span data-en="International dropshipping operations and team management are governed by SBL global enterprise policy and verified terms." data-bn="আন্তর্জাতিক ড্রপশিপিং অপারেশন ও টিম ম্যানেজমেন্ট SBL গ্লোবাল এন্টারপ্রাইজ পলিসি এবং প্রযোজ্য শর্ত অনুযায়ী পরিচালিত হবে।">International dropshipping operations and team management are governed by SBL global enterprise policy and verified terms.</span>
                 </div>
 
                 <!-- Mobile CTAs (Only rendered on small screens < lg) -->
@@ -270,7 +270,7 @@
                         data-component-variant="international"
                         data-cta-location="mobile"
                     >
-                        <span>International Package শুরু করুন</span>
+                        <span data-en="Get Started with International Package" data-bn="International Package শুরু করুন">Get Started with International Package</span>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                         </svg>
@@ -287,21 +287,23 @@
                             data-package-price="550000"
                             data-component-variant="international"
                             data-cta-location="mobile"
+                            aria-label="View International Package details"
                         >
-                            <span>প্যাকেজ বিস্তারিত</span>
+                            <span data-en="View Details" data-bn="প্যাকেজ বিস্তারিত">View Details</span>
                         </button>
 
                         <button 
                             type="button" 
                             @click="openCalculator('international', 550000)"
                             class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition min-h-[44px] flex items-center justify-center gap-1 text-center"
+                            aria-label="Calculate ROI"
                         >
-                            <span>🧮 ROI ক্যালকুলেটর</span>
+                            <span data-en="🧮 ROI Calculator" data-bn="🧮 ROI ক্যালকুলেটর">🧮 ROI Calculator</span>
                         </button>
                     </div>
 
-                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-0.5">
-                        স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা
+                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-0.5" data-en="Transparent Info • Clear Terms • According to Official SBL Plan" data-bn="স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা">
+                        Transparent Info • Clear Terms • According to Official SBL Plan
                     </p>
                 </div>
 

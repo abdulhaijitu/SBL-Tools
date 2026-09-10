@@ -1,4 +1,46 @@
 export function registerShell(Alpine) {
+    Alpine.store('lang', {
+        current: (typeof localStorage !== 'undefined' && localStorage.getItem('sbl_lang')) || 'en',
+        init() {
+            this.apply(this.current);
+        },
+        toggle() {
+            const next = this.current === 'en' ? 'bn' : 'en';
+            this.set(next);
+        },
+        set(lang) {
+            this.current = lang;
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('sbl_lang', lang);
+            }
+            this.apply(lang);
+            window.dispatchEvent(new CustomEvent('lang-changed', { detail: { lang } }));
+        },
+        apply(lang) {
+            document.documentElement.lang = lang;
+            document.documentElement.dataset.lang = lang;
+
+            document.querySelectorAll('[data-en][data-bn]').forEach(el => {
+                const text = lang === 'bn' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
+                if (text) {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        if (el.hasAttribute('placeholder')) el.placeholder = text;
+                    } else {
+                        el.textContent = text;
+                    }
+                }
+            });
+
+            document.querySelectorAll('[data-lang-content]').forEach(el => {
+                if (el.getAttribute('data-lang-content') === lang) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        }
+    });
+
     Alpine.store('currency', {
         code: document.documentElement.dataset.currency || 'USD',
         rate: Number(document.documentElement.dataset.exchangeRate) || 120,
@@ -32,6 +74,9 @@ export function registerShell(Alpine) {
         init() {
             this.viewportListener = () => { this.isMobile = window.innerWidth < 1024; if (!this.isMobile) this.sidebarOpen = false; };
             window.addEventListener('resize', this.viewportListener);
+            this.$nextTick(() => {
+                if (Alpine.store('lang')) Alpine.store('lang').init();
+            });
         },
         destroy() { window.removeEventListener('resize', this.viewportListener); },
         sidebarOpen: false, quickActionOpen: false, toasts: [],

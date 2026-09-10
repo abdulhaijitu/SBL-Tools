@@ -3,12 +3,12 @@
 @section('meta-title', 'Packages | SBL Marketing')
 @section('page-title', 'Packages')
 @section('page-subtitle', 'SBL Membership & Dropshipping Packages')
-@section('meta-description', 'SBL Marketing-এর Membership ও Dropshipping package, সুবিধা, service details, ownership note এবং প্যাকেজ বিস্তারিত এক জায়গায় দেখুন।')
+@section('meta-description', 'View SBL Marketing Membership & Dropshipping packages, benefits, service details, and ownership terms in one place.')
 
 @section('content')
 <div class="space-y-6">
 
-        <!-- SBL MEMBERSHIP PACKAGES (Starter ৳১০,০০০, National ৳১,২০,০০০, International ৳৫,৫০,০০০) -->
+        <!-- SBL MEMBERSHIP PACKAGES (Starter 10,000 BDT, National 120,000 BDT, International 550,000 BDT) -->
         @include('toolkit.partials.membership-package')
 
         <!-- Additional Supporting Sections (Market comparison & 6-month growth) -->

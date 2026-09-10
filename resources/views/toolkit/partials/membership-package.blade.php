@@ -174,9 +174,9 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold tracking-wider uppercase bg-[#FDEDE7] text-[#AB2925] border border-[#FDEDE7]">
                         SBL PACKAGES
                     </span>
-                    <span class="text-xs font-bold text-slate-800">অফিসিয়াল ৩টি বিজনেস প্যাকেজ</span>
+                    <span class="text-xs font-bold text-slate-800" data-en="Official 3 Business Packages" data-bn="অফিসিয়াল ৩টি বিজনেস প্যাকেজ">Official 3 Business Packages</span>
                 </div>
-                <p class="text-xs text-slate-500">আপনার প্রয়োজন ও বিনিয়োগ বাজেট অনুযায়ী উপযুক্ত প্যাকেজটি নির্বাচন করুন</p>
+                <p class="text-xs text-slate-500" data-en="Select the package suitable for your requirements and investment budget" data-bn="আপনার প্রয়োজন ও বিনিয়োগ বাজেট অনুযায়ী উপযুক্ত প্যাকেজটি নির্বাচন করুন">Select the package suitable for your requirements and investment budget</p>
             </div>
             
             <!-- Switcher Tabs -->
@@ -186,9 +186,9 @@
                     @click="selectedTier = 'all'"
                     :class="selectedTier === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                     class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
-                    aria-label="সকল প্যাকেজ দেখুন"
+                    aria-label="View all packages"
                 >
-                    <span>সকল প্যাকেজ (৩টি)</span>
+                    <span data-en="All Packages (3)" data-bn="সকল প্যাকেজ (৩টি)">All Packages (3)</span>
                 </button>
 
                 <button 
@@ -196,10 +196,10 @@
                     @click="selectedTier = 'starter'"
                     :class="selectedTier === 'starter' ? 'bg-white text-[#AB2925] shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                     class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
-                    aria-label="Starter প্যাকেজ (৳১০,০০০)"
+                    aria-label="Starter Package (10,000 BDT)"
                 >
                     <span class="w-2 h-2 rounded-full bg-[#AB2925]"></span>
-                    <span>Starter (৳১০,০০০)</span>
+                    <span data-en="Starter (৳10,000)" data-bn="Starter (৳১০,০০০)">Starter (৳10,000)</span>
                 </button>
 
                 <button 
@@ -207,10 +207,10 @@
                     @click="selectedTier = 'national'"
                     :class="selectedTier === 'national' ? 'bg-white text-[#C2410C] shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                     class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
-                    aria-label="National প্যাকেজ (৳১,২০,০০০)"
+                    aria-label="National Package (120,000 BDT)"
                 >
                     <span class="w-2 h-2 rounded-full bg-[#C2410C]"></span>
-                    <span>National (৳১,২০,০০০)</span>
+                    <span data-en="National (৳120,000)" data-bn="National (৳১,২০,০০০)">National (৳120,000)</span>
                 </button>
 
                 <button 
@@ -218,10 +218,10 @@
                     @click="selectedTier = 'international'"
                     :class="selectedTier === 'international' ? 'bg-white text-amber-800 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
                     class="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[36px]"
-                    aria-label="International প্যাকেজ (৳৫,৫০,০০০)"
+                    aria-label="International Package (550,000 BDT)"
                 >
                     <span class="w-2 h-2 rounded-full bg-amber-600"></span>
-                    <span>International (৳৫,৫০,০০০)</span>
+                    <span data-en="International (৳550,000)" data-bn="International (৳৫,৫০,০০০)">International (৳550,000)</span>
                 </button>
             </div>
         </div>
@@ -230,38 +230,38 @@
     <!-- PACKAGES RENDERING CONTAINER -->
     <div class="space-y-6 sm:space-y-8">
         
-        <!-- 1. STARTER MEMBERSHIP PACKAGE (৳১০,০০০) -->
+        <!-- 1. STARTER MEMBERSHIP PACKAGE (৳10,000) -->
         <div x-show="selectedTier === 'all' || selectedTier === 'starter'" x-cloak>
             <div class="mb-2.5 flex items-center justify-between" x-show="selectedTier === 'all'">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-black uppercase tracking-wider text-[#AB2925]">প্যাকেজ ১</span>
-                    <span class="text-xs font-bold text-slate-800">• এন্ট্রি লেভেল অ্যাফিলিয়েট ও নেটওয়ার্ক মেম্বারশিপ</span>
+                    <span class="text-xs font-black uppercase tracking-wider text-[#AB2925]" data-en="PACKAGE 1" data-bn="প্যাকেজ ১">PACKAGE 1</span>
+                    <span class="text-xs font-bold text-slate-800" data-en="• Entry Level Affiliate & Network Membership" data-bn="• এন্ট্রি লেভেল অ্যাফিলিয়েট ও নেটওয়ার্ক মেম্বারশিপ">• Entry Level Affiliate & Network Membership</span>
                 </div>
-                <span class="text-xs text-slate-500 font-semibold">৳১০,০০০ BDT</span>
+                <span class="text-xs text-slate-500 font-semibold">10,000 BDT</span>
             </div>
             @include('toolkit.partials.package-variant-b')
         </div>
 
-        <!-- 2. NATIONAL DROPSHIPPING PACKAGE (৳১,২০,০০০) -->
+        <!-- 2. NATIONAL DROPSHIPPING PACKAGE (৳120,000) -->
         <div x-show="selectedTier === 'all' || selectedTier === 'national'" x-cloak>
             <div class="mb-2.5 flex items-center justify-between" x-show="selectedTier === 'all'">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-black uppercase tracking-wider text-[#C2410C]">প্যাকেজ ২</span>
-                    <span class="text-xs font-bold text-slate-800">• ন্যাশনাল ড্রপশিপিং ও শপিফাই ই-কমার্স ব্যবসা</span>
+                    <span class="text-xs font-black uppercase tracking-wider text-[#C2410C]" data-en="PACKAGE 2" data-bn="প্যাকেজ ২">PACKAGE 2</span>
+                    <span class="text-xs font-bold text-slate-800" data-en="• National Dropshipping & Shopify E-Commerce Business" data-bn="• ন্যাশনাল ড্রপশিপিং ও শপিফাই ই-কমার্স ব্যবসা">• National Dropshipping & Shopify E-Commerce Business</span>
                 </div>
-                <span class="text-xs text-slate-500 font-semibold">৳১,২০,০০০ BDT (100 BV)</span>
+                <span class="text-xs text-slate-500 font-semibold">120,000 BDT (100 BV)</span>
             </div>
             @include('toolkit.partials.package-national')
         </div>
 
-        <!-- 3. INTERNATIONAL DROPSHIPPING PACKAGE (৳৫,৫০,০০০) -->
+        <!-- 3. INTERNATIONAL DROPSHIPPING PACKAGE (৳550,000) -->
         <div x-show="selectedTier === 'all' || selectedTier === 'international'" x-cloak>
             <div class="mb-2.5 flex items-center justify-between" x-show="selectedTier === 'all'">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-black uppercase tracking-wider text-amber-800">প্যাকেজ ৩</span>
-                    <span class="text-xs font-bold text-slate-800">• আন্তর্জাতিক ড্রপশিপিং ও গ্লোবাল প্রজেক্ট ম্যানেজমেন্ট</span>
+                    <span class="text-xs font-black uppercase tracking-wider text-amber-800" data-en="PACKAGE 3" data-bn="প্যাকেজ ৩">PACKAGE 3</span>
+                    <span class="text-xs font-bold text-slate-800" data-en="• International Dropshipping & Global Project Management" data-bn="• আন্তর্জাতিক ড্রপশিপিং ও গ্লোবাল প্রজেক্ট ম্যানেজমেন্ট">• International Dropshipping & Global Project Management</span>
                 </div>
-                <span class="text-xs text-slate-500 font-semibold">৳৫,৫০,০০০ BDT (500 BV)</span>
+                <span class="text-xs text-slate-500 font-semibold">550,000 BDT (500 BV)</span>
             </div>
             @include('toolkit.partials.package-international')
         </div>

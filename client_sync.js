@@ -1413,6 +1413,7 @@
                     (DATA.sources && DATA.sources[lead.lead_source_id]) ||
                     "Direct";
                 const score = lead.score || 25;
+                const temp = (lead.temperature || "warm").toUpperCase();
                 let cleanWhatsapp = (
                     lead.whatsapp ||
                     lead.mobile ||
@@ -1454,6 +1455,11 @@
                 );
                 if (stageBadge) stageBadge.textContent = stageLabel;
 
+                const tempBadge = document.getElementById(
+                    "lead-show-temp-badge",
+                );
+                if (tempBadge) tempBadge.textContent = temp;
+
                 const mobileBtn = document.getElementById(
                     "lead-show-mobile-btn",
                 );
@@ -1475,6 +1481,8 @@
                     "lead-show-location-text",
                 );
                 if (locBox && locTxt) {
+                    if (lead.location) {
+                        locTxt.textContent = lead.location;
                     const loc = (lead.location || "").trim();
                     const isValidLoc =
                         loc &&
@@ -1488,6 +1496,14 @@
                         locBox.style.display = "none";
                     }
                 }
+
+                const scoreTxt = document.getElementById(
+                    "lead-show-score-text",
+                );
+                if (scoreTxt) scoreTxt.textContent = score + " / 100";
+
+                const scoreBar = document.getElementById("lead-show-score-bar");
+                if (scoreBar) scoreBar.style.width = score + "%";
 
                 const sourceTxt = document.getElementById(
                     "lead-show-source-text",
@@ -2948,122 +2964,144 @@
             curPath === "/presentations" ||
             curPath.startsWith("/presentations?")
         ) {
-            if (
-                DATA.deletedPresentations &&
-                DATA.deletedPresentations.length > 0
-            ) {
-                DATA.deletedPresentations.forEach(function (id) {
-                    document
-                        .querySelectorAll('[data-presentation-id="' + id + '"]')
-                        .forEach(function (el) {
-                            el.remove();
-                        });
+            const presGrid = document.querySelector(
+                'div[class*="grid-cols-1"][class*="lg:grid-cols-3"]',
+            );
+            if (DATA.presentations && Array.isArray(DATA.presentations)) {
+                const livePresMap = new Map();
+                DATA.presentations.forEach(function (p) {
+                    livePresMap.set(String(p.id), p);
                 });
-            }
-            if (DATA.presentations && DATA.presentations.length > 0) {
-                const presGrid = document.querySelector(
-                    'div[class*="grid-cols-1"][class*="lg:grid-cols-3"]',
-                );
-                const emptyNotice = document.querySelector(
-                    ".empty-presentations-notice, .col-span-full",
-                );
-                if (emptyNotice) {
-                    emptyNotice.remove();
-                }
-                if (presGrid) {
-                    DATA.presentations
-                        .slice()
-                        .reverse()
-                        .forEach(function (pres) {
-                            if (
-                                document.querySelector(
-                                    '[data-presentation-id="' + pres.id + '"]',
+
+                // Remove any cards that are not in live presentations
+                document
+                    .querySelectorAll("[data-presentation-id]")
+                    .forEach(function (el) {
+                        const pid = el.getAttribute("data-presentation-id");
+                        if (!livePresMap.has(pid)) {
+                            el.remove();
+                        }
+                    });
+
+                // Update total count
+                const totalEl = document.getElementById("total-presentations");
+                if (totalEl) totalEl.textContent = DATA.presentations.length;
+
+                if (DATA.presentations.length === 0) {
+                    if (presGrid && !document.querySelector(".empty-presentations-notice")) {
+                        const emptyNotice = document.createElement("div");
+                        emptyNotice.className =
+                            "col-span-full bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400 text-xs empty-presentations-notice";
+                        emptyNotice.textContent =
+                            'No presentations recorded yet. Click "Record Presentation" above to log a session.';
+                        presGrid.appendChild(emptyNotice);
+                    }
+                } else {
+                    const emptyNotice = document.querySelector(
+                        ".empty-presentations-notice",
+                    );
+                    if (emptyNotice) emptyNotice.remove();
+
+                    if (presGrid) {
+                        DATA.presentations
+                            .slice()
+                            .reverse()
+                            .forEach(function (pres) {
+                                if (
+                                    document.querySelector(
+                                        '[data-presentation-id="' + pres.id + '"]',
+                                    )
                                 )
-                            )
-                                return;
-                            const card = document.createElement("div");
-                            card.setAttribute("data-presentation-id", pres.id);
-                            card.className =
-                                "bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between bg-orange-50/10";
+                                    return;
+                                const card = document.createElement("div");
+                                card.setAttribute("data-presentation-id", pres.id);
+                                card.className =
+                                    "bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 hover:border-orange-200 transition-all flex flex-col justify-between";
 
-                            let outcomeBadge =
-                                '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">Pending</span>';
-                            if (pres.outcome) {
-                                outcomeBadge =
-                                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">' +
-                                    pres.outcome +
-                                    "</span>";
-                            }
+                                let outcomeBadge =
+                                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">Pending</span>';
+                                if (pres.outcome) {
+                                    outcomeBadge =
+                                        '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">' +
+                                        escapeHtml(pres.outcome) +
+                                        "</span>";
+                                }
 
-                            let leadBox = "";
-                            if (
-                                pres.lead_id &&
-                                (pres.lead_name || pres.lead_mobile)
-                            ) {
-                                leadBox =
-                                    '<div class="text-xs text-slate-600 mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100"><span class="text-slate-400 block text-[10px] uppercase font-semibold">Lead:</span><a href="/leads/' +
-                                    pres.lead_id +
-                                    '" class="font-bold text-orange-600 hover:underline">' +
-                                    (pres.lead_name ||
-                                        "Lead #" + pres.lead_id) +
-                                    "</a>" +
-                                    (pres.lead_mobile
-                                        ? '<span class="text-slate-500 text-[11px] block">📞 ' +
-                                          pres.lead_mobile +
-                                          "</span>"
-                                        : "") +
-                                    "</div>";
-                            }
+                                let leadBox = "";
+                                if (
+                                    pres.lead_id &&
+                                    (pres.lead_name || pres.lead_mobile)
+                                ) {
+                                    leadBox =
+                                        '<div class="text-xs text-slate-600 mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100"><span class="text-slate-400 block text-[10px] uppercase font-semibold">Lead:</span><a href="/leads/' +
+                                        pres.lead_id +
+                                        '" class="font-bold text-orange-600 hover:underline">' +
+                                        escapeHtml(
+                                            pres.lead_name ||
+                                                "Lead #" + pres.lead_id,
+                                        ) +
+                                        "</a>" +
+                                        (pres.lead_mobile
+                                            ? '<span class="text-slate-500 text-[11px] block">📞 ' +
+                                              escapeHtml(pres.lead_mobile) +
+                                              "</span>"
+                                            : "") +
+                                        "</div>";
+                                }
 
-                            let qaBox = "";
-                            if (pres.questions || pres.objections) {
-                                qaBox =
-                                    '<div class="mt-3 space-y-1 text-xs text-slate-600">' +
-                                    (pres.questions
-                                        ? '<div><strong class="text-slate-800">Q:</strong> ' +
-                                          pres.questions +
-                                          "</div>"
-                                        : "") +
-                                    (pres.objections
-                                        ? '<div><strong class="text-rose-700">Objection:</strong> ' +
-                                          pres.objections +
-                                          "</div>"
-                                        : "") +
-                                    "</div>";
-                            }
+                                let qaBox = "";
+                                if (pres.questions || pres.objections) {
+                                    qaBox =
+                                        '<div class="mt-3 space-y-1 text-xs text-slate-600">' +
+                                        (pres.questions
+                                            ? '<div><strong class="text-slate-800">Q:</strong> ' +
+                                              escapeHtml(pres.questions) +
+                                              "</div>"
+                                            : "") +
+                                        (pres.objections
+                                            ? '<div><strong class="text-rose-700">Objection:</strong> ' +
+                                              escapeHtml(pres.objections) +
+                                              "</div>"
+                                            : "") +
+                                        "</div>";
+                                }
 
-                            const dtStr = pres.date_time
-                                ? new Date(pres.date_time).toLocaleString(
-                                      "en-US",
-                                      {
-                                          day: "2-digit",
-                                          month: "short",
-                                          year: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                      },
-                                  )
-                                : "Scheduled";
+                                const dtStr = pres.date_time
+                                    ? new Date(pres.date_time).toLocaleString(
+                                          "en-US",
+                                          {
+                                              day: "2-digit",
+                                              month: "short",
+                                              year: "numeric",
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                          },
+                                      )
+                                    : "Scheduled";
 
-                            card.innerHTML =
-                                '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">' +
-                                (pres.type || "1-on-1") +
-                                "</span>" +
-                                outcomeBadge +
-                                '</div><h4 class="font-bold text-sm text-slate-900 mb-1">' +
-                                (pres.topic || "SBL Ecosystem Presentation") +
-                                "</h4>" +
-                                leadBox +
-                                qaBox +
-                                '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>' +
-                                dtStr +
-                                '</span><div class="flex items-center gap-2"><span>By ' +
-                                (pres.user_name || "Admin") +
-                                '</span><form action="/presentations/' +
-                                pres.id +
-                                '" method="POST" onsubmit="return confirm(&quot;Delete presentation record?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1 text-slate-400 hover:text-rose-600" title="Delete Presentation">🗑️</button></form></div></div>';
-                            presGrid.prepend(card);
-                        });
+                                card.innerHTML =
+                                    '<div><div class="flex items-center justify-between gap-2 mb-2"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">' +
+                                    escapeHtml(pres.type || "1-on-1") +
+                                    "</span>" +
+                                    outcomeBadge +
+                                    '</div><h4 class="font-bold text-sm text-slate-900 mb-1">' +
+                                    escapeHtml(
+                                        pres.topic ||
+                                            "SBL Ecosystem Presentation",
+                                    ) +
+                                    "</h4>" +
+                                    leadBox +
+                                    qaBox +
+                                    '</div><div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>' +
+                                    dtStr +
+                                    '</span><div class="flex items-center gap-2"><span>By ' +
+                                    escapeHtml(pres.user_name || "Admin") +
+                                    '</span><form action="/presentations/' +
+                                    pres.id +
+                                    '" method="POST" onsubmit="return confirm(&quot;Delete presentation record?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors" title="Delete Presentation"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></form></div></div>';
+                                presGrid.prepend(card);
+                            });
+                    }
                 }
             }
         }
@@ -3381,15 +3419,38 @@
         } catch (e) {}
     }
 
+    function applyLanguage() {
+        try {
+            const lang = localStorage.getItem("sbl_lang") || "en";
+            document.documentElement.lang = lang;
+            document.documentElement.dataset.lang = lang;
+            document.querySelectorAll("[data-en][data-bn]").forEach(function(el) {
+                const text = lang === "bn" ? el.getAttribute("data-bn") : el.getAttribute("data-en");
+                if (text !== null && text !== undefined) {
+                    el.textContent = text;
+                }
+            });
+            document.querySelectorAll("[data-lang-content]").forEach(function(el) {
+                el.style.display = el.getAttribute("data-lang-content") === lang ? "" : "none";
+            });
+        } catch (e) {}
+    }
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function () {
+            applyLanguage();
             runSync();
             checkLeadSavedToast();
         });
     } else {
+        applyLanguage();
         runSync();
         checkLeadSavedToast();
     }
+
+    window.addEventListener("lang-changed", function() {
+        applyLanguage();
+    });
 
     // Re-sync dropdowns whenever user clicks to open any modal
     document.addEventListener("click", function () {

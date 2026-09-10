@@ -36,10 +36,10 @@
                     <!-- Price Block -->
                     <div class="p-4 bg-[#FFF7F3] rounded-2xl border border-[#FDEDE7]">
                         <div class="flex items-baseline gap-2">
-                            <span class="text-3xl sm:text-4xl font-extrabold text-[#111827] tracking-tight">৳১০,০০০</span>
+                            <span class="text-3xl sm:text-4xl font-extrabold text-[#111827] tracking-tight">৳10,000</span>
                             <span class="text-xs font-bold uppercase tracking-wider text-[#6B7280]">BDT</span>
                         </div>
-                        <p class="text-xs font-bold uppercase tracking-wider text-[#AB2925] mt-1">
+                        <p class="text-xs font-bold uppercase tracking-wider text-[#AB2925] mt-1" data-en="Membership Activation" data-bn="মেম্বারশিপ অ্যাক্টিভেশন">
                             Membership Activation
                         </p>
                     </div>
@@ -49,14 +49,14 @@
                         <h3 id="pkg-title-b" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111827]">
                             SBL Membership Package
                         </h3>
-                        <p class="text-sm font-semibold text-[#C2410C] mt-1">
-                            SBL Ecosystem-এ আপনার শুরু
+                        <p class="text-sm font-semibold text-[#C2410C] mt-1" data-en="Your Gateway to SBL Ecosystem" data-bn="SBL Ecosystem-এ আপনার শুরু">
+                            Your Gateway to SBL Ecosystem
                         </p>
                     </div>
 
                     <!-- Description -->
-                    <p class="text-xs sm:text-sm text-[#374151] leading-relaxed">
-                        SBL Ecosystem-এর Affiliate ও Network কার্যক্রম শুরু করার জন্য entry-level membership package।
+                    <p class="text-xs sm:text-sm text-[#374151] leading-relaxed" data-en="Entry-level membership package to start Affiliate and Network activities within the SBL Ecosystem." data-bn="SBL Ecosystem-এর Affiliate ও Network কার্যক্রম শুরু করার জন্য entry-level membership package।">
+                        Entry-level membership package to start Affiliate and Network activities within the SBL Ecosystem.
                     </p>
                 </div>
 
@@ -75,7 +75,7 @@
                         data-component-variant="feature"
                         data-cta-location="card"
                     >
-                        <span>Membership শুরু করুন</span>
+                        <span data-en="Get Started with Membership" data-bn="Membership শুরু করুন">Get Started with Membership</span>
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                         </svg>
@@ -92,9 +92,9 @@
                             data-package-price="10000"
                             data-component-variant="feature"
                             data-cta-location="card"
-                            aria-label="প্যাকেজের বিস্তারিত দেখুন"
+                            aria-label="View SBL Membership Package details"
                         >
-                            <span>প্যাকেজের বিস্তারিত দেখুন</span>
+                            <span data-en="View Package Details" data-bn="প্যাকেজের বিস্তারিত দেখুন">View Package Details</span>
                         </button>
 
                         <button 
@@ -107,15 +107,15 @@
                             data-package-price="10000"
                             data-component-variant="feature"
                             data-cta-location="card"
-                            aria-label="শর্ত ও প্ল্যান দেখুন"
+                            aria-label="View Terms & Plan"
                         >
-                            <span>শর্ত ও প্ল্যান দেখুন</span>
+                            <span data-en="View Terms & Plan" data-bn="শর্ত ও প্ল্যান দেখুন">View Terms & Plan</span>
                         </button>
                     </div>
 
                     <!-- Trust Note (Desktop) -->
-                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1">
-                        স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা
+                    <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1" data-en="Transparent Info • Clear Terms • According to Official SBL Plan" data-bn="স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা">
+                        Transparent Info • Clear Terms • According to Official SBL Plan
                     </p>
                 </div>
 
@@ -125,8 +125,8 @@
             <div class="lg:w-7/12 flex flex-col justify-between space-y-5">
                 <div>
                     <div class="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-                        <h4 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#111827]">
-                            অন্তর্ভুক্ত ৮টি প্রধান সুবিধা
+                        <h4 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#111827]" data-en="8 Core Included Features" data-bn="অন্তর্ভুক্ত ৮টি প্রধান সুবিধা">
+                            8 Core Included Features
                         </h4>
                         <span class="text-xs font-semibold text-[#AB2925] bg-[#FDEDE7] px-2 py-0.5 rounded-md">
                             8 Core Features
@@ -144,7 +144,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Facebook Page Setup Support</strong>
-                                <span class="text-[11px] text-[#6B7280]">পেজ ক্রিয়েশন ও কনফিগারেশন সাপোর্ট</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Page creation and configuration support" data-bn="পেজ ক্রিয়েশন ও কনফিগারেশন সাপোর্ট">Page creation and configuration support</span>
                             </div>
                         </li>
 
@@ -157,7 +157,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Affiliate Account Setup</strong>
-                                <span class="text-[11px] text-[#6B7280]">অ্যাফিলিয়েট অ্যাকাউন্ট অ্যাক্টিভেশন</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Affiliate account activation" data-bn="অ্যাফিলিয়েট অ্যাকাউন্ট অ্যাক্টিভেশন">Affiliate account activation</span>
                             </div>
                         </li>
 
@@ -169,8 +169,8 @@
                                 </svg>
                             </div>
                             <div>
-                                <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Unlimited Sponsor সুবিধা</strong>
-                                <span class="text-[11px] text-[#6B7280]">সীমাহীন রেফারেল স্পন্সরশিপ</span>
+                                <strong class="text-xs sm:text-sm font-bold text-[#111827] block" data-en="Unlimited Sponsor Feature" data-bn="Unlimited Sponsor সুবিধা">Unlimited Sponsor Feature</strong>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Uncapped direct referral sponsorship privileges" data-bn="সীমাহীন রেফারেল স্পন্সরশিপ">Uncapped direct referral sponsorship privileges</span>
                             </div>
                         </li>
 
@@ -183,7 +183,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Content Support</strong>
-                                <span class="text-[11px] text-[#6B7280]">প্রচারের জন্য ডিজিটাল কনটেন্ট</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Digital marketing creatives and promotional assets" data-bn="প্রচারের জন্য ডিজিটাল কনটেন্ট">Digital marketing creatives and promotional assets</span>
                             </div>
                         </li>
 
@@ -196,7 +196,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Spot Commission Plan Access</strong>
-                                <span class="text-[11px] text-[#6B7280]">১০% স্পট কমিশন প্ল্যান অ্যাক্সেস</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="10% spot commission plan access" data-bn="১০% স্পট কমিশন প্ল্যান অ্যাক্সেস">10% spot commission plan access</span>
                             </div>
                         </li>
 
@@ -209,7 +209,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Referral Return Plan Access</strong>
-                                <span class="text-[11px] text-[#6B7280]">১০০ সপ্তাহের রিটার্ন প্ল্যান অ্যাক্সেস</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="100 weeks return plan access" data-bn="১০০ সপ্তাহের রিটার্ন প্ল্যান অ্যাক্সেস">100 weeks return plan access</span>
                             </div>
                         </li>
 
@@ -221,8 +221,8 @@
                                 </svg>
                             </div>
                             <div>
-                                <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Pair Reward ও UDR Eligibility</strong>
-                                <span class="text-[11px] text-[#6B7280]">পেয়ার বোনাস ও ৫% UDR কমিশন যোগ্যতা</span>
+                                <strong class="text-xs sm:text-sm font-bold text-[#111827] block" data-en="Pair Reward & UDR Eligibility" data-bn="Pair Reward ও UDR Eligibility">Pair Reward & UDR Eligibility</strong>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Binary pair reward & 5% UDR commission qualification" data-bn="পেয়ার বোনাস ও ৫% UDR কমিশন যোগ্যতা">Binary pair reward & 5% UDR commission qualification</span>
                             </div>
                         </li>
 
@@ -235,7 +235,7 @@
                             </div>
                             <div>
                                 <strong class="text-xs sm:text-sm font-bold text-[#111827] block">Rank Reward Plan Access</strong>
-                                <span class="text-[11px] text-[#6B7280]">অফিশিয়াল র‍্যাঙ্ক অ্যাচিভমেন্ট ইনসেনটিভ</span>
+                                <span class="text-[11px] text-[#6B7280]" data-en="Official rank achievement incentives and bonuses" data-bn="অফিশিয়াল র‍্যাঙ্ক অ্যাচিভমেন্ট ইনসেনটিভ">Official rank achievement incentives and bonuses</span>
                             </div>
                         </li>
                     </ul>
@@ -247,10 +247,10 @@
                         <svg class="w-4 h-4 text-[#AB2925] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>মালিকানা ও অ্যাক্সেস স্পষ্টীকরণ:</span>
+                        <span data-en="Ownership & Access Policy:" data-bn="মালিকানা ও অ্যাক্সেস স্পষ্টীকরণ:">Ownership & Access Policy:</span>
                     </div>
-                    <p class="leading-relaxed">
-                        Membership-এর অধীনে তৈরি account/page-এর ownership ও access SBL-এর প্রযোজ্য official policy অনুযায়ী নির্ধারিত হবে।
+                    <p class="leading-relaxed" data-en="Ownership and access of accounts and pages created under membership are governed by official SBL policy." data-bn="Membership-এর অধীনে তৈরি account/page-এর ownership ও access SBL-এর প্রযোজ্য official policy অনুযায়ী নির্ধারিত হবে।">
+                        Ownership and access of accounts and pages created under membership are governed by official SBL policy.
                     </p>
                 </div>
             </div>
@@ -272,7 +272,7 @@
                 data-component-variant="feature"
                 data-cta-location="card"
             >
-                <span>Membership শুরু করুন</span>
+                <span data-en="Get Started with Membership" data-bn="Membership শুরু করুন">Get Started with Membership</span>
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
                 </svg>
@@ -289,9 +289,9 @@
                     data-package-price="10000"
                     data-component-variant="feature"
                     data-cta-location="card"
-                    aria-label="প্যাকেজের বিস্তারিত দেখুন"
+                    aria-label="View SBL Membership Package details"
                 >
-                    <span>প্যাকেজের বিস্তারিত দেখুন</span>
+                    <span data-en="View Details" data-bn="প্যাকেজ বিস্তারিত">View Details</span>
                 </button>
 
                 <button 
@@ -304,15 +304,15 @@
                     data-package-price="10000"
                     data-component-variant="feature"
                     data-cta-location="card"
-                    aria-label="শর্ত ও প্ল্যান দেখুন"
+                    aria-label="View Terms & Plan"
                 >
-                    <span>শর্ত ও প্ল্যান দেখুন</span>
+                    <span data-en="View Terms" data-bn="শর্ত দেখুন">View Terms</span>
                 </button>
             </div>
 
             <!-- Trust Note (Mobile) -->
-            <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1">
-                স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা
+            <p class="text-[11px] text-[#6B7280] text-center font-medium pt-1" data-en="Transparent Info • Clear Terms • According to Official SBL Plan" data-bn="স্বচ্ছ তথ্য • পরিষ্কার শর্ত • Official SBL plan অনুযায়ী সুবিধা">
+                Transparent Info • Clear Terms • According to Official SBL Plan
             </p>
         </div>
 

@@ -50,6 +50,11 @@
                 <select id="display-currency" class="currency-select" :value="$store.currency.code" :disabled="$store.currency.busy" @change="$store.currency.set($event.target.value)" title="Display Currency (Fixed baseline: 1 USD = 120 BDT)">
                     <option value="USD">USD ($)</option><option value="BDT">BDT (৳120/$)</option>
                 </select>
+                <button type="button" @click="$store.lang && $store.lang.toggle()" class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-colors" title="Toggle Language (English / বাংলা)">
+                    <span :class="(!$store.lang || $store.lang.current === 'en') ? 'text-orange-600 font-bold' : 'text-slate-400'">EN</span>
+                    <span class="text-slate-300">/</span>
+                    <span :class="($store.lang && $store.lang.current === 'bn') ? 'text-orange-600 font-bold' : 'text-slate-400'">বাং</span>
+                </button>
                 @can('leads.create')<a href="{{ route('leads.create') }}" class="btn-primary hidden sm:inline-flex"><x-ui-icon name="plus" /> New lead</a>@endcan
                 <a href="{{ route('profile.edit') }}" class="profile-avatar" aria-label="Your profile">{{ mb_substr(Auth::user()->name, 0, 1) }}</a>
             </div>
