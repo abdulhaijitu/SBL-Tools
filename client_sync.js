@@ -1116,7 +1116,10 @@
                     lead.mobile ||
                     ""
                 ).replace(/[^\d]/g, "");
-                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                if (
+                    cleanWhatsapp.startsWith("01") &&
+                    cleanWhatsapp.length === 11
+                ) {
                     cleanWhatsapp = "88" + cleanWhatsapp;
                 }
 
@@ -1410,12 +1413,14 @@
                     (DATA.sources && DATA.sources[lead.lead_source_id]) ||
                     "Direct";
                 const score = lead.score || 25;
-                const temp = (lead.temperature || "warm").toUpperCase();
-                const cleanWhatsapp = (
+                let cleanWhatsapp = (
                     lead.whatsapp ||
                     lead.mobile ||
                     ""
                 ).replace(/[^0-9]/g, "");
+                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                    cleanWhatsapp = "88" + cleanWhatsapp;
+                }
 
                 document.title = lead.name + " - SBL Growth Manager";
 
@@ -1449,11 +1454,6 @@
                 );
                 if (stageBadge) stageBadge.textContent = stageLabel;
 
-                const tempBadge = document.getElementById(
-                    "lead-show-temp-badge",
-                );
-                if (tempBadge) tempBadge.textContent = temp;
-
                 const mobileBtn = document.getElementById(
                     "lead-show-mobile-btn",
                 );
@@ -1475,21 +1475,19 @@
                     "lead-show-location-text",
                 );
                 if (locBox && locTxt) {
-                    if (lead.location) {
-                        locTxt.textContent = lead.location;
+                    const loc = (lead.location || "").trim();
+                    const isValidLoc =
+                        loc &&
+                        !loc.startsWith("http://") &&
+                        !loc.startsWith("https://") &&
+                        !loc.includes("/leads/");
+                    if (isValidLoc) {
+                        locTxt.textContent = loc;
                         locBox.style.display = "";
                     } else {
                         locBox.style.display = "none";
                     }
                 }
-
-                const scoreTxt = document.getElementById(
-                    "lead-show-score-text",
-                );
-                if (scoreTxt) scoreTxt.textContent = score + " / 100";
-
-                const scoreBar = document.getElementById("lead-show-score-bar");
-                if (scoreBar) scoreBar.style.width = score + "%";
 
                 const sourceTxt = document.getElementById(
                     "lead-show-source-text",

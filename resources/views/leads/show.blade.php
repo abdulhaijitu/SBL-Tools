@@ -29,34 +29,33 @@
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 id="lead-show-name" class="text-xl font-bold text-slate-900">{{ $lead->name }}</h2>
-                        <span id="lead-show-id" class="text-sm font-mono text-slate-400 font-normal">#{{ $lead->id }}</span>
+                        <span id="lead-show-id" class="text-xs font-mono text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md">#{{ $lead->id }}</span>
                         <span id="lead-show-stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $lead->stage->badgeClasses() }}">
                             {{ $lead->stage->label() }}
                         </span>
-                        <span id="lead-show-temp-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border {{ $lead->temperature->badgeClasses() }}">
-                            {{ $lead->temperature->label() }}
-                        </span>
-                        @if ($lead->lead_tag)
-                            <span class="px-2 py-0.5 rounded bg-orange-100 text-orange-800 text-xs font-bold">
-                                {{ $lead->lead_tag }}
-                            </span>
-                        @endif
                     </div>
 
-                    <div class="text-xs text-slate-500 mt-2 flex flex-wrap items-center gap-2">
-                        <a id="lead-show-mobile-btn" href="tel:{{ $lead->mobile }}" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 active:scale-95 transition-all">
-                            <span>📞</span> <span id="lead-show-mobile-text">{{ $lead->mobile }}</span>
+                    <div class="text-xs text-slate-500 mt-2.5 flex flex-wrap items-center gap-2">
+                        <a id="lead-show-mobile-btn" href="tel:{{ $lead->mobile }}" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 border border-emerald-200/80 active:scale-95 transition-all shadow-2xs">
+                            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>
+                            <span id="lead-show-mobile-text">{{ $lead->mobile }}</span>
                         </a>
-                        <a id="lead-show-wa-btn" href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all">
-                            <span>💬</span> WhatsApp
+                        <a id="lead-show-wa-btn" href="https://wa.me/{{ \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile) }}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition-all">
+                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>
+                            <span>WhatsApp</span>
                         </a>
                         @if ($lead->facebook_url)
-                            <a id="lead-show-fb-link" href="{{ $lead->facebook_url }}" target="_blank" class="px-2.5 py-1.5 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium text-xs flex items-center gap-1">
-                                <span>🌐</span> FB
+                            <a id="lead-show-fb-link" href="{{ $lead->facebook_url }}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium text-xs flex items-center gap-1 active:scale-95 transition-all">
+                                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                <span>Facebook</span>
                             </a>
                         @endif
-                        <span id="lead-show-location-container" class="flex items-center gap-1 text-slate-500 text-xs py-1 px-1" @if(!$lead->location) style="display: none;" @endif>
-                            <span>📍</span> <span id="lead-show-location-text">{{ $lead->location }}</span>
+                        @php
+                            $validLocation = $lead->location && !str_starts_with($lead->location, 'http://') && !str_starts_with($lead->location, 'https://') && !str_contains($lead->location, '/leads/');
+                        @endphp
+                        <span id="lead-show-location-container" class="flex items-center gap-1 text-slate-500 text-xs py-1 px-1.5 bg-slate-50 border border-slate-100 rounded-lg" @if(!$validLocation) style="display: none;" @endif>
+                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span id="lead-show-location-text">{{ $validLocation ? $lead->location : '' }}</span>
                         </span>
                     </div>
                 </div>
@@ -100,42 +99,32 @@
         </div>
 
         <!-- Meta Snapshot Bar -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
-            <div>
-                <span class="text-slate-400 block text-[11px] uppercase tracking-wider font-semibold">Lead Score</span>
-                <div class="text-slate-900 font-bold text-sm mt-0.5 flex items-center gap-2">
-                    <span id="lead-show-score-text">{{ $lead->score }} / 100</span>
-                    <div class="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div id="lead-show-score-bar" class="h-full bg-orange-500 rounded-full" style="width: {{ $lead->score }}%"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-xs">
+            <div class="p-3 bg-slate-50/70 rounded-xl border border-slate-100">
                 <span class="text-slate-400 block text-[11px] uppercase tracking-wider font-semibold">Lead Source</span>
-                <span id="lead-show-source-text" class="text-slate-800 font-semibold text-sm mt-0.5 block">{{ $lead->source->name ?? 'N/A' }}</span>
+                <span id="lead-show-source-text" class="text-slate-800 font-bold text-sm mt-0.5 block">{{ $lead->source->name ?? 'Direct' }}</span>
             </div>
 
-            <div>
+            <div class="p-3 bg-slate-50/70 rounded-xl border border-slate-100">
                 <span class="text-slate-400 block text-[11px] uppercase tracking-wider font-semibold">Scheduled Next Action</span>
                 @if ($lead->next_action_at)
-                    <div id="lead-show-next-action-text" class="mt-0.5 {{ $lead->is_next_action_overdue ? 'text-rose-600 font-bold' : 'text-slate-800 font-semibold' }}">
+                    <div id="lead-show-next-action-text" class="mt-0.5 {{ $lead->is_next_action_overdue ? 'text-rose-600 font-bold' : 'text-slate-800 font-bold' }} text-sm">
                         {{ $lead->next_action_type ?? 'Action' }} ({{ $lead->next_action_at->format('d M, h:i A') }})
                     </div>
                 @else
-                    <span id="lead-show-next-action-text" class="text-amber-600 font-semibold text-xs mt-0.5 block">Needs Next Action</span>
+                    <span id="lead-show-next-action-text" class="text-amber-600 font-bold text-xs mt-0.5 block">Needs Next Action</span>
                 @endif
             </div>
 
-            <div>
+            <div class="p-3 bg-slate-50/70 rounded-xl border border-slate-100">
                 <span class="text-slate-400 block text-[11px] uppercase tracking-wider font-semibold">Interests</span>
-                <div id="lead-show-interests-list" class="flex flex-wrap gap-1 mt-0.5">
+                <div id="lead-show-interests-list" class="flex flex-wrap gap-1 mt-1">
                     @forelse ($lead->interests as $interest)
-                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
+                        <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-[11px] font-medium shadow-2xs">
                             {{ $interest->interest }}
                         </span>
                     @empty
-                        <span class="text-slate-400">None specified</span>
+                        <span class="text-slate-400 italic text-[11px]">None specified</span>
                     @endforelse
                 </div>
             </div>
@@ -143,29 +132,33 @@
     </div>
 
     <!-- Quick Action Bar (Section 6 & 24) -->
-    <div class="bg-slate-900 rounded-2xl p-3 shadow-md flex items-center justify-between gap-2 overflow-x-auto text-white no-scrollbar">
+    <div class="bg-slate-900 rounded-2xl p-2.5 shadow-md flex items-center justify-between gap-2 overflow-x-auto text-white no-scrollbar">
         <span class="text-xs font-bold text-orange-400 uppercase tracking-wider px-2 flex-shrink-0">Quick Action:</span>
-        <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
             <button @click="modalType = 'call'; modalTitle = 'Log Phone / WhatsApp Call'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
-                <span>📞</span> Log Call
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>
+                <span>Log Call</span>
             </button>
             <button @click="modalType = 'note'; modalTitle = 'Add Interaction Note'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
-                <span>📝</span> Add Note
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span>Add Note</span>
             </button>
             <button @click="modalType = 'presentation'; modalTitle = 'Schedule Presentation'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
-                <span>📊</span> Presentation
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                <span>Presentation</span>
             </button>
             <button @click="modalType = 'task'; modalTitle = 'Schedule Task / Follow-up'; actionModal = true" 
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5">
-                <span>⏰</span> Next Follow-up
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-orange-600 active:scale-95 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>Next Follow-up</span>
             </button>
             <a href="{{ route('toolkit.index') }}" target="_blank" 
                class="px-3 py-1.5 rounded-xl bg-orange-600/30 hover:bg-orange-600 active:scale-95 text-orange-300 hover:text-white text-xs font-semibold transition-all flex items-center gap-1.5 border border-orange-500/40">
-                <span>📖</span> Pitch Deck & Plans
-            </a>
+                <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span>Pitch Deck & Plans</span>
         </div>
     </div>
 

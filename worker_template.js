@@ -754,44 +754,89 @@ export default {
 
                 if (db) {
                     try {
-                        const name = (formData.get("name") || "").trim() || "Unnamed Lead";
+                        const name =
+                            (formData.get("name") || "").trim() ||
+                            "Unnamed Lead";
                         const mobile = (formData.get("mobile") || "").trim();
-                        const whatsapp = (formData.get("whatsapp") || "").trim() || null;
-                        const email = (formData.get("email") || "").trim() || null;
-                        const location = (formData.get("location") || "").trim() || null;
-                        const profession = (formData.get("profession_or_business") || "").trim() || null;
-                        const rawSourceId = Number(formData.get("lead_source_id")) || 1;
+                        const whatsapp =
+                            (formData.get("whatsapp") || "").trim() || null;
+                        const email =
+                            (formData.get("email") || "").trim() || null;
+                        const location =
+                            (formData.get("location") || "").trim() || null;
+                        const profession =
+                            (
+                                formData.get("profession_or_business") || ""
+                            ).trim() || null;
+                        const rawSourceId =
+                            Number(formData.get("lead_source_id")) || 1;
                         const stage = formData.get("stage") || "new";
-                        const interests = formData.getAll("interest_types[]") || [];
+                        const interests =
+                            formData.getAll("interest_types[]") || [];
                         const interestsJson = JSON.stringify(interests);
-                        const nextActionType = formData.get("next_action_type") || null;
-                        const nextActionAt = formData.get("next_action_at") || null;
+                        const nextActionType =
+                            formData.get("next_action_type") || null;
+                        const nextActionAt =
+                            formData.get("next_action_at") || null;
                         const notes = formData.get("notes") || null;
-                        const score = (interests.length > 0 ? 20 : 0) + (nextActionAt ? 15 : 0);
-                        const temperature = score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
+                        const score =
+                            (interests.length > 0 ? 20 : 0) +
+                            (nextActionAt ? 15 : 0);
+                        const temperature =
+                            score >= 50 ? "hot" : score >= 25 ? "warm" : "cold";
 
                         // Debounce duplicate submissions within 15 seconds to prevent double-click duplicates
                         try {
-                            const recentDup = await db.prepare(
-                                "SELECT id FROM leads WHERE name = ? AND mobile = ? AND datetime(created_at) >= datetime('now', '-15 seconds') LIMIT 1"
-                            ).bind(name, mobile).first();
+                            const recentDup = await db
+                                .prepare(
+                                    "SELECT id FROM leads WHERE name = ? AND mobile = ? AND datetime(created_at) >= datetime('now', '-15 seconds') LIMIT 1",
+                                )
+                                .bind(name, mobile)
+                                .first();
                             if (recentDup && recentDup.id) {
-                                console.warn(`Debounced duplicate lead submission for ${name} (${mobile}), reusing existing ID #${recentDup.id}`);
-                                const wantsJson = request.headers.get("accept")?.includes("json") || contentType.includes("json");
+                                console.warn(
+                                    `Debounced duplicate lead submission for ${name} (${mobile}), reusing existing ID #${recentDup.id}`,
+                                );
+                                const wantsJson =
+                                    request.headers
+                                        .get("accept")
+                                        ?.includes("json") ||
+                                    contentType.includes("json");
                                 if (wantsJson) {
-                                    return Response.json({ success: true, lead_id: recentDup.id, message: "Lead already created", debounced: true });
+                                    return Response.json({
+                                        success: true,
+                                        lead_id: recentDup.id,
+                                        message: "Lead already created",
+                                        debounced: true,
+                                    });
                                 }
-                                return Response.redirect(new URL("/leads?saved=1&lead_id=" + recentDup.id, request.url), 302);
+                                return Response.redirect(
+                                    new URL(
+                                        "/leads?saved=1&lead_id=" +
+                                            recentDup.id,
+                                        request.url,
+                                    ),
+                                    302,
+                                );
                             }
                         } catch (eDup) {}
 
                         // Verify owner user ID exists in DB to prevent foreign key errors
                         let safeOwnerId = currentUserId || 1;
                         try {
-                            const userCheck = await db.prepare("SELECT id FROM users WHERE id = ?").bind(safeOwnerId).first();
+                            const userCheck = await db
+                                .prepare("SELECT id FROM users WHERE id = ?")
+                                .bind(safeOwnerId)
+                                .first();
                             if (!userCheck) {
-                                const firstUser = await db.prepare("SELECT id FROM users ORDER BY id ASC LIMIT 1").first();
-                                safeOwnerId = firstUser ? Number(firstUser.id) : 1;
+                                const firstUser = await db
+                                    .prepare(
+                                        "SELECT id FROM users ORDER BY id ASC LIMIT 1",
+                                    )
+                                    .first();
+                                safeOwnerId = firstUser
+                                    ? Number(firstUser.id)
+                                    : 1;
                             }
                         } catch (e) {
                             safeOwnerId = 1;
@@ -800,10 +845,21 @@ export default {
                         // Verify source ID exists in DB to prevent foreign key errors
                         let safeSourceId = rawSourceId;
                         try {
-                            const srcCheck = await db.prepare("SELECT id FROM lead_sources WHERE id = ?").bind(safeSourceId).first();
+                            const srcCheck = await db
+                                .prepare(
+                                    "SELECT id FROM lead_sources WHERE id = ?",
+                                )
+                                .bind(safeSourceId)
+                                .first();
                             if (!srcCheck) {
-                                const firstSrc = await db.prepare("SELECT id FROM lead_sources ORDER BY id ASC LIMIT 1").first();
-                                safeSourceId = firstSrc ? Number(firstSrc.id) : 1;
+                                const firstSrc = await db
+                                    .prepare(
+                                        "SELECT id FROM lead_sources ORDER BY id ASC LIMIT 1",
+                                    )
+                                    .first();
+                                safeSourceId = firstSrc
+                                    ? Number(firstSrc.id)
+                                    : 1;
                             }
                         } catch (e) {
                             safeSourceId = 1;
@@ -811,8 +867,13 @@ export default {
 
                         // Safe Photo handling: limit size to prevent D1 row/statement limits
                         let photo = formData.get("photo") || null;
-                        if (photo && (typeof photo !== "string" || photo.length > 60000)) {
-                            console.warn("Photo payload exceeds 60KB, omitting photo to guarantee lead save");
+                        if (
+                            photo &&
+                            (typeof photo !== "string" || photo.length > 60000)
+                        ) {
+                            console.warn(
+                                "Photo payload exceeds 60KB, omitting photo to guarantee lead save",
+                            );
                             photo = null;
                         }
 
@@ -844,7 +905,10 @@ export default {
                                 .run();
                             newLeadId = insRes?.meta?.last_row_id;
                         } catch (e1) {
-                            console.error("D1 Leads Tier 1 insert error, attempting Tier 2 safe fallback:", e1);
+                            console.error(
+                                "D1 Leads Tier 1 insert error, attempting Tier 2 safe fallback:",
+                                e1,
+                            );
                             insertError = e1;
 
                             // TIER 2: Safe Fallback insert (omitting photo & secondary columns)
@@ -873,7 +937,10 @@ export default {
                                 newLeadId = fallbackRes?.meta?.last_row_id;
                                 insertError = null; // Successfully rescued and saved!
                             } catch (e2) {
-                                console.error("D1 Leads Tier 2 fallback insert error:", e2);
+                                console.error(
+                                    "D1 Leads Tier 2 fallback insert error:",
+                                    e2,
+                                );
                                 insertError = e2;
                             }
                         }
@@ -899,7 +966,10 @@ export default {
                                         )
                                         .run();
                                 } catch (taskErr) {
-                                    console.error("Non-fatal secondary task insert error:", taskErr);
+                                    console.error(
+                                        "Non-fatal secondary task insert error:",
+                                        taskErr,
+                                    );
                                 }
                             }
 
@@ -916,7 +986,10 @@ export default {
                                     )
                                     .run();
                             } catch (actErr) {
-                                console.error("Non-fatal secondary activity insert error:", actErr);
+                                console.error(
+                                    "Non-fatal secondary activity insert error:",
+                                    actErr,
+                                );
                             }
                         }
                     } catch (e) {
@@ -925,22 +998,55 @@ export default {
                     }
                 }
 
-                const wantsJson = request.headers.get("accept")?.includes("json") || contentType.includes("json");
+                const wantsJson =
+                    request.headers.get("accept")?.includes("json") ||
+                    contentType.includes("json");
                 if (wantsJson) {
                     if (newLeadId) {
-                        return Response.json({ success: true, lead_id: newLeadId, message: "Lead created successfully" });
+                        return Response.json({
+                            success: true,
+                            lead_id: newLeadId,
+                            message: "Lead created successfully",
+                        });
                     } else {
-                        return Response.json({ success: false, error: insertError ? insertError.message : "Failed to create lead" }, { status: 422 });
+                        return Response.json(
+                            {
+                                success: false,
+                                error: insertError
+                                    ? insertError.message
+                                    : "Failed to create lead",
+                            },
+                            { status: 422 },
+                        );
                     }
                 }
 
                 if (newLeadId) {
-                    return Response.redirect(new URL("/leads?saved=1&lead_id=" + newLeadId, request.url), 302);
+                    return Response.redirect(
+                        new URL(
+                            "/leads?saved=1&lead_id=" + newLeadId,
+                            request.url,
+                        ),
+                        302,
+                    );
                 } else if (insertError) {
                     // Fail-safe: Redirect back to create with explicit error message so draft is restored
-                    return Response.redirect(new URL("/leads/create?error=" + encodeURIComponent(insertError.message || "Database insert error"), request.url), 302);
+                    return Response.redirect(
+                        new URL(
+                            "/leads/create?error=" +
+                                encodeURIComponent(
+                                    insertError.message ||
+                                        "Database insert error",
+                                ),
+                            request.url,
+                        ),
+                        302,
+                    );
                 } else {
-                    return Response.redirect(new URL("/leads", request.url), 302);
+                    return Response.redirect(
+                        new URL("/leads", request.url),
+                        302,
+                    );
                 }
             }
 
@@ -1127,7 +1233,13 @@ export default {
                                     "INSERT INTO activities (lead_id, user_id, type, title, description, performed_at, created_at, updated_at) " +
                                         "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                                 )
-                                .bind(leadId, currentUserId, actType, title, description)
+                                .bind(
+                                    leadId,
+                                    currentUserId,
+                                    actType,
+                                    title,
+                                    description,
+                                )
                                 .run();
 
                             await db
@@ -2011,7 +2123,15 @@ export default {
                                 "INSERT INTO tasks (title, type, due_at, priority, notes, related_lead_id, user_id, status, created_at, updated_at) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
-                            .bind(title, type, dueAt, priority, notes, leadId, currentUserId)
+                            .bind(
+                                title,
+                                type,
+                                dueAt,
+                                priority,
+                                notes,
+                                leadId,
+                                currentUserId,
+                            )
                             .run();
 
                         if (leadId) {
@@ -2234,7 +2354,8 @@ export default {
                 }
                 const refEco = request.headers.get("Referer");
                 const ecoDest =
-                    refEco && (refEco.includes("/links") || refEco.includes("/toolkit"))
+                    refEco &&
+                    (refEco.includes("/links") || refEco.includes("/toolkit"))
                         ? "/links"
                         : "/ecosystem";
                 return Response.redirect(new URL(ecoDest, request.url), 302);
@@ -2258,7 +2379,9 @@ export default {
                     }
                     const refEcoDel = request.headers.get("Referer");
                     const ecoDestDel =
-                        refEcoDel && (refEcoDel.includes("/links") || refEcoDel.includes("/toolkit"))
+                        refEcoDel &&
+                        (refEcoDel.includes("/links") ||
+                            refEcoDel.includes("/toolkit"))
                             ? "/links"
                             : "/ecosystem";
                     return Response.redirect(
@@ -2300,7 +2423,9 @@ export default {
                     }
                     const refEcoPut = request.headers.get("Referer");
                     const ecoDestPut =
-                        refEcoPut && (refEcoPut.includes("/links") || refEcoPut.includes("/toolkit"))
+                        refEcoPut &&
+                        (refEcoPut.includes("/links") ||
+                            refEcoPut.includes("/toolkit"))
                             ? "/links"
                             : "/ecosystem";
                     return Response.redirect(
@@ -2318,14 +2443,19 @@ export default {
             ) {
                 if (db) {
                     try {
-                        const title = formData.get("title") || "Untitled Resource";
-                        const category = formData.get("category") || "Leaflets & Sheets";
+                        const title =
+                            formData.get("title") || "Untitled Resource";
+                        const category =
+                            formData.get("category") || "Leaflets & Sheets";
                         const fileType = formData.get("file_type") || "pdf";
                         const fileUrl = formData.get("file_url") || "#";
                         const fileSize = formData.get("file_size") || null;
                         const badge = formData.get("badge") || null;
                         const description = formData.get("description") || null;
-                        const sortOrder = parseInt(formData.get("sort_order") || "0", 10);
+                        const sortOrder = parseInt(
+                            formData.get("sort_order") || "0",
+                            10,
+                        );
                         const isActive = formData.has("is_active") ? 1 : 1;
 
                         await db
@@ -2348,7 +2478,10 @@ export default {
                         console.error("D1 Marketing Resource insert error:", e);
                     }
                 }
-                return Response.redirect(new URL("/resources", request.url), 302);
+                return Response.redirect(
+                    new URL("/resources", request.url),
+                    302,
+                );
             }
 
             if (path.startsWith("/marketing-resources/")) {
@@ -2364,22 +2497,34 @@ export default {
                                 .bind(resId)
                                 .run();
                         } catch (e) {
-                            console.error("D1 Marketing Resource delete error:", e);
+                            console.error(
+                                "D1 Marketing Resource delete error:",
+                                e,
+                            );
                         }
                     }
-                    return Response.redirect(new URL("/resources", request.url), 302);
+                    return Response.redirect(
+                        new URL("/resources", request.url),
+                        302,
+                    );
                 }
                 if (effectiveMethod === "PUT" && resId && formData) {
                     if (db) {
                         try {
-                            const title = formData.get("title") || "Untitled Resource";
-                            const category = formData.get("category") || "Leaflets & Sheets";
+                            const title =
+                                formData.get("title") || "Untitled Resource";
+                            const category =
+                                formData.get("category") || "Leaflets & Sheets";
                             const fileType = formData.get("file_type") || "pdf";
                             const fileUrl = formData.get("file_url") || "#";
                             const fileSize = formData.get("file_size") || null;
                             const badge = formData.get("badge") || null;
-                            const description = formData.get("description") || null;
-                            const sortOrder = parseInt(formData.get("sort_order") || "0", 10);
+                            const description =
+                                formData.get("description") || null;
+                            const sortOrder = parseInt(
+                                formData.get("sort_order") || "0",
+                                10,
+                            );
                             const isActive = formData.has("is_active") ? 1 : 0;
 
                             await db
@@ -2400,10 +2545,16 @@ export default {
                                 )
                                 .run();
                         } catch (e) {
-                            console.error("D1 Marketing Resource update error:", e);
+                            console.error(
+                                "D1 Marketing Resource update error:",
+                                e,
+                            );
                         }
                     }
-                    return Response.redirect(new URL("/resources", request.url), 302);
+                    return Response.redirect(
+                        new URL("/resources", request.url),
+                        302,
+                    );
                 }
             }
 
@@ -2963,12 +3114,20 @@ export default {
                 if (rolesRes?.results) liveRoles = rolesRes.results;
 
                 try {
-                    const mRes = await db.prepare("SELECT * FROM marketing_resources WHERE is_active = 1 ORDER BY sort_order ASC, id DESC").all();
+                    const mRes = await db
+                        .prepare(
+                            "SELECT * FROM marketing_resources WHERE is_active = 1 ORDER BY sort_order ASC, id DESC",
+                        )
+                        .all();
                     if (mRes?.results) liveResources = mRes.results;
                 } catch (e) {}
 
                 try {
-                    const abbRes = await db.prepare("SELECT * FROM abbreviations ORDER BY term ASC").all();
+                    const abbRes = await db
+                        .prepare(
+                            "SELECT * FROM abbreviations ORDER BY term ASC",
+                        )
+                        .all();
                     if (abbRes?.results) liveAbbreviations = abbRes.results;
                 } catch (e) {}
 
@@ -3078,11 +3237,18 @@ export default {
 
         // 5c. Unified Search API Endpoint
         if (path === "/api/search") {
-            const query = (url.searchParams.get("q") || "").trim().toLowerCase();
+            const query = (url.searchParams.get("q") || "")
+                .trim()
+                .toLowerCase();
             if (!query) {
-                return new Response(JSON.stringify({ query: "", total: 0, results: {} }), {
-                    headers: { "Content-Type": "application/json; charset=utf-8" }
-                });
+                return new Response(
+                    JSON.stringify({ query: "", total: 0, results: {} }),
+                    {
+                        headers: {
+                            "Content-Type": "application/json; charset=utf-8",
+                        },
+                    },
+                );
             }
 
             const results = {
@@ -3092,58 +3258,131 @@ export default {
                 resources: [],
                 abbreviations: [],
                 contacts: [],
-                links: []
+                links: [],
             };
 
             // 1. Navigation Tools
             const navTools = [
-                { title: 'Packages', category: 'Tool', url: '/packages', description: 'SBL Product & Investment Packages' },
-                { title: 'Ranks', category: 'Tool', url: '/ranks', description: 'Ranks, Badges & Criteria' },
-                { title: 'Counseling Guide', category: 'Tool', url: '/counseling', description: 'Step-by-step Client Counseling Scripts' },
-                { title: 'Commission Calculator', category: 'Tool', url: '/commission', description: 'Sales & Team Binary Commission Simulator' },
-                { title: 'Official Links', category: 'Tool', url: '/links', description: 'Ecosystem Portals & Links Directory' },
-                { title: 'Resources', category: 'Tool', url: '/resources', description: 'Marketing Leaflets, Pitch Decks & Documents' },
-                { title: 'Team Explorer', category: 'Tool', url: '/team', description: 'Binary Tree, Network Structure & Directory' },
-                { title: 'Abbreviations', category: 'Tool', url: '/abbreviations', description: 'SBL Business Terms & Glossary' },
-                { title: 'Contacts & Helplines', category: 'Tool', url: '/contacts', description: 'Customer Support, Management & Office Directory' },
-                { title: 'Leads CRM', category: 'CRM', url: '/leads', description: 'Client Pipelines, Warm Leads & Conversion' },
-                { title: 'Dashboard', category: 'Navigation', url: '/dashboard', description: 'Performance Overview & Metric Cards' },
-                { title: 'Users & Roles', category: 'Administration', url: '/users', description: 'Manage Team Members & Access Permissions' }
+                {
+                    title: "Packages",
+                    category: "Tool",
+                    url: "/packages",
+                    description: "SBL Product & Investment Packages",
+                },
+                {
+                    title: "Ranks",
+                    category: "Tool",
+                    url: "/ranks",
+                    description: "Ranks, Badges & Criteria",
+                },
+                {
+                    title: "Counseling Guide",
+                    category: "Tool",
+                    url: "/counseling",
+                    description: "Step-by-step Client Counseling Scripts",
+                },
+                {
+                    title: "Commission Calculator",
+                    category: "Tool",
+                    url: "/commission",
+                    description: "Sales & Team Binary Commission Simulator",
+                },
+                {
+                    title: "Official Links",
+                    category: "Tool",
+                    url: "/links",
+                    description: "Ecosystem Portals & Links Directory",
+                },
+                {
+                    title: "Resources",
+                    category: "Tool",
+                    url: "/resources",
+                    description: "Marketing Leaflets, Pitch Decks & Documents",
+                },
+                {
+                    title: "Team Explorer",
+                    category: "Tool",
+                    url: "/team",
+                    description: "Binary Tree, Network Structure & Directory",
+                },
+                {
+                    title: "Abbreviations",
+                    category: "Tool",
+                    url: "/abbreviations",
+                    description: "SBL Business Terms & Glossary",
+                },
+                {
+                    title: "Contacts & Helplines",
+                    category: "Tool",
+                    url: "/contacts",
+                    description:
+                        "Customer Support, Management & Office Directory",
+                },
+                {
+                    title: "Leads CRM",
+                    category: "CRM",
+                    url: "/leads",
+                    description: "Client Pipelines, Warm Leads & Conversion",
+                },
+                {
+                    title: "Dashboard",
+                    category: "Navigation",
+                    url: "/dashboard",
+                    description: "Performance Overview & Metric Cards",
+                },
+                {
+                    title: "Users & Roles",
+                    category: "Administration",
+                    url: "/users",
+                    description: "Manage Team Members & Access Permissions",
+                },
             ];
 
             for (const item of navTools) {
-                if (item.title.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query))) {
+                if (
+                    item.title.toLowerCase().includes(query) ||
+                    (item.description &&
+                        item.description.toLowerCase().includes(query))
+                ) {
                     results.tools.push(item);
                 }
             }
 
             // 2. Leads (scoped to user unless superadmin)
-            const isSuperAdmin = (authUser && (authUser.role === 'super-admin' || authUser.id === 1 || authUser.role_slug === 'super-admin'));
-            const userLeads = (liveLeads || []).filter(l => {
+            const isSuperAdmin =
+                authUser &&
+                (authUser.role === "super-admin" ||
+                    authUser.id === 1 ||
+                    authUser.role_slug === "super-admin");
+            const userLeads = (liveLeads || []).filter((l) => {
                 if (!isSuperAdmin) {
-                    return Number(l.assigned_to) === Number(authUser.id) || Number(l.owner_user_id) === Number(authUser.id);
+                    return (
+                        Number(l.assigned_to) === Number(authUser.id) ||
+                        Number(l.owner_user_id) === Number(authUser.id)
+                    );
                 }
                 return true;
             });
 
             for (const lead of userLeads) {
-                const searchStr = `${lead.name || ''} ${lead.mobile || ''} ${lead.whatsapp || ''} ${lead.location || ''} ${lead.profession_or_business || ''}`.toLowerCase();
+                const searchStr =
+                    `${lead.name || ""} ${lead.mobile || ""} ${lead.whatsapp || ""} ${lead.location || ""} ${lead.profession_or_business || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.leads.push({
                         id: lead.id,
                         title: lead.name,
-                        subtitle: `${lead.mobile || ''} • ${lead.stage || 'lead'}`,
-                        category: 'Lead',
+                        subtitle: `${lead.mobile || ""} • ${lead.stage || "lead"}`,
+                        category: "Lead",
                         url: `/leads/${lead.id}`,
                         stage: lead.stage,
-                        mobile: lead.mobile
+                        mobile: lead.mobile,
                     });
                     if (results.leads.length >= 8) break;
                 }
             }
 
             // 3. Team Nodes
-            const userNodes = (liveNodes || []).filter(n => {
+            const userNodes = (liveNodes || []).filter((n) => {
                 if (!isSuperAdmin) {
                     return Number(n.tree_owner_id) === Number(authUser.id);
                 }
@@ -3151,77 +3390,82 @@ export default {
             });
 
             for (const node of userNodes) {
-                const searchStr = `${node.member_name || ''} ${node.member_code || ''} ${node.phone || ''} ${node.rank_title || ''}`.toLowerCase();
+                const searchStr =
+                    `${node.member_name || ""} ${node.member_code || ""} ${node.phone || ""} ${node.rank_title || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.team.push({
                         id: node.id,
                         title: node.member_name,
-                        subtitle: `${node.member_code} • ${node.phone || ''}`,
-                        category: 'Team Member',
+                        subtitle: `${node.member_code} • ${node.phone || ""}`,
+                        category: "Team Member",
                         url: `/team?search=${encodeURIComponent(node.member_code)}`,
                         member_code: node.member_code,
-                        side: node.side
+                        side: node.side,
                     });
                     if (results.team.length >= 8) break;
                 }
             }
 
             // 4. Resources
-            for (const res of (liveResources || [])) {
-                const searchStr = `${res.title || ''} ${res.category || ''} ${res.description || ''}`.toLowerCase();
+            for (const res of liveResources || []) {
+                const searchStr =
+                    `${res.title || ""} ${res.category || ""} ${res.description || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.resources.push({
                         id: res.id,
                         title: res.title,
-                        subtitle: res.category || 'Resource',
-                        category: 'Resource',
-                        url: res.file_url || '/resources',
-                        file_type: res.file_type
+                        subtitle: res.category || "Resource",
+                        category: "Resource",
+                        url: res.file_url || "/resources",
+                        file_type: res.file_type,
                     });
                     if (results.resources.length >= 6) break;
                 }
             }
 
             // 5. Abbreviations
-            for (const abbr of (liveAbbreviations || [])) {
-                const searchStr = `${abbr.term || ''} ${abbr.meaning || ''} ${abbr.description || ''}`.toLowerCase();
+            for (const abbr of liveAbbreviations || []) {
+                const searchStr =
+                    `${abbr.term || ""} ${abbr.meaning || ""} ${abbr.description || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.abbreviations.push({
                         id: abbr.id,
                         title: abbr.term,
                         subtitle: abbr.meaning,
-                        category: 'Abbreviation',
-                        url: `/abbreviations#term-${encodeURIComponent(abbr.term)}`
+                        category: "Abbreviation",
+                        url: `/abbreviations#term-${encodeURIComponent(abbr.term)}`,
                     });
                     if (results.abbreviations.length >= 6) break;
                 }
             }
 
             // 6. Helplines & Contacts
-            for (const c of (liveContacts || [])) {
-                const searchStr = `${c.department || ''} ${c.contact_person || ''} ${c.phone || ''} ${c.mobile || ''}`.toLowerCase();
+            for (const c of liveContacts || []) {
+                const searchStr =
+                    `${c.department || ""} ${c.contact_person || ""} ${c.phone || ""} ${c.mobile || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.contacts.push({
                         id: c.id,
                         title: c.department || c.contact_person,
-                        subtitle: `${c.contact_person ? c.contact_person + ' • ' : ''}${c.phone || c.mobile || ''}`,
-                        category: 'Contact',
-                        url: '/contacts'
+                        subtitle: `${c.contact_person ? c.contact_person + " • " : ""}${c.phone || c.mobile || ""}`,
+                        category: "Contact",
+                        url: "/contacts",
                     });
                     if (results.contacts.length >= 6) break;
                 }
             }
 
             // 7. Official Links
-            for (const l of (liveEcosystem || [])) {
-                const searchStr = `${l.title || ''} ${l.category || ''} ${l.url || ''} ${l.description || ''}`.toLowerCase();
+            for (const l of liveEcosystem || []) {
+                const searchStr =
+                    `${l.title || ""} ${l.category || ""} ${l.url || ""} ${l.description || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.links.push({
                         id: l.id,
                         title: l.title,
                         subtitle: l.category || l.url,
-                        category: 'Link',
-                        url: l.url
+                        category: "Link",
+                        url: l.url,
                     });
                     if (results.links.length >= 6) break;
                 }
@@ -3232,16 +3476,19 @@ export default {
                 total += results[cat].length;
             }
 
-            return new Response(JSON.stringify({
-                query,
-                total,
-                results
-            }), {
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Cache-Control": "private, no-cache"
-                }
-            });
+            return new Response(
+                JSON.stringify({
+                    query,
+                    total,
+                    results,
+                }),
+                {
+                    headers: {
+                        "Content-Type": "application/json; charset=utf-8",
+                        "Cache-Control": "private, no-cache",
+                    },
+                },
+            );
         }
 
         // 6. Select Page Template
@@ -3254,13 +3501,18 @@ export default {
                 let todayStr;
                 let dhakaFormattedDate;
                 try {
-                    todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-                    dhakaFormattedDate = new Intl.DateTimeFormat('en-US', {
-                        timeZone: 'Asia/Dhaka',
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
+                    todayStr = new Intl.DateTimeFormat("en-CA", {
+                        timeZone: "Asia/Dhaka",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                    }).format(new Date());
+                    dhakaFormattedDate = new Intl.DateTimeFormat("en-US", {
+                        timeZone: "Asia/Dhaka",
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
                     }).format(new Date());
                 } catch (e) {
                     const dhakaTime = new Date(Date.now() + 6 * 3600 * 1000);
@@ -3268,50 +3520,115 @@ export default {
                     dhakaFormattedDate = dhakaTime.toDateString();
                 }
 
-                const nonDel = (liveLeads || []).filter(l => !l.deleted_at);
-                const activeCount = nonDel.filter(l => l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable').length;
-                const addedTodayCount = nonDel.filter(l => l.created_at && l.created_at.slice(0, 10) === todayStr).length;
+                const nonDel = (liveLeads || []).filter((l) => !l.deleted_at);
+                const activeCount = nonDel.filter(
+                    (l) =>
+                        l.stage !== "converted" &&
+                        l.stage !== "lost" &&
+                        l.stage !== "not_suitable",
+                ).length;
+                const addedTodayCount = nonDel.filter(
+                    (l) =>
+                        l.created_at && l.created_at.slice(0, 10) === todayStr,
+                ).length;
 
                 let dueFollowupsToday = 0;
                 let overdueCount = 0;
                 const nowUtc = new Date();
-                nonDel.forEach(l => {
-                    if (l.next_action_at && l.stage !== 'converted' && l.stage !== 'lost' && l.stage !== 'not_suitable') {
-                        if (l.next_action_at.slice(0, 10) === todayStr) dueFollowupsToday++;
+                nonDel.forEach((l) => {
+                    if (
+                        l.next_action_at &&
+                        l.stage !== "converted" &&
+                        l.stage !== "lost" &&
+                        l.stage !== "not_suitable"
+                    ) {
+                        if (l.next_action_at.slice(0, 10) === todayStr)
+                            dueFollowupsToday++;
                         if (new Date(l.next_action_at) < nowUtc) overdueCount++;
                     }
                 });
 
                 let tasksTodayCount = 0;
-                (liveTasks || []).forEach(t => {
-                    if (t.status !== 'Completed' && t.status !== 'Cancelled' && t.due_at && t.due_at.slice(0, 10) === todayStr) {
+                (liveTasks || []).forEach((t) => {
+                    if (
+                        t.status !== "Completed" &&
+                        t.status !== "Cancelled" &&
+                        t.due_at &&
+                        t.due_at.slice(0, 10) === todayStr
+                    ) {
                         tasksTodayCount++;
                     }
                 });
 
-                const presCount = (livePresentations || []).filter(p => !p.deleted_at).length;
+                const presCount = (livePresentations || []).filter(
+                    (p) => !p.deleted_at,
+                ).length;
 
-                dashHtml = dashHtml.replace(/<p id="dashboard-current-date">.*?<\/p>/, `<p id="dashboard-current-date">${dhakaFormattedDate}</p>`);
-                dashHtml = dashHtml.replace(/<strong id="active-leads">.*?<\/strong>/, `<strong id="active-leads">${activeCount}</strong>`);
-                dashHtml = dashHtml.replace(/<small id="added-today-count">.*?<\/small>|<small>.*? added today<\/small>/, `<small id="added-today-count">${addedTodayCount} added today</small>`);
-                dashHtml = dashHtml.replace(/<strong id="today-followup">.*?<\/strong>/, `<strong id="today-followup">${dueFollowupsToday}</strong>`);
-                dashHtml = dashHtml.replace(/<strong id="today-tasks-kpi">.*?<\/strong>/, `<strong id="today-tasks-kpi">${tasksTodayCount}</strong>`);
-                dashHtml = dashHtml.replace(/<strong id="total-presentations">.*?<\/strong>/, `<strong id="total-presentations">${presCount}</strong>`);
-                dashHtml = dashHtml.replace(/<span id="dashboard-overdue-badge"[^>]*>.*?<\/span>/, `<span id="dashboard-overdue-badge" class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">${overdueCount} Overdue</span>`);
+                dashHtml = dashHtml.replace(
+                    /<p id="dashboard-current-date">.*?<\/p>/,
+                    `<p id="dashboard-current-date">${dhakaFormattedDate}</p>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<strong id="active-leads">.*?<\/strong>/,
+                    `<strong id="active-leads">${activeCount}</strong>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<small id="added-today-count">.*?<\/small>|<small>.*? added today<\/small>/,
+                    `<small id="added-today-count">${addedTodayCount} added today</small>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<strong id="today-followup">.*?<\/strong>/,
+                    `<strong id="today-followup">${dueFollowupsToday}</strong>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<strong id="today-tasks-kpi">.*?<\/strong>/,
+                    `<strong id="today-tasks-kpi">${tasksTodayCount}</strong>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<strong id="total-presentations">.*?<\/strong>/,
+                    `<strong id="total-presentations">${presCount}</strong>`,
+                );
+                dashHtml = dashHtml.replace(
+                    /<span id="dashboard-overdue-badge"[^>]*>.*?<\/span>/,
+                    `<span id="dashboard-overdue-badge" class="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">${overdueCount} Overdue</span>`,
+                );
 
                 const totalLeads = nonDel.length;
-                const stages = ['new', 'contacted', 'interested', 'qualified', 'presentation', 'follow_up', 'decision', 'converted'];
-                stages.forEach(s => {
-                    const cnt = nonDel.filter(l => (l.stage || 'new') === s).length;
-                    const pct = totalLeads > 0 ? Math.min(100, Math.round((cnt / totalLeads) * 100)) : 0;
-                    
-                    const countRegex = new RegExp(`(<span data-funnel-count="${s}"[^>]*>)[^<]*(<\\/span>)`);
+                const stages = [
+                    "new",
+                    "contacted",
+                    "interested",
+                    "qualified",
+                    "presentation",
+                    "follow_up",
+                    "decision",
+                    "converted",
+                ];
+                stages.forEach((s) => {
+                    const cnt = nonDel.filter(
+                        (l) => (l.stage || "new") === s,
+                    ).length;
+                    const pct =
+                        totalLeads > 0
+                            ? Math.min(
+                                  100,
+                                  Math.round((cnt / totalLeads) * 100),
+                              )
+                            : 0;
+
+                    const countRegex = new RegExp(
+                        `(<span data-funnel-count="${s}"[^>]*>)[^<]*(<\\/span>)`,
+                    );
                     dashHtml = dashHtml.replace(countRegex, `$1${cnt}$2`);
 
-                    const barRegex = new RegExp(`(data-funnel-bar="${s}"[^>]*style="width:\\s*)[^%]+(%")`);
+                    const barRegex = new RegExp(
+                        `(data-funnel-bar="${s}"[^>]*style="width:\\s*)[^%]+(%")`,
+                    );
                     dashHtml = dashHtml.replace(barRegex, `$1${pct}$2`);
 
-                    const pctRegex = new RegExp(`(<span data-funnel-pct="${s}"[^>]*>)[^<]*(<\\/span>)`);
+                    const pctRegex = new RegExp(
+                        `(<span data-funnel-pct="${s}"[^>]*>)[^<]*(<\\/span>)`,
+                    );
                     dashHtml = dashHtml.replace(pctRegex, `$1${pct}% share$2`);
                 });
             }
@@ -3454,11 +3771,14 @@ export default {
                             : currentLead.interest_types || [];
                 } catch (e) {}
 
-                const cleanWhatsapp = (
+                let cleanWhatsapp = (
                     currentLead.whatsapp ||
                     currentLead.mobile ||
                     ""
                 ).replace(/[^0-9]/g, "");
+                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                    cleanWhatsapp = "88" + cleanWhatsapp;
+                }
 
                 pageHtml = pageHtml
                     .replace(
@@ -3548,10 +3868,6 @@ export default {
                         `id="lead-show-stage-badge">${stageLabel}</span>`,
                     )
                     .replace(
-                        /id="lead-show-temp-badge">.*?<\/span>/,
-                        `id="lead-show-temp-badge">${temp}</span>`,
-                    )
-                    .replace(
                         /id="lead-show-mobile-btn" href="[^"]*"/,
                         `id="lead-show-mobile-btn" href="tel:${escapedMobile}"`,
                     )
@@ -3564,17 +3880,32 @@ export default {
                         `id="lead-show-wa-btn" href="https://wa.me/${cleanWhatsapp}"`,
                     )
                     .replace(
-                        /id="lead-show-score-text">.*?<\/span>/,
-                        `id="lead-show-score-text">${score} / 100</span>`,
-                    )
-                    .replace(
-                        /id="lead-show-score-bar"[^>]*style="[^"]*"/,
-                        `id="lead-show-score-bar" style="width: ${score}%"`,
-                    )
-                    .replace(
                         /id="lead-show-source-text">.*?<\/span>/,
                         `id="lead-show-source-text">${escapeHtml(sourceName)}</span>`,
                     );
+
+                const validLocation =
+                    currentLead.location &&
+                    !currentLead.location.startsWith("http://") &&
+                    !currentLead.location.startsWith("https://") &&
+                    !currentLead.location.includes("/leads/");
+                if (validLocation) {
+                    pageHtml = pageHtml
+                        .replace(
+                            /id="lead-show-location-container"[^>]*style="display:\s*none;?"/,
+                            'id="lead-show-location-container"',
+                        )
+                        .replace(
+                            /id="lead-show-location-text">.*?<\/span>/,
+                            `id="lead-show-location-text">${escapeHtml(currentLead.location)}</span>`,
+                        );
+                } else {
+                    pageHtml = pageHtml
+                        .replace(
+                            /id="lead-show-location-container"/,
+                            'id="lead-show-location-container" style="display: none;"',
+                        );
+                }
             }
             html = pageHtml;
         } else if (path === "/leads" || path === "/members") {
