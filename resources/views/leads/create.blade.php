@@ -4,18 +4,19 @@
 @section('page-subtitle', 'Fast Lead Capture (< 30 Seconds Entry)')
 
 @section('content')
-<div class="max-w-2xl mx-auto" 
-     x-data="{
-        name: '{{ old('name', '') }}',
-        mobile: '{{ old('mobile', '') }}',
-        whatsapp: '{{ old('whatsapp', '') }}',
-        email: '{{ old('email', '') }}',
-        location: '{{ old('location', '') }}',
-        profession_or_business: '{{ old('profession_or_business', '') }}',
-        lead_source_id: '{{ old('lead_source_id', '1') }}',
-        stage: '{{ old('stage', 'new') }}',
-        notes: `{{ old('notes', '') }}`,
-        photoData: '{{ old('photo', '') }}',
+<script>
+function leadCreateData() {
+    return {
+        name: @json(old('name', '')),
+        mobile: @json(old('mobile', '')),
+        whatsapp: @json(old('whatsapp', '')),
+        email: @json(old('email', '')),
+        location: @json(old('location', '')),
+        profession_or_business: @json(old('profession_or_business', '')),
+        lead_source_id: @json(old('lead_source_id', '1')),
+        stage: @json(old('stage', 'new')),
+        notes: @json(old('notes', '')),
+        photoData: @json(old('photo', '')),
         sameAsMobile: true,
         isSubmitting: false,
         photoProcessing: false,
@@ -170,18 +171,18 @@
                 e.preventDefault();
                 this.errorMessage = 'দয়া করে লিডের পূর্ণ নাম লিখুন (কমপক্ষে ২ অক্ষর)।';
                 this.$nextTick(() => {
-                    const el = document.querySelector('input[name=\"name\"]');
+                    const el = document.querySelector('input[name="name"]');
                     if (el) el.focus();
                 });
                 return false;
             }
 
-            const digits = trimmedMobile.replace(/\\D/g, '');
+            const digits = trimmedMobile.replace(/\D/g, '');
             if (digits.length < 10) {
                 e.preventDefault();
                 this.errorMessage = 'দয়া করে একটি সঠিক মোবাইল নম্বর লিখুন (কমপক্ষে ১০ বা ১১ ডিজিট)।';
                 this.$nextTick(() => {
-                    const el = document.querySelector('input[name=\"mobile\"]');
+                    const el = document.querySelector('input[name="mobile"]');
                     if (el) el.focus();
                 });
                 return false;
@@ -197,7 +198,11 @@
             this.saveDraft();
             return true;
         }
-     }">
+    };
+}
+</script>
+
+<div class="max-w-2xl mx-auto" x-data="leadCreateData()">
 
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 md:p-8">
 
