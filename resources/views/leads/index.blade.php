@@ -102,7 +102,7 @@
                         <th class="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody id="desktop-leads-tbody" class="divide-y divide-slate-100">
                     @forelse ($leads as $lead)
                         <tr data-lead-id="{{ $lead->id }}" class="hover:bg-slate-50/70 transition-colors">
                             <!-- Lead Info -->
@@ -273,7 +273,7 @@
         </div>
 
         <!-- Mobile Card Stack (Visible on mobile/tablets < md) -->
-        <div class="block md:hidden divide-y divide-slate-100">
+        <div id="mobile-leads-stack" class="block md:hidden divide-y divide-slate-100">
             @forelse ($leads as $lead)
                 <div data-lead-id="{{ $lead->id }}" class="p-4 space-y-3 hover:bg-slate-50/50 transition-colors">
                     <!-- Top Row: Avatar, Name & Stage Badge -->

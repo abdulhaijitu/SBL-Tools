@@ -3740,6 +3740,8 @@ export default {
                                 id +
                                 '"], .kanban-card[data-lead-id="' +
                                 id +
+                                '"], #mobile-leads-stack > div[data-lead-id="' +
+                                id +
                                 '"], .divide-y > div[data-lead-id="' +
                                 id +
                                 '"]',

@@ -314,10 +314,21 @@
             // Helper for Asia/Dhaka YYYY-MM-DD
             function getDhakaYmd() {
                 try {
-                    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+                    return new Intl.DateTimeFormat("en-CA", {
+                        timeZone: "Asia/Dhaka",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                    }).format(new Date());
                 } catch (e) {
                     const d = new Date();
-                    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+                    return (
+                        d.getFullYear() +
+                        "-" +
+                        String(d.getMonth() + 1).padStart(2, "0") +
+                        "-" +
+                        String(d.getDate()).padStart(2, "0")
+                    );
                 }
             }
 
@@ -325,12 +336,12 @@
             const dateEl = document.getElementById("dashboard-current-date");
             if (dateEl) {
                 try {
-                    dateEl.textContent = new Intl.DateTimeFormat('en-US', {
-                        timeZone: 'Asia/Dhaka',
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
+                    dateEl.textContent = new Intl.DateTimeFormat("en-US", {
+                        timeZone: "Asia/Dhaka",
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
                     }).format(new Date());
                 } catch (e) {}
             }
@@ -339,18 +350,29 @@
                 return !l.deleted_at;
             });
             const activeLeads = nonDeletedLeads.filter(function (l) {
-                return l.stage !== "converted" && l.stage !== "lost" && l.stage !== "not_suitable";
+                return (
+                    l.stage !== "converted" &&
+                    l.stage !== "lost" &&
+                    l.stage !== "not_suitable"
+                );
             });
 
             // 1.1 Total Active Leads & Added Today
-            const activeLeadsEl = document.getElementById("active-leads") || document.querySelector('[data-metric="total-leads"]');
+            const activeLeadsEl =
+                document.getElementById("active-leads") ||
+                document.querySelector('[data-metric="total-leads"]');
             const localYmd = getDhakaYmd();
             if (activeLeadsEl) {
                 activeLeadsEl.textContent = activeLeads.length;
-                const smallEl = activeLeadsEl.parentElement ? activeLeadsEl.parentElement.querySelector("small") : null;
+                const smallEl = activeLeadsEl.parentElement
+                    ? activeLeadsEl.parentElement.querySelector("small")
+                    : null;
                 if (smallEl) {
                     const addedToday = nonDeletedLeads.filter(function (l) {
-                        return l.created_at && l.created_at.slice(0, 10) === localYmd;
+                        return (
+                            l.created_at &&
+                            l.created_at.slice(0, 10) === localYmd
+                        );
                     }).length;
                     smallEl.textContent = addedToday + " added today";
                 }
@@ -362,7 +384,12 @@
             let overdueLeads = [];
 
             nonDeletedLeads.forEach(function (lead) {
-                if (lead.next_action_at && lead.stage !== "converted" && lead.stage !== "lost" && lead.stage !== "not_suitable") {
+                if (
+                    lead.next_action_at &&
+                    lead.stage !== "converted" &&
+                    lead.stage !== "lost" &&
+                    lead.stage !== "not_suitable"
+                ) {
                     const actDate = lead.next_action_at.slice(0, 10);
                     if (actDate === localYmd) {
                         followupsToday++;
@@ -373,14 +400,20 @@
                 }
             });
 
-            const dueEl = document.getElementById("today-followup") || document.querySelector('[data-metric="followups-today"]');
+            const dueEl =
+                document.getElementById("today-followup") ||
+                document.querySelector('[data-metric="followups-today"]');
             if (dueEl) dueEl.textContent = followupsToday;
 
             // 1.3 Today's Tasks Calculation
             let tasksTodayList = [];
             if (DATA.tasks) {
                 DATA.tasks.forEach(function (task) {
-                    if (task.status !== "Completed" && task.status !== "Cancelled" && task.due_at) {
+                    if (
+                        task.status !== "Completed" &&
+                        task.status !== "Cancelled" &&
+                        task.due_at
+                    ) {
                         const dStr = task.due_at.slice(0, 10);
                         if (dStr === localYmd) {
                             tasksTodayList.push(task);
@@ -395,7 +428,9 @@
             const totalPres = (DATA.presentations || []).filter(function (p) {
                 return !p.deleted_at;
             }).length;
-            const presEl = document.getElementById("total-presentations") || document.querySelector('[data-metric="presentations-today"]');
+            const presEl =
+                document.getElementById("total-presentations") ||
+                document.querySelector('[data-metric="presentations-today"]');
             if (presEl) presEl.textContent = totalPres;
 
             // 1.5 Stage Funnel Counters & Percentage Bars
@@ -415,25 +450,43 @@
                 const count = nonDeletedLeads.filter(function (l) {
                     return (l.stage || "new") === s;
                 }).length;
-                const pct = totalPipelineLeads > 0 ? Math.min(100, Math.round((count / totalPipelineLeads) * 100)) : 0;
+                const pct =
+                    totalPipelineLeads > 0
+                        ? Math.min(
+                              100,
+                              Math.round((count / totalPipelineLeads) * 100),
+                          )
+                        : 0;
 
-                const el = document.querySelector('[data-funnel-count="' + s + '"]');
+                const el = document.querySelector(
+                    '[data-funnel-count="' + s + '"]',
+                );
                 if (el) el.textContent = count;
 
-                const barEl = document.querySelector('[data-funnel-bar="' + s + '"]');
+                const barEl = document.querySelector(
+                    '[data-funnel-bar="' + s + '"]',
+                );
                 if (barEl) barEl.style.width = pct + "%";
 
-                const pctEl = document.querySelector('[data-funnel-pct="' + s + '"]');
+                const pctEl = document.querySelector(
+                    '[data-funnel-pct="' + s + '"]',
+                );
                 if (pctEl) pctEl.textContent = pct + "% share";
             });
 
             // 1.6 Overdue Follow-ups List Hydration (Dual-State DOM)
-            const overdueBadge = document.getElementById("dashboard-overdue-badge") || document.querySelector('[data-metric="overdue-followups"]');
+            const overdueBadge =
+                document.getElementById("dashboard-overdue-badge") ||
+                document.querySelector('[data-metric="overdue-followups"]');
             if (overdueBadge) {
                 overdueBadge.textContent = overdueLeads.length + " Overdue";
             }
-            const overdueContainer = document.getElementById("dashboard-overdue-container");
-            const overdueEmpty = document.getElementById("dashboard-overdue-empty");
+            const overdueContainer = document.getElementById(
+                "dashboard-overdue-container",
+            );
+            const overdueEmpty = document.getElementById(
+                "dashboard-overdue-empty",
+            );
 
             if (overdueLeads.length === 0) {
                 if (overdueEmpty) overdueEmpty.style.display = "";
@@ -446,50 +499,101 @@
                 if (overdueContainer) {
                     overdueContainer.style.display = "";
                     // Remove elements that are no longer overdue
-                    overdueContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
-                        const lid = Number(el.getAttribute("data-lead-id"));
-                        if (!overdueLeads.some(function (ol) { return Number(ol.id) === lid; })) {
-                            el.remove();
-                        }
-                    });
+                    overdueContainer
+                        .querySelectorAll("[data-lead-id]")
+                        .forEach(function (el) {
+                            const lid = Number(el.getAttribute("data-lead-id"));
+                            if (
+                                !overdueLeads.some(function (ol) {
+                                    return Number(ol.id) === lid;
+                                })
+                            ) {
+                                el.remove();
+                            }
+                        });
                     // Add overdue leads not already in the container
                     overdueLeads.forEach(function (lead) {
-                        if (!overdueContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
-                            const cleanWa = (lead.whatsapp || lead.mobile || "").replace(/\D/g, "");
-                            const tempClasses = lead.temperature === "hot" ? "bg-rose-100 text-rose-800" : (lead.temperature === "warm" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800");
-                            const tempLabel = lead.temperature ? (lead.temperature.charAt(0).toUpperCase() + lead.temperature.slice(1)) : "Warm";
-                            const initial = (lead.name || "L").charAt(0).toUpperCase();
+                        if (
+                            !overdueContainer.querySelector(
+                                '[data-lead-id="' + lead.id + '"]',
+                            )
+                        ) {
+                            const cleanWa = (
+                                lead.whatsapp ||
+                                lead.mobile ||
+                                ""
+                            ).replace(/\D/g, "");
+                            const tempClasses =
+                                lead.temperature === "hot"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : lead.temperature === "warm"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : "bg-blue-100 text-blue-800";
+                            const tempLabel = lead.temperature
+                                ? lead.temperature.charAt(0).toUpperCase() +
+                                  lead.temperature.slice(1)
+                                : "Warm";
+                            const initial = (lead.name || "L")
+                                .charAt(0)
+                                .toUpperCase();
 
                             const item = document.createElement("div");
                             item.setAttribute("data-lead-id", lead.id);
-                            item.className = "p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
-                            item.innerHTML = 
+                            item.className =
+                                "p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
+                            item.innerHTML =
                                 '<div class="flex items-start gap-3 min-w-0">' +
-                                    '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-black flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' +
-                                        initial +
-                                    '</div>' +
-                                    '<div class="min-w-0">' +
-                                        '<div class="flex items-center gap-2 flex-wrap">' +
-                                            '<a href="/leads/' + lead.id + '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate">' +
-                                                (lead.name || "") +
-                                            '</a>' +
-                                            '<span class="text-xs font-mono text-slate-400 font-normal">#' + lead.id + '</span>' +
-                                            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full ' + tempClasses + '">' +
-                                                tempLabel +
-                                            '</span>' +
-                                        '</div>' +
-                                        '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3">' +
-                                            '<span class="font-medium text-slate-700">📞 ' + (lead.mobile || "") + '</span>' +
-                                            '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded text-[10px]">Overdue Action</span>' +
-                                        '</div>' +
-                                        (lead.next_action_type ? '<div class="text-[11px] font-semibold text-slate-600 mt-0.5">Action: <span class="text-orange-600 font-bold">' + lead.next_action_type + '</span></div>' : '') +
-                                    '</div>' +
-                                '</div>' +
+                                '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-black flex items-center justify-center text-sm flex-shrink-0 shadow-xs">' +
+                                initial +
+                                "</div>" +
+                                '<div class="min-w-0">' +
+                                '<div class="flex items-center gap-2 flex-wrap">' +
+                                '<a href="/leads/' +
+                                lead.id +
+                                '" class="font-bold text-sm text-slate-900 hover:text-orange-600 truncate">' +
+                                (lead.name || "") +
+                                "</a>" +
+                                '<span class="text-xs font-mono text-slate-400 font-normal">#' +
+                                lead.id +
+                                "</span>" +
+                                '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full ' +
+                                tempClasses +
+                                '">' +
+                                tempLabel +
+                                "</span>" +
+                                "</div>" +
+                                '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3">' +
+                                '<span class="font-medium text-slate-700">📞 ' +
+                                (lead.mobile || "") +
+                                "</span>" +
+                                '<span class="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.2 rounded text-[10px]">Overdue Action</span>' +
+                                "</div>" +
+                                (lead.next_action_type
+                                    ? '<div class="text-[11px] font-semibold text-slate-600 mt-0.5">Action: <span class="text-orange-600 font-bold">' +
+                                      lead.next_action_type +
+                                      "</span></div>"
+                                    : "") +
+                                "</div>" +
+                                "</div>" +
                                 '<div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">' +
-                                    (cleanWa ? '<a href="https://wa.me/' + cleanWa + '" target="_blank" title="WhatsApp Message" aria-label="WhatsApp ' + (lead.name || "") + '" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors text-xs font-bold flex items-center gap-1"><span>💬</span></a>' : '') +
-                                    (lead.mobile ? '<a href="tel:' + lead.mobile + '" title="Phone Call" aria-label="Call ' + (lead.name || "") + '" class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors text-xs font-bold flex items-center gap-1"><span>📞</span></a>' : '') +
-                                    '<a href="/leads/' + lead.id + '" class="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">Take Action</a>' +
-                                '</div>';
+                                (cleanWa
+                                    ? '<a href="https://wa.me/' +
+                                      cleanWa +
+                                      '" target="_blank" title="WhatsApp Message" aria-label="WhatsApp ' +
+                                      (lead.name || "") +
+                                      '" class="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors text-xs font-bold flex items-center gap-1"><span>💬</span></a>'
+                                    : "") +
+                                (lead.mobile
+                                    ? '<a href="tel:' +
+                                      lead.mobile +
+                                      '" title="Phone Call" aria-label="Call ' +
+                                      (lead.name || "") +
+                                      '" class="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors text-xs font-bold flex items-center gap-1"><span>📞</span></a>'
+                                    : "") +
+                                '<a href="/leads/' +
+                                lead.id +
+                                '" class="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">Take Action</a>' +
+                                "</div>";
                             overdueContainer.appendChild(item);
                         }
                     });
@@ -497,7 +601,9 @@
             }
 
             // 1.7 Today's Tasks Hydration (Dual-State DOM)
-            const tasksContainer = document.getElementById("dashboard-tasks-container");
+            const tasksContainer = document.getElementById(
+                "dashboard-tasks-container",
+            );
             const tasksEmpty = document.getElementById("dashboard-tasks-empty");
 
             if (tasksTodayList.length === 0) {
@@ -511,42 +617,82 @@
                 if (tasksContainer) {
                     tasksContainer.style.display = "";
                     // Remove tasks no longer due today
-                    tasksContainer.querySelectorAll("[data-task-id]").forEach(function (el) {
-                        const tid = Number(el.getAttribute("data-task-id"));
-                        if (!tasksTodayList.some(function (tt) { return Number(tt.id) === tid; })) {
-                            el.remove();
-                        }
-                    });
+                    tasksContainer
+                        .querySelectorAll("[data-task-id]")
+                        .forEach(function (el) {
+                            const tid = Number(el.getAttribute("data-task-id"));
+                            if (
+                                !tasksTodayList.some(function (tt) {
+                                    return Number(tt.id) === tid;
+                                })
+                            ) {
+                                el.remove();
+                            }
+                        });
                     // Add tasks not already present
                     tasksTodayList.forEach(function (task) {
-                        if (!tasksContainer.querySelector('[data-task-id="' + task.id + '"]')) {
+                        if (
+                            !tasksContainer.querySelector(
+                                '[data-task-id="' + task.id + '"]',
+                            )
+                        ) {
                             const prio = task.priority || "Medium";
-                            const prioClass = prio === "Urgent" ? "bg-rose-100 text-rose-800" : (prio === "High" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-800");
-                            const dueTime = task.due_at ? task.due_at.slice(11, 16) : "";
-                            const leadName = task.lead ? task.lead.name : (task.lead_name || "");
-                            const leadId = task.lead ? task.lead.id : (task.lead_id || "");
+                            const prioClass =
+                                prio === "Urgent"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : prio === "High"
+                                      ? "bg-orange-100 text-orange-800"
+                                      : "bg-slate-100 text-slate-800";
+                            const dueTime = task.due_at
+                                ? task.due_at.slice(11, 16)
+                                : "";
+                            const leadName = task.lead
+                                ? task.lead.name
+                                : task.lead_name || "";
+                            const leadId = task.lead
+                                ? task.lead.id
+                                : task.lead_id || "";
 
                             const item = document.createElement("div");
                             item.setAttribute("data-task-id", task.id);
-                            item.className = "p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
-                            item.innerHTML = 
+                            item.className =
+                                "p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors";
+                            item.innerHTML =
                                 '<div class="flex items-center gap-3 min-w-0">' +
-                                    '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ' + prioClass + ' flex-shrink-0">' +
-                                        prio +
-                                    '</span>' +
-                                    '<div class="min-w-0">' +
-                                        '<div class="text-sm font-bold text-slate-900 truncate">' + (task.title || "") + '</div>' +
-                                        '<div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">' +
-                                            '<span class="font-semibold text-slate-700">' + (task.type || "Task") + '</span>' +
-                                            (leadName ? '<span>•</span><a href="/leads/' + leadId + '" class="text-orange-600 hover:underline font-bold truncate">' + leadName + ' <span class="text-slate-400 font-normal">#' + leadId + '</span></a>' : '') +
-                                            (dueTime ? '<span>• Due ' + dueTime + '</span>' : '') +
-                                        '</div>' +
-                                    '</div>' +
-                                '</div>' +
-                                '<form action="/tasks/' + task.id + '/complete" method="POST" class="flex-shrink-0">' +
-                                    '<input type="hidden" name="outcome" value="Completed successfully as planned">' +
-                                    '<button type="submit" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-bold text-slate-700 transition-colors shadow-2xs">✓ Done</button>' +
-                                '</form>';
+                                '<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ' +
+                                prioClass +
+                                ' flex-shrink-0">' +
+                                prio +
+                                "</span>" +
+                                '<div class="min-w-0">' +
+                                '<div class="text-sm font-bold text-slate-900 truncate">' +
+                                (task.title || "") +
+                                "</div>" +
+                                '<div class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">' +
+                                '<span class="font-semibold text-slate-700">' +
+                                (task.type || "Task") +
+                                "</span>" +
+                                (leadName
+                                    ? '<span>•</span><a href="/leads/' +
+                                      leadId +
+                                      '" class="text-orange-600 hover:underline font-bold truncate">' +
+                                      leadName +
+                                      ' <span class="text-slate-400 font-normal">#' +
+                                      leadId +
+                                      "</span></a>"
+                                    : "") +
+                                (dueTime
+                                    ? "<span>• Due " + dueTime + "</span>"
+                                    : "") +
+                                "</div>" +
+                                "</div>" +
+                                "</div>" +
+                                '<form action="/tasks/' +
+                                task.id +
+                                '/complete" method="POST" class="flex-shrink-0">' +
+                                '<input type="hidden" name="outcome" value="Completed successfully as planned">' +
+                                '<button type="submit" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-bold text-slate-700 transition-colors shadow-2xs">✓ Done</button>' +
+                                "</form>";
                             tasksContainer.appendChild(item);
                         }
                     });
@@ -555,14 +701,20 @@
 
             // 1.8 Hot Priority Leads Hydration
             const hotLeads = nonDeletedLeads.filter(function (l) {
-                return l.stage !== "converted" && l.stage !== "lost" && l.stage !== "not_suitable" &&
-                       (Number(l.score) >= 80 || l.temperature === "hot");
+                return (
+                    l.stage !== "converted" &&
+                    l.stage !== "lost" &&
+                    l.stage !== "not_suitable" &&
+                    (Number(l.score) >= 80 || l.temperature === "hot")
+                );
             });
             const hotBadge = document.getElementById("dashboard-hot-badge");
             if (hotBadge) {
                 hotBadge.textContent = hotLeads.length + " hot";
             }
-            const hotContainer = document.getElementById("dashboard-hot-container");
+            const hotContainer = document.getElementById(
+                "dashboard-hot-container",
+            );
             const hotEmpty = document.getElementById("dashboard-hot-empty");
             if (hotContainer) {
                 if (hotLeads.length === 0) {
@@ -572,31 +724,50 @@
                 } else {
                     if (hotEmpty) hotEmpty.style.display = "none";
                     hotContainer.style.display = "";
-                    hotContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
-                        const lid = Number(el.getAttribute("data-lead-id"));
-                        if (!hotLeads.some(function (hl) { return Number(hl.id) === lid; })) {
-                            el.remove();
-                        }
-                    });
+                    hotContainer
+                        .querySelectorAll("[data-lead-id]")
+                        .forEach(function (el) {
+                            const lid = Number(el.getAttribute("data-lead-id"));
+                            if (
+                                !hotLeads.some(function (hl) {
+                                    return Number(hl.id) === lid;
+                                })
+                            ) {
+                                el.remove();
+                            }
+                        });
                     hotLeads.forEach(function (lead) {
-                        if (!hotContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
+                        if (
+                            !hotContainer.querySelector(
+                                '[data-lead-id="' + lead.id + '"]',
+                            )
+                        ) {
                             const item = document.createElement("a");
                             item.setAttribute("data-lead-id", lead.id);
                             item.setAttribute("href", "/leads/" + lead.id);
-                            item.className = "block p-3 rounded-xl border border-slate-100 hover:border-orange-300 hover:bg-orange-50/30 transition-all shadow-2xs group";
-                            item.innerHTML = 
+                            item.className =
+                                "block p-3 rounded-xl border border-slate-100 hover:border-orange-300 hover:bg-orange-50/30 transition-all shadow-2xs group";
+                            item.innerHTML =
                                 '<div class="flex items-center justify-between">' +
-                                    '<span class="text-xs font-bold text-slate-900 group-hover:text-orange-700 truncate">' +
-                                        (lead.name || "") + ' <span class="font-mono text-slate-400 font-normal">#' + lead.id + '</span>' +
-                                    '</span>' +
-                                    '<span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-orange-600 text-white shadow-2xs">' +
-                                        (lead.score || 0) + ' pts' +
-                                    '</span>' +
-                                '</div>' +
+                                '<span class="text-xs font-bold text-slate-900 group-hover:text-orange-700 truncate">' +
+                                (lead.name || "") +
+                                ' <span class="font-mono text-slate-400 font-normal">#' +
+                                lead.id +
+                                "</span>" +
+                                "</span>" +
+                                '<span class="px-2 py-0.5 text-[10px] font-black rounded-md bg-orange-600 text-white shadow-2xs">' +
+                                (lead.score || 0) +
+                                " pts" +
+                                "</span>" +
+                                "</div>" +
                                 '<div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">' +
-                                    '<span class="font-medium text-slate-600">' + (lead.stage || "new") + '</span>' +
-                                    '<span>' + (lead.mobile || "") + '</span>' +
-                                '</div>';
+                                '<span class="font-medium text-slate-600">' +
+                                (lead.stage || "new") +
+                                "</span>" +
+                                "<span>" +
+                                (lead.mobile || "") +
+                                "</span>" +
+                                "</div>";
                             hotContainer.appendChild(item);
                         }
                     });
@@ -605,13 +776,21 @@
 
             // 1.9 Stale Leads Hydration (Disambiguate duplicates via #ID & mobile)
             const staleLeads = nonDeletedLeads.filter(function (l) {
-                if (l.stage === "converted" || l.stage === "lost" || l.stage === "not_suitable") return false;
+                if (
+                    l.stage === "converted" ||
+                    l.stage === "lost" ||
+                    l.stage === "not_suitable"
+                )
+                    return false;
                 const contactDate = l.last_contact_at || l.created_at;
                 if (!contactDate) return true;
-                const daysDiff = (now - new Date(contactDate)) / (1000 * 60 * 60 * 24);
+                const daysDiff =
+                    (now - new Date(contactDate)) / (1000 * 60 * 60 * 24);
                 return daysDiff >= 7;
             });
-            const staleContainer = document.getElementById("dashboard-stale-container");
+            const staleContainer = document.getElementById(
+                "dashboard-stale-container",
+            );
             const staleEmpty = document.getElementById("dashboard-stale-empty");
             if (staleContainer) {
                 if (staleLeads.length === 0) {
@@ -621,32 +800,53 @@
                 } else {
                     if (staleEmpty) staleEmpty.style.display = "none";
                     staleContainer.style.display = "";
-                    staleContainer.querySelectorAll("[data-lead-id]").forEach(function (el) {
-                        const lid = Number(el.getAttribute("data-lead-id"));
-                        if (!staleLeads.some(function (sl) { return Number(sl.id) === lid; })) {
-                            el.remove();
-                        }
-                    });
+                    staleContainer
+                        .querySelectorAll("[data-lead-id]")
+                        .forEach(function (el) {
+                            const lid = Number(el.getAttribute("data-lead-id"));
+                            if (
+                                !staleLeads.some(function (sl) {
+                                    return Number(sl.id) === lid;
+                                })
+                            ) {
+                                el.remove();
+                            }
+                        });
                     staleLeads.forEach(function (lead) {
-                        if (!staleContainer.querySelector('[data-lead-id="' + lead.id + '"]')) {
+                        if (
+                            !staleContainer.querySelector(
+                                '[data-lead-id="' + lead.id + '"]',
+                            )
+                        ) {
                             const item = document.createElement("div");
                             item.setAttribute("data-lead-id", lead.id);
-                            item.className = "flex items-center justify-between p-2.5 bg-white border border-purple-100 rounded-xl text-xs shadow-2xs";
-                            item.innerHTML = 
+                            item.className =
+                                "flex items-center justify-between p-2.5 bg-white border border-purple-100 rounded-xl text-xs shadow-2xs";
+                            item.innerHTML =
                                 '<div class="min-w-0 pr-2">' +
-                                    '<a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-purple-700 block truncate">' +
-                                        (lead.name || "") + ' <span class="text-[11px] font-mono text-purple-600 font-normal">#' + lead.id + '</span>' +
-                                    '</a>' +
-                                    '<div class="text-[10px] text-slate-400 mt-0.5">📞 ' + (lead.mobile || "") + ' • ID #' + lead.id + '</div>' +
-                                '</div>' +
-                                '<a href="/leads/' + lead.id + '" class="text-[11px] font-bold text-purple-700 hover:underline flex-shrink-0">Re-engage →</a>';
+                                '<a href="/leads/' +
+                                lead.id +
+                                '" class="font-bold text-slate-900 hover:text-purple-700 block truncate">' +
+                                (lead.name || "") +
+                                ' <span class="text-[11px] font-mono text-purple-600 font-normal">#' +
+                                lead.id +
+                                "</span>" +
+                                "</a>" +
+                                '<div class="text-[10px] text-slate-400 mt-0.5">📞 ' +
+                                (lead.mobile || "") +
+                                " • ID #" +
+                                lead.id +
+                                "</div>" +
+                                "</div>" +
+                                '<a href="/leads/' +
+                                lead.id +
+                                '" class="text-[11px] font-bold text-purple-700 hover:underline flex-shrink-0">Re-engage →</a>';
                             staleContainer.appendChild(item);
                         }
                     });
                 }
             }
         }
-
 
         // 2. REPORTS SYNC - ONLY on /reports!
         if (curPath === "/reports" || curPath.startsWith("/reports?")) {
@@ -714,10 +914,12 @@
                 });
             }
 
-            const tableBody = document.querySelector("tbody.divide-y");
-            const mobileStack = document.querySelector(
-                'div.divide-y[class*="md:hidden"]',
-            );
+            const tableBody =
+                document.querySelector("#desktop-leads-tbody") ||
+                document.querySelector("tbody.divide-y");
+            const mobileStack =
+                document.querySelector("#mobile-leads-stack") ||
+                document.querySelector('div.divide-y[class*="md:hidden"]');
 
             function getStageBadgeClass(stage) {
                 switch (stage) {
@@ -755,6 +957,13 @@
                 }
             }
 
+            const callIconSvg =
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>';
+            const waIconSvg =
+                '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>';
+            const fbIconSvg =
+                '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+
             function renderLeadRow(lead) {
                 const initialLetter = (lead.name || "L")
                     .charAt(0)
@@ -775,13 +984,6 @@
                 }
                 const stageClass = getStageBadgeClass(lead.stage || "new");
                 const fbUrl = lead.facebook_url || "";
-
-                const callIconSvg =
-                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>';
-                const waIconSvg =
-                    '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>';
-                const fbIconSvg =
-                    '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
 
                 const callBtn =
                     '<a href="tel:' +
@@ -906,67 +1108,122 @@
                 const tempClass = getTempBadgeClass(lead.temperature || "warm");
                 const tempLabel = (lead.temperature || "warm").toUpperCase();
                 const sourceName =
-                    (DATA.sources && DATA.sources[lead.lead_source_id]) || "Direct";
+                    (DATA.sources && DATA.sources[lead.lead_source_id]) ||
+                    "Direct";
                 const cleanMobile = (lead.mobile || "").replace(/[^\d+]/g, "");
-                const cleanWhatsapp = (lead.whatsapp || lead.mobile || "").replace(/[^\d]/g, "");
+                let cleanWhatsapp = (
+                    lead.whatsapp ||
+                    lead.mobile ||
+                    ""
+                ).replace(/[^\d]/g, "");
+                if (cleanWhatsapp.startsWith("01") && cleanWhatsapp.length === 11) {
+                    cleanWhatsapp = "88" + cleanWhatsapp;
+                }
 
                 const callBtn = cleanMobile
-                    ? '<a href="tel:' + cleanMobile + '" class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 transition-all">' +
-                      callIconSvg + '<span>Call</span></a>'
-                    : '';
+                    ? '<a href="tel:' +
+                      cleanMobile +
+                      '" class="py-2.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-xs text-center flex items-center justify-center gap-1.5 active:scale-95 transition-all">' +
+                      callIconSvg +
+                      "<span>Call</span></a>"
+                    : "";
 
                 const waBtn = cleanWhatsapp
-                    ? '<a href="https://wa.me/' + cleanWhatsapp + '" target="_blank" rel="noopener noreferrer" class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">' +
-                      waIconSvg + '<span>WhatsApp</span></a>'
-                    : '';
+                    ? '<a href="https://wa.me/' +
+                      cleanWhatsapp +
+                      '" target="_blank" rel="noopener noreferrer" class="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs text-center flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all">' +
+                      waIconSvg +
+                      "<span>WhatsApp</span></a>"
+                    : "";
 
-                const detailsBtn = '<a href="/leads/' + lead.id + '" class="py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs text-center flex items-center justify-center gap-1 active:scale-95 transition-all"><span>Details</span><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></a>';
+                const detailsBtn =
+                    '<a href="/leads/' +
+                    lead.id +
+                    '" class="py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs text-center flex items-center justify-center gap-1 active:scale-95 transition-all"><span>Details</span><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></a>';
 
                 const nextActionHtml = lead.next_action_at
-                    ? '<div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100"><div class="flex items-center gap-1.5"><span>⏰</span><div><span class="font-semibold text-slate-700">' + escapeHtml(lead.next_action_type || 'Action') + '</span><span class="text-[11px] text-slate-400"> • ' + escapeHtml(lead.next_action_at) + '</span></div></div></div>'
+                    ? '<div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100"><div class="flex items-center gap-1.5"><span>⏰</span><div><span class="font-semibold text-slate-700">' +
+                      escapeHtml(lead.next_action_type || "Action") +
+                      '</span><span class="text-[11px] text-slate-400"> • ' +
+                      escapeHtml(lead.next_action_at) +
+                      "</span></div></div></div>"
                     : '<div class="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs border border-slate-100"><div class="flex items-center gap-1.5"><span>⏰</span><span class="text-amber-600 font-semibold text-[11px]">Needs Next Action</span></div></div>';
 
                 return (
                     '<div class="flex items-start justify-between gap-2">' +
                     '<div class="flex items-center gap-3">' +
                     (lead.photo
-                        ? '<div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-orange-200/50"><img src="' + escapeHtml(lead.photo) + '" class="w-full h-full object-cover"></div>'
-                        : '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs border border-orange-200/50">' + initialLetter + '</div>') +
-                    '<div>' +
-                    '<a href="/leads/' + lead.id + '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' + escapeHtml(lead.name) + '</a>' +
-                    '<div class="text-[11px] text-slate-400 mt-0.5">' + escapeHtml(lead.location || 'No location') + (lead.profession_or_business ? ' • ' + escapeHtml(lead.profession_or_business) : '') + '</div>' +
-                    '</div>' +
-                    '</div>' +
-                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ' + stageClass + '">' + stageLabel + '</span>' +
-                    '</div>' +
-
+                        ? '<div class="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-orange-200/50"><img src="' +
+                          escapeHtml(lead.photo) +
+                          '" class="w-full h-full object-cover"></div>'
+                        : '<div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-xs border border-orange-200/50">' +
+                          initialLetter +
+                          "</div>") +
+                    "<div>" +
+                    '<div class="flex items-center gap-1.5">' +
+                    '<a href="/leads/' +
+                    lead.id +
+                    '" class="font-bold text-slate-900 hover:text-orange-600 text-sm block">' +
+                    escapeHtml(lead.name) +
+                    "</a>" +
+                    '<span class="text-xs font-mono text-slate-400 font-normal">#' +
+                    lead.id +
+                    "</span>" +
+                    "</div>" +
+                    '<div class="text-[11px] text-slate-400 mt-0.5">' +
+                    escapeHtml(lead.location || "No location") +
+                    (lead.profession_or_business
+                        ? " • " + escapeHtml(lead.profession_or_business)
+                        : "") +
+                    "</div>" +
+                    "</div>" +
+                    "</div>" +
+                    '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ' +
+                    stageClass +
+                    '">' +
+                    stageLabel +
+                    "</span>" +
+                    "</div>" +
                     '<div class="flex flex-wrap items-center gap-1.5 text-[11px]">' +
-                    '<span class="px-2 py-0.5 rounded-full font-semibold border ' + tempClass + '">' + tempLabel + (lead.score ? ' (' + lead.score + ' pts)' : '') + '</span>' +
-                    '<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">' + escapeHtml(sourceName) + '</span>' +
-                    (lead.lead_tag ? '<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 font-bold">' + escapeHtml(lead.lead_tag) + '</span>' : '') +
-                    '</div>' +
-
+                    '<span class="px-2 py-0.5 rounded-full font-semibold border ' +
+                    tempClass +
+                    '">' +
+                    tempLabel +
+                    (lead.score ? " (" + lead.score + " pts)" : "") +
+                    "</span>" +
+                    '<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">' +
+                    escapeHtml(sourceName) +
+                    "</span>" +
+                    (lead.lead_tag
+                        ? '<span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 font-bold">' +
+                          escapeHtml(lead.lead_tag) +
+                          "</span>"
+                        : "") +
+                    "</div>" +
                     nextActionHtml +
-
                     '<div class="grid grid-cols-3 gap-2 pt-1">' +
                     callBtn +
                     waBtn +
                     detailsBtn +
-                    '</div>' +
-
+                    "</div>" +
                     '<div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">' +
-                    '<a href="/leads/' + lead.id + '/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>Edit</a>' +
-                    '<form action="/leads/' + lead.id + '" method="POST" onsubmit="return confirm(\'Are you sure you want to delete this lead?\');" class="inline">' +
+                    '<a href="/leads/' +
+                    lead.id +
+                    '/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>Edit</a>' +
+                    '<form action="/leads/' +
+                    lead.id +
+                    '" method="POST" onsubmit="return confirm(\'Are you sure you want to delete this lead?\');" class="inline">' +
                     '<input type="hidden" name="_method" value="DELETE">' +
                     '<button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>Delete</button>' +
-                    '</form>' +
-                    '</div>'
+                    "</form>" +
+                    "</div>"
                 );
             }
 
             function renderKanbanCard(lead) {
                 const sourceName =
-                    DATA.sources[lead.lead_source_id] || "Direct";
+                    (DATA.sources && DATA.sources[lead.lead_source_id]) ||
+                    "Direct";
                 const tempClass = getTempBadgeClass(lead.temperature || "warm");
                 const tempLabel = (lead.temperature || "warm").toUpperCase();
 
@@ -1082,6 +1339,51 @@
                     });
                 }
             }
+
+            window.filterLeadsLive = function (query) {
+                query = (query || "").toLowerCase().trim();
+                const rows = document.querySelectorAll(
+                    "#desktop-leads-tbody tr[data-lead-id], tbody.divide-y tr[data-lead-id]",
+                );
+                const cards = document.querySelectorAll(
+                    "#mobile-leads-stack > div[data-lead-id], div.divide-y[class*='md:hidden'] > div[data-lead-id]",
+                );
+                const kCards = document.querySelectorAll(
+                    ".kanban-cards-container .kanban-card[data-lead-id]",
+                );
+                let count = 0;
+
+                function checkMatch(el) {
+                    if (!query) {
+                        el.style.display = "";
+                        return true;
+                    }
+                    const text = (el.textContent || "").toLowerCase();
+                    const matches = text.includes(query);
+                    el.style.display = matches ? "" : "none";
+                    return matches;
+                }
+
+                rows.forEach(function (r) {
+                    if (checkMatch(r)) count++;
+                });
+                cards.forEach(function (c) {
+                    checkMatch(c);
+                });
+                kCards.forEach(function (k) {
+                    checkMatch(k);
+                });
+
+                const counter = document.getElementById("leads-live-counter");
+                if (counter) {
+                    if (query) {
+                        counter.textContent = count + " found";
+                        counter.classList.remove("hidden");
+                    } else {
+                        counter.classList.add("hidden");
+                    }
+                }
+            };
         }
 
         // 3b. LEAD DETAILS PAGE SYNC - ONLY on /leads/:id!
@@ -1105,7 +1407,8 @@
                     .charAt(0)
                     .toUpperCase();
                 const sourceName =
-                    DATA.sources[lead.lead_source_id] || "Direct";
+                    (DATA.sources && DATA.sources[lead.lead_source_id]) ||
+                    "Direct";
                 const score = lead.score || 25;
                 const temp = (lead.temperature || "warm").toUpperCase();
                 const cleanWhatsapp = (
@@ -2185,254 +2488,374 @@
 
         // 6. CONTACTS SYNC - ONLY on /contacts!
         if (curPath === "/contacts" || curPath.startsWith("/contacts?")) {
-            const contactsTbody = document.getElementById("contacts-table-body");
-            const contactsMobileCards = document.getElementById("contacts-mobile-cards");
+            const contactsTbody = document.getElementById(
+                "contacts-table-body",
+            );
+            const contactsMobileCards = document.getElementById(
+                "contacts-mobile-cards",
+            );
 
             if (DATA.contacts && Array.isArray(DATA.contacts)) {
                 // Desktop Table Rendering
                 if (contactsTbody) {
-                    contactsTbody.innerHTML = DATA.contacts.map(function (c) {
-                        const isPrimary = Number(c.is_primary) === 1;
-                        const iconBg = isPrimary
-                            ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                            : "bg-slate-100 border border-slate-200/80 text-slate-700";
-                        const badgeHtml = c.badge
-                            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
-                              (isPrimary
-                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                  : "bg-slate-100 text-slate-700 border border-slate-200") +
-                              '">' +
-                              escapeHtml(c.badge) +
-                              "</span>"
-                            : "";
-                        const descHtml = c.description
-                            ? '<p class="text-xs text-slate-500 line-clamp-1 mt-0.5 max-w-xs" title="' +
-                              escapeHtml(c.description) +
-                              '">' +
-                              escapeHtml(c.description) +
-                              "</p>"
-                            : "";
-                        const cleanPhone = (c.phone || "").replace(/[^0-9+]/g, "");
-                        let cleanWa = (c.whatsapp || c.phone || "").replace(/[^0-9]/g, "");
-                        if (cleanWa.startsWith("01")) {
-                            cleanWa = "88" + cleanWa;
-                        }
+                    contactsTbody.innerHTML = DATA.contacts
+                        .map(function (c) {
+                            const isPrimary = Number(c.is_primary) === 1;
+                            const iconBg = isPrimary
+                                ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                                : "bg-slate-100 border border-slate-200/80 text-slate-700";
+                            const badgeHtml = c.badge
+                                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
+                                  (isPrimary
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-slate-100 text-slate-700 border border-slate-200") +
+                                  '">' +
+                                  escapeHtml(c.badge) +
+                                  "</span>"
+                                : "";
+                            const descHtml = c.description
+                                ? '<p class="text-xs text-slate-500 line-clamp-1 mt-0.5 max-w-xs" title="' +
+                                  escapeHtml(c.description) +
+                                  '">' +
+                                  escapeHtml(c.description) +
+                                  "</p>"
+                                : "";
+                            const cleanPhone = (c.phone || "").replace(
+                                /[^0-9+]/g,
+                                "",
+                            );
+                            let cleanWa = (c.whatsapp || c.phone || "").replace(
+                                /[^0-9]/g,
+                                "",
+                            );
+                            if (cleanWa.startsWith("01")) {
+                                cleanWa = "88" + cleanWa;
+                            }
 
-                        let personHtml = '<span class="text-slate-400 text-xs">—</span>';
-                        if (c.contact_person) {
-                            personHtml =
-                                '<div class="flex items-center gap-2 text-sm text-slate-800 font-medium">' +
-                                '<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>' +
-                                "<span>" + escapeHtml(c.contact_person) + "</span>" +
-                                "</div>";
-                        }
+                            let personHtml =
+                                '<span class="text-slate-400 text-xs">—</span>';
+                            if (c.contact_person) {
+                                personHtml =
+                                    '<div class="flex items-center gap-2 text-sm text-slate-800 font-medium">' +
+                                    '<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>' +
+                                    "<span>" +
+                                    escapeHtml(c.contact_person) +
+                                    "</span>" +
+                                    "</div>";
+                            }
 
-                        let phoneHtml = '<span class="text-slate-400 text-xs">—</span>';
-                        if (c.phone) {
-                            phoneHtml =
-                                '<div class="flex items-center gap-2">' +
-                                '<span class="font-bold text-slate-900 text-sm font-mono">' + escapeHtml(c.phone) + "</span>" +
-                                '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(c.phone) + '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
-                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                            let phoneHtml =
+                                '<span class="text-slate-400 text-xs">—</span>';
+                            if (c.phone) {
+                                phoneHtml =
+                                    '<div class="flex items-center gap-2">' +
+                                    '<span class="font-bold text-slate-900 text-sm font-mono">' +
+                                    escapeHtml(c.phone) +
+                                    "</span>" +
+                                    '<button type="button" onclick="window.copyContactToClipboard(\'' +
+                                    escapeHtml(c.phone) +
+                                    '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
+                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                                    "</button>" +
+                                    '<a href="tel:' +
+                                    cleanPhone +
+                                    '" title="সরাসরি ফোন কল করুন" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
+                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
+                                    "<span>কল</span>" +
+                                    "</a>" +
+                                    "</div>";
+                            }
+
+                            const targetWa = c.whatsapp || c.phone;
+                            let waHtml =
+                                '<span class="text-slate-400 text-xs">—</span>';
+                            if (targetWa) {
+                                waHtml =
+                                    '<div class="flex items-center gap-2">' +
+                                    '<span class="font-bold text-slate-900 text-sm font-mono">' +
+                                    escapeHtml(targetWa) +
+                                    "</span>" +
+                                    '<button type="button" onclick="window.copyContactToClipboard(\'' +
+                                    escapeHtml(targetWa) +
+                                    '\', \'WhatsApp number\')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
+                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                                    "</button>" +
+                                    '<a href="https://wa.me/' +
+                                    cleanWa +
+                                    "?text=" +
+                                    encodeURIComponent(
+                                        "আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।",
+                                    ) +
+                                    '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে মেসেজ পাঠান" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
+                                    '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
+                                    "<span>মেসেজ</span>" +
+                                    "</a>" +
+                                    '<a href="https://wa.me/' +
+                                    cleanWa +
+                                    '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে কল / ডায়াল করুন" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors active:scale-95">' +
+                                    "<span>📱 কল</span>" +
+                                    "</a>" +
+                                    "</div>";
+                            }
+
+                            let emailHtml =
+                                '<span class="text-slate-400 text-xs">—</span>';
+                            if (c.email) {
+                                emailHtml =
+                                    '<a href="mailto:' +
+                                    escapeHtml(c.email) +
+                                    '" class="text-xs text-slate-700 hover:text-emerald-600 font-medium truncate max-w-[160px] inline-flex items-center gap-1.5" title="' +
+                                    escapeHtml(c.email) +
+                                    '">' +
+                                    '<svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>' +
+                                    "<span>" +
+                                    escapeHtml(c.email) +
+                                    "</span>" +
+                                    "</a>";
+                            }
+
+                            const hoursHtml =
+                                '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium">' +
+                                '<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' +
+                                "<span>" +
+                                escapeHtml(
+                                    c.available_hours || "10:00 AM - 08:00 PM",
+                                ) +
+                                "</span>" +
+                                "</span>";
+
+                            const searchData = (
+                                (c.department || "") +
+                                " " +
+                                (c.contact_person || "") +
+                                " " +
+                                (c.phone || "") +
+                                " " +
+                                (c.whatsapp || "") +
+                                " " +
+                                (c.email || "") +
+                                " " +
+                                (c.badge || "") +
+                                " " +
+                                (c.description || "")
+                            ).toLowerCase();
+
+                            return (
+                                '<tr data-contact-id="' +
+                                c.id +
+                                '" data-search="' +
+                                escapeHtml(searchData) +
+                                '" class="hover:bg-slate-50/75 transition-colors group">' +
+                                '<td class="py-4 px-4 align-middle">' +
+                                '<div class="flex items-center gap-3">' +
+                                '<div class="w-10 h-10 rounded-xl ' +
+                                iconBg +
+                                ' flex items-center justify-center text-xl flex-shrink-0">' +
+                                escapeHtml(c.icon || "📞") +
+                                "</div>" +
+                                '<div class="min-w-0">' +
+                                '<div class="flex items-center gap-2 flex-wrap">' +
+                                '<span class="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">' +
+                                escapeHtml(c.department) +
+                                "</span>" +
+                                badgeHtml +
+                                "</div>" +
+                                descHtml +
+                                "</div>" +
+                                "</div>" +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
+                                personHtml +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
+                                phoneHtml +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
+                                waHtml +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
+                                emailHtml +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
+                                hoursHtml +
+                                "</td>" +
+                                '<td class="py-4 px-4 align-middle text-right whitespace-nowrap">' +
+                                '<div class="inline-flex items-center gap-1.5">' +
+                                '<button type="button" onclick="window.openContactEditModalById(' +
+                                c.id +
+                                ')" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="Edit Contact">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
                                 "</button>" +
-                                '<a href="tel:' + cleanPhone + '" title="সরাসরি ফোন কল করুন" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
-                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
-                                "<span>কল</span>" +
-                                "</a>" +
-                                "</div>";
-                        }
-
-                        const targetWa = c.whatsapp || c.phone;
-                        let waHtml = '<span class="text-slate-400 text-xs">—</span>';
-                        if (targetWa) {
-                            waHtml =
-                                '<div class="flex items-center gap-2">' +
-                                '<span class="font-bold text-slate-900 text-sm font-mono">' + escapeHtml(targetWa) + "</span>" +
-                                '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(targetWa) + '\', \'WhatsApp number\')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
-                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                                '<form action="/contacts/' +
+                                c.id +
+                                '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
+                                '<input type="hidden" name="_method" value="DELETE">' +
+                                '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete Contact">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
                                 "</button>" +
-                                '<a href="https://wa.me/' + cleanWa + '?text=' + encodeURIComponent('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') + '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে মেসেজ পাঠান" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
-                                '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
-                                "<span>মেসেজ</span>" +
-                                "</a>" +
-                                '<a href="https://wa.me/' + cleanWa + '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে কল / ডায়াল করুন" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors active:scale-95">' +
-                                "<span>📱 কল</span>" +
-                                "</a>" +
-                                "</div>";
-                        }
-
-                        let emailHtml = '<span class="text-slate-400 text-xs">—</span>';
-                        if (c.email) {
-                            emailHtml =
-                                '<a href="mailto:' + escapeHtml(c.email) + '" class="text-xs text-slate-700 hover:text-emerald-600 font-medium truncate max-w-[160px] inline-flex items-center gap-1.5" title="' + escapeHtml(c.email) + '">' +
-                                '<svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>' +
-                                "<span>" + escapeHtml(c.email) + "</span>" +
-                                "</a>";
-                        }
-
-                        const hoursHtml =
-                            '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium">' +
-                            '<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' +
-                            "<span>" + escapeHtml(c.available_hours || "10:00 AM - 08:00 PM") + "</span>" +
-                            "</span>";
-
-                        const searchData = (
-                            (c.department || "") + " " +
-                            (c.contact_person || "") + " " +
-                            (c.phone || "") + " " +
-                            (c.whatsapp || "") + " " +
-                            (c.email || "") + " " +
-                            (c.badge || "") + " " +
-                            (c.description || "")
-                        ).toLowerCase();
-
-                        return (
-                            '<tr data-contact-id="' + c.id + '" data-search="' + escapeHtml(searchData) + '" class="hover:bg-slate-50/75 transition-colors group">' +
-                            '<td class="py-4 px-4 align-middle">' +
-                            '<div class="flex items-center gap-3">' +
-                            '<div class="w-10 h-10 rounded-xl ' + iconBg + ' flex items-center justify-center text-xl flex-shrink-0">' +
-                            escapeHtml(c.icon || "📞") +
-                            "</div>" +
-                            '<div class="min-w-0">' +
-                            '<div class="flex items-center gap-2 flex-wrap">' +
-                            '<span class="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">' +
-                            escapeHtml(c.department) +
-                            "</span>" +
-                            badgeHtml +
-                            "</div>" +
-                            descHtml +
-                            "</div>" +
-                            "</div>" +
-                            "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + personHtml + "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + phoneHtml + "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + waHtml + "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + emailHtml + "</td>" +
-                            '<td class="py-4 px-4 align-middle whitespace-nowrap">' + hoursHtml + "</td>" +
-                            '<td class="py-4 px-4 align-middle text-right whitespace-nowrap">' +
-                            '<div class="inline-flex items-center gap-1.5">' +
-                            '<button type="button" onclick="window.openContactEditModalById(' + c.id + ')" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="Edit Contact">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
-                            "</button>" +
-                            '<form action="/contacts/' + c.id + '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
-                            '<input type="hidden" name="_method" value="DELETE">' +
-                            '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete Contact">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
-                            "</button>" +
-                            "</form>" +
-                            "</div>" +
-                            "</td>" +
-                            "</tr>"
-                        );
-                    }).join("");
+                                "</form>" +
+                                "</div>" +
+                                "</td>" +
+                                "</tr>"
+                            );
+                        })
+                        .join("");
                 }
 
                 // Mobile Cards Rendering
                 if (contactsMobileCards) {
-                    contactsMobileCards.innerHTML = DATA.contacts.map(function (c) {
-                        const isPrimary = Number(c.is_primary) === 1;
-                        const iconBg = isPrimary
-                            ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                            : "bg-slate-100 border border-slate-200 text-slate-700";
-                        const badgeHtml = c.badge
-                            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
-                              (isPrimary
-                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                  : "bg-slate-100 text-slate-700 border border-slate-200") +
-                              '">' +
-                              escapeHtml(c.badge) +
-                              "</span>"
-                            : "";
-                        const descHtml = c.description
-                            ? '<p class="text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">' +
-                              escapeHtml(c.description) +
-                              "</p>"
-                            : "";
-                        const cleanPhone = (c.phone || "").replace(/[^0-9+]/g, "");
-                        let cleanWa = (c.whatsapp || c.phone || "").replace(/[^0-9]/g, "");
-                        if (cleanWa.startsWith("01")) {
-                            cleanWa = "88" + cleanWa;
-                        }
+                    contactsMobileCards.innerHTML = DATA.contacts
+                        .map(function (c) {
+                            const isPrimary = Number(c.is_primary) === 1;
+                            const iconBg = isPrimary
+                                ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+                                : "bg-slate-100 border border-slate-200 text-slate-700";
+                            const badgeHtml = c.badge
+                                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
+                                  (isPrimary
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-slate-100 text-slate-700 border border-slate-200") +
+                                  '">' +
+                                  escapeHtml(c.badge) +
+                                  "</span>"
+                                : "";
+                            const descHtml = c.description
+                                ? '<p class="text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">' +
+                                  escapeHtml(c.description) +
+                                  "</p>"
+                                : "";
+                            const cleanPhone = (c.phone || "").replace(
+                                /[^0-9+]/g,
+                                "",
+                            );
+                            let cleanWa = (c.whatsapp || c.phone || "").replace(
+                                /[^0-9]/g,
+                                "",
+                            );
+                            if (cleanWa.startsWith("01")) {
+                                cleanWa = "88" + cleanWa;
+                            }
 
-                        const personHtml = c.contact_person
-                            ? '<p class="text-xs text-slate-600 mt-0.5 flex items-center gap-1"><span>👤</span> ' + escapeHtml(c.contact_person) + '</p>'
-                            : '';
+                            const personHtml = c.contact_person
+                                ? '<p class="text-xs text-slate-600 mt-0.5 flex items-center gap-1"><span>👤</span> ' +
+                                  escapeHtml(c.contact_person) +
+                                  "</p>"
+                                : "";
 
-                        const searchData = (
-                            (c.department || "") + " " +
-                            (c.contact_person || "") + " " +
-                            (c.phone || "") + " " +
-                            (c.whatsapp || "") + " " +
-                            (c.email || "") + " " +
-                            (c.badge || "") + " " +
-                            (c.description || "")
-                        ).toLowerCase();
+                            const searchData = (
+                                (c.department || "") +
+                                " " +
+                                (c.contact_person || "") +
+                                " " +
+                                (c.phone || "") +
+                                " " +
+                                (c.whatsapp || "") +
+                                " " +
+                                (c.email || "") +
+                                " " +
+                                (c.badge || "") +
+                                " " +
+                                (c.description || "")
+                            ).toLowerCase();
 
-                        return (
-                            '<div data-contact-id="' + c.id + '" data-search="' + escapeHtml(searchData) + '" class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 transition-all">' +
-                            '<div class="flex items-start justify-between gap-3">' +
-                            '<div class="flex items-center gap-3">' +
-                            '<div class="w-11 h-11 rounded-2xl ' + iconBg + ' flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">' +
-                            escapeHtml(c.icon || "📞") +
-                            "</div>" +
-                            "<div>" +
-                            '<div class="flex items-center gap-1.5 flex-wrap">' +
-                            '<h3 class="font-bold text-slate-900 text-sm">' + escapeHtml(c.department) + "</h3>" +
-                            badgeHtml +
-                            "</div>" +
-                            personHtml +
-                            "</div>" +
-                            "</div>" +
-                            '<div class="flex items-center gap-1">' +
-                            '<button type="button" onclick="window.openContactEditModalById(' + c.id + ')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
-                            "</button>" +
-                            '<form action="/contacts/' + c.id + '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
-                            '<input type="hidden" name="_method" value="DELETE">' +
-                            '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
-                            "</button>" +
-                            "</form>" +
-                            "</div>" +
-                            "</div>" +
-                            descHtml +
-                            '<div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">' +
-                            '<div class="flex items-center gap-1.5">' +
-                            '<span class="font-bold text-slate-900 font-mono">' + escapeHtml(c.phone) + "</span>" +
-                            '<button type="button" onclick="window.copyContactToClipboard(\'' + escapeHtml(c.phone) + '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100">' +
-                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
-                            "</button>" +
-                            "</div>" +
-                            '<span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">🕒 ' + escapeHtml(c.available_hours || "10:00 AM - 08:00 PM") + "</span>" +
-                            "</div>" +
-                            '<div class="grid grid-cols-3 gap-2 pt-1">' +
-                            '<a href="tel:' + cleanPhone + '" title="Direct Phone Call" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-black text-emerald-400 shadow-xs active:scale-95 transition-all text-center">' +
-                            '<svg class="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
-                            '<span class="text-[11px] font-bold">ফোন কল</span>' +
-                            "</a>" +
-                            '<a href="https://wa.me/' + cleanWa + '?text=' + encodeURIComponent('আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।') + '" target="_blank" rel="noopener noreferrer" title="WhatsApp Message" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all text-center">' +
-                            '<svg class="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
-                            '<span class="text-[11px] font-bold">হোয়াটসঅ্যাপ</span>' +
-                            "</a>" +
-                            '<a href="https://wa.me/' + cleanWa + '" target="_blank" rel="noopener noreferrer" title="WhatsApp Call / Direct" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all text-center">' +
-                            '<span class="text-base mb-0.5 leading-tight">📱</span>' +
-                            '<span class="text-[11px] font-bold">ডায়াল / কল</span>' +
-                            "</a>" +
-                            "</div>" +
-                            "</div>"
-                        );
-                    }).join("");
+                            return (
+                                '<div data-contact-id="' +
+                                c.id +
+                                '" data-search="' +
+                                escapeHtml(searchData) +
+                                '" class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 transition-all">' +
+                                '<div class="flex items-start justify-between gap-3">' +
+                                '<div class="flex items-center gap-3">' +
+                                '<div class="w-11 h-11 rounded-2xl ' +
+                                iconBg +
+                                ' flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">' +
+                                escapeHtml(c.icon || "📞") +
+                                "</div>" +
+                                "<div>" +
+                                '<div class="flex items-center gap-1.5 flex-wrap">' +
+                                '<h3 class="font-bold text-slate-900 text-sm">' +
+                                escapeHtml(c.department) +
+                                "</h3>" +
+                                badgeHtml +
+                                "</div>" +
+                                personHtml +
+                                "</div>" +
+                                "</div>" +
+                                '<div class="flex items-center gap-1">' +
+                                '<button type="button" onclick="window.openContactEditModalById(' +
+                                c.id +
+                                ')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
+                                "</button>" +
+                                '<form action="/contacts/' +
+                                c.id +
+                                '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
+                                '<input type="hidden" name="_method" value="DELETE">' +
+                                '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
+                                "</button>" +
+                                "</form>" +
+                                "</div>" +
+                                "</div>" +
+                                descHtml +
+                                '<div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">' +
+                                '<div class="flex items-center gap-1.5">' +
+                                '<span class="font-bold text-slate-900 font-mono">' +
+                                escapeHtml(c.phone) +
+                                "</span>" +
+                                '<button type="button" onclick="window.copyContactToClipboard(\'' +
+                                escapeHtml(c.phone) +
+                                '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100">' +
+                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
+                                "</button>" +
+                                "</div>" +
+                                '<span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">🕒 ' +
+                                escapeHtml(
+                                    c.available_hours || "10:00 AM - 08:00 PM",
+                                ) +
+                                "</span>" +
+                                "</div>" +
+                                '<div class="grid grid-cols-3 gap-2 pt-1">' +
+                                '<a href="tel:' +
+                                cleanPhone +
+                                '" title="Direct Phone Call" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-black text-emerald-400 shadow-xs active:scale-95 transition-all text-center">' +
+                                '<svg class="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
+                                '<span class="text-[11px] font-bold">ফোন কল</span>' +
+                                "</a>" +
+                                '<a href="https://wa.me/' +
+                                cleanWa +
+                                "?text=" +
+                                encodeURIComponent(
+                                    "আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।",
+                                ) +
+                                '" target="_blank" rel="noopener noreferrer" title="WhatsApp Message" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all text-center">' +
+                                '<svg class="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
+                                '<span class="text-[11px] font-bold">হোয়াটসঅ্যাপ</span>' +
+                                "</a>" +
+                                '<a href="https://wa.me/' +
+                                cleanWa +
+                                '" target="_blank" rel="noopener noreferrer" title="WhatsApp Call / Direct" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all text-center">' +
+                                '<span class="text-base mb-0.5 leading-tight">📱</span>' +
+                                '<span class="text-[11px] font-bold">ডায়াল / কল</span>' +
+                                "</a>" +
+                                "</div>" +
+                                "</div>"
+                            );
+                        })
+                        .join("");
                 }
             }
 
             // Live search filter on input (filters BOTH table rows and mobile cards)
-            const contactSearchInput = document.getElementById("contacts-search-input");
+            const contactSearchInput = document.getElementById(
+                "contacts-search-input",
+            );
             if (contactSearchInput && !contactSearchInput.__hasListener) {
                 contactSearchInput.__hasListener = true;
                 contactSearchInput.addEventListener("input", function (e) {
                     const q = (e.target.value || "").toLowerCase().trim();
                     const items = document.querySelectorAll(
-                        "#contacts-table-body tr[data-contact-id], #contacts-mobile-cards div[data-contact-id]"
+                        "#contacts-table-body tr[data-contact-id], #contacts-mobile-cards div[data-contact-id]",
                     );
                     items.forEach(function (el) {
                         const txt = (
@@ -2832,24 +3255,33 @@
         if (curPath === "/users" || curPath.startsWith("/users?")) {
             if (DATA.deletedUsers && DATA.deletedUsers.length > 0) {
                 DATA.deletedUsers.forEach(function (id) {
-                    document.querySelectorAll('[data-user-id="' + id + '"]').forEach(function (el) {
-                        el.remove();
-                    });
+                    document
+                        .querySelectorAll('[data-user-id="' + id + '"]')
+                        .forEach(function (el) {
+                            el.remove();
+                        });
                 });
             }
             if (DATA.users && DATA.users.length > 0) {
                 const tbody = document.querySelector("table tbody.divide-y");
                 DATA.users.forEach(function (u) {
-                    const row = document.querySelector('tr[data-user-id="' + u.id + '"]');
+                    const row = document.querySelector(
+                        'tr[data-user-id="' + u.id + '"]',
+                    );
                     if (row) {
                         const statusCell = row.children[5];
                         if (statusCell) {
                             const isAct = u.status === "active";
-                            statusCell.innerHTML = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' +
-                                (isAct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' +
-                                (isAct ? 'Active' : 'Inactive') + '</span>';
+                            statusCell.innerHTML =
+                                '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' +
+                                (isAct
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-rose-100 text-rose-800") +
+                                '">' +
+                                (isAct ? "Active" : "Inactive") +
+                                "</span>";
                         }
-                        const phoneSpan = row.querySelector('.font-mono span');
+                        const phoneSpan = row.querySelector(".font-mono span");
                         if (phoneSpan && u.phone) {
                             phoneSpan.textContent = u.phone;
                         }
@@ -2860,24 +3292,41 @@
                         const isAct = u.status === "active";
                         const initial = (u.name || "U").charAt(0).toUpperCase();
 
-                        tr.innerHTML = '<td class="py-3 px-4"><div class="flex items-center gap-3">' +
+                        tr.innerHTML =
+                            '<td class="py-3 px-4"><div class="flex items-center gap-3">' +
                             '<div class="w-9 h-9 rounded-full bg-slate-900 text-orange-400 font-bold flex items-center justify-center text-sm shadow-xs border border-slate-700 flex-shrink-0">' +
-                            initial + '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' +
-                            (u.name || "User") + '</span></div><div class="text-xs text-slate-500 font-mono">📱 Login: <span class="font-bold text-slate-700">' +
-                            (u.phone || "None") + '</span></div></div></div></td>' +
+                            initial +
+                            '</div><div><div class="font-semibold text-slate-900 flex items-center gap-2"><span>' +
+                            (u.name || "User") +
+                            '</span></div><div class="text-xs text-slate-500 font-mono">📱 Login: <span class="font-bold text-slate-700">' +
+                            (u.phone || "None") +
+                            "</span></div></div></div></td>" +
                             '<td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold border bg-emerald-100 text-emerald-800 border-emerald-200">Member</span></td>' +
-                            '<td class="py-3 px-4 text-slate-700 font-medium">' + (u.designation || "Affiliate Partner") + '</td>' +
-                            '<td class="py-3 px-4 text-xs font-mono text-slate-600">' + (u.phone || '<span class="text-slate-400 italic">No phone set</span>') + '</td>' +
+                            '<td class="py-3 px-4 text-slate-700 font-medium">' +
+                            (u.designation || "Affiliate Partner") +
+                            "</td>" +
+                            '<td class="py-3 px-4 text-xs font-mono text-slate-600">' +
+                            (u.phone ||
+                                '<span class="text-slate-400 italic">No phone set</span>') +
+                            "</td>" +
                             '<td class="py-3 px-4 text-center"><div class="inline-flex items-center gap-2 text-xs"><span class="px-2 py-0.5 bg-orange-50 text-orange-700 font-semibold rounded-md">👥 0</span><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded-md">✅ 0</span></div></td>' +
                             '<td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ' +
-                            (isAct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800') + '">' + (isAct ? 'Active' : 'Inactive') + '</span></td>' +
+                            (isAct
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-rose-100 text-rose-800") +
+                            '">' +
+                            (isAct ? "Active" : "Inactive") +
+                            "</span></td>" +
                             '<td class="py-3 px-4 text-right space-x-2"><button type="button" class="text-orange-600 hover:text-orange-800 font-semibold text-xs px-2 py-1 rounded hover:bg-orange-50 transition-colors">Edit</button>' +
-                            '<form action="/users/' + u.id + '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
+                            '<form action="/users/' +
+                            u.id +
+                            '" method="POST" class="inline" onsubmit="return confirm(&quot;Are you sure?&quot;);"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="text-slate-400 hover:text-rose-600 font-semibold text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors">Delete</button></form></td>';
 
                         const editBtn = tr.querySelector("button");
                         if (editBtn) {
                             editBtn.addEventListener("click", function () {
-                                const alpine = document.querySelector("[x-data]");
+                                const alpine =
+                                    document.querySelector("[x-data]");
                                 if (alpine && alpine._x_dataStack) {
                                     alpine._x_dataStack[0].editingUser = {
                                         id: u.id,
@@ -2886,7 +3335,7 @@
                                         phone: u.phone || "",
                                         designation: u.designation || "",
                                         role_id: u.role_id || "2",
-                                        status: u.status || "active"
+                                        status: u.status || "active",
                                     };
                                     alpine._x_dataStack[0].editModalOpen = true;
                                 }
@@ -2908,8 +3357,10 @@
                 } catch (e) {}
 
                 const toast = document.createElement("div");
-                toast.className = "fixed bottom-5 right-5 z-50 flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 font-bold text-sm transform transition-all duration-300 translate-y-10 opacity-0";
-                toast.innerHTML = '<span>✅</span> <span>নতুন লিড সফলভাবে সংরক্ষিত হয়েছে!</span>';
+                toast.className =
+                    "fixed bottom-5 right-5 z-50 flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-xl shadow-emerald-600/30 font-bold text-sm transform transition-all duration-300 translate-y-10 opacity-0";
+                toast.innerHTML =
+                    "<span>✅</span> <span>নতুন লিড সফলভাবে সংরক্ষিত হয়েছে!</span>";
                 document.body.appendChild(toast);
 
                 requestAnimationFrame(() => {
@@ -2923,7 +3374,11 @@
 
                 url.searchParams.delete("saved");
                 url.searchParams.delete("lead_id");
-                window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ""));
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    url.pathname + (url.search ? url.search : ""),
+                );
             }
         } catch (e) {}
     }
@@ -2943,4 +3398,3 @@
         setTimeout(syncEntityDropdowns, 50);
     });
 })();
-
