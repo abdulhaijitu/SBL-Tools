@@ -20,7 +20,7 @@
         
         // Lead Generation Modal
         leadModalOpen: false,
-        leadPkg: null,
+        leadPkg: { id: 'national', name: 'National Dropshipping', price: 120000, bv: 100 },
         leadForm: {
             name: '',
             mobile: '',
@@ -1687,7 +1687,7 @@
             </template>
 
             <!-- Lead Form Form -->
-            <template x-if="!leadForm.success">
+            <template x-if="!leadForm.success && leadPkg">
                 <form @submit.prevent="submitLead" class="space-y-3.5 mt-4 text-xs">
                     <template x-if="leadForm.error">
                         <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-semibold text-xs" x-text="leadForm.error"></div>

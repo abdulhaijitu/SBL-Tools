@@ -223,7 +223,6 @@ class SblContactSeeder extends Seeder
 
         foreach ($contacts as $contact) {
             SblContact::updateOrCreate(
-                ['department' => $contact['department']],
                 ['id' => $contact['id']],
                 $contact
             );

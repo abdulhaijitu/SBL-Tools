@@ -876,6 +876,7 @@ function teamExplorerData() {
                                 <span>🎯</span> <span>Convert to Active</span>
                             </button>
                         </form>
+                    </template>
                     <template x-if="detailsNode.parent_id">
                         <form :action="'/team/' + detailsNode.id" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this member? Any children will be safely reattached.');">
                             @csrf
@@ -1062,7 +1063,6 @@ function teamExplorerData() {
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Username / Member Code</label>
                         <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
-                        <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @@username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
                     </div>
                 </div>
 
@@ -1100,7 +1100,6 @@ function teamExplorerData() {
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Select Package</label>
-                        <select name="package_name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
                         <select name="package_name" x-model="selectedPackage" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
                             @foreach($packages as $pkg)
                             <option value="{{ $pkg['name'] }}">{{ $pkg['label'] }}</option>
@@ -1130,12 +1129,9 @@ function teamExplorerData() {
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                    <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
                     <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer" data-en="Cancel" data-bn="বাতিল">
-                        Cancel
+                        <span data-en="Cancel" data-bn="বাতিল">Cancel</span>
                     </button>
-                    <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer">
-                        Save & Place Member
                     <button type="button" @click="goToPlacementConfirm()" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5" data-en="Review & Place Member →" data-bn="রিভিউ ও প্লেসমেন্ট নিশ্চিত করুন →">
                         <span data-en="Review & Place Member" data-bn="রিভিউ ও প্লেসমেন্ট নিশ্চিত করুন">Review & Place Member</span>
                         <span>→</span>

@@ -16,12 +16,26 @@ export function sanitizeWhatsApp(raw, phone) {
 }
 
 export function calculateOperatingStatus(contact, isBn) {
-    if (contact.is_24_hours || (contact.hours_en && contact.hours_en.toLowerCase().includes("24/7"))) {
+    if (!contact) {
+        return {
+            isOpen: false,
+            status: "closed",
+            label: isBn ? "বন্ধ" : "Closed",
+            badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
+            dotClass: "bg-slate-400",
+        };
+    }
+
+    if (
+        contact.is_24_hours ||
+        (contact.hours_en && contact.hours_en.toLowerCase().includes("24/7"))
+    ) {
         return {
             isOpen: true,
             status: "24_7",
             label: isBn ? "২৪/৭ খোলা" : "Open 24/7",
-            badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-500/20",
+            badgeClass:
+                "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-500/20",
             dotClass: "bg-emerald-500 animate-pulse",
         };
     }
@@ -67,7 +81,8 @@ export function calculateOperatingStatus(contact, isBn) {
             isOpen: true,
             status: "open",
             label: isBn ? "এখন খোলা" : "Open Now",
-            badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-500/20",
+            badgeClass:
+                "bg-emerald-50 text-emerald-700 border-emerald-200 ring-1 ring-emerald-500/20",
             dotClass: "bg-emerald-500 animate-pulse",
         };
     } else {
@@ -119,7 +134,9 @@ export function registerContacts(Alpine) {
         init() {
             try {
                 this.contacts =
-                    (window.DATA && Array.isArray(window.DATA.contacts) && window.DATA.contacts.length > 0)
+                    window.DATA &&
+                    Array.isArray(window.DATA.contacts) &&
+                    window.DATA.contacts.length > 0
                         ? window.DATA.contacts
                         : JSON.parse(this.$el.dataset.contacts || "[]");
             } catch {
@@ -158,26 +175,64 @@ export function registerContacts(Alpine) {
 
         get categories() {
             const list = [
-                { id: "all", name_en: "All Contacts", name_bn: "সকল সাপোর্ট", icon: "✨" },
-                { id: "customer_care", name_en: "Customer Care", name_bn: "কাস্টমার কেয়ার", icon: "🎧" },
-                { id: "dropshipping", name_en: "Dropshipping", name_bn: "ড্রপশিপিং", icon: "📦" },
-                { id: "business", name_en: "Business & Investor", name_bn: "বিজনেস ও ইনভেস্টর", icon: "💼" },
-                { id: "technical", name_en: "Technical Support", name_bn: "টেকনিক্যাল সাপোর্ট", icon: "🛠️" },
-                { id: "training", name_en: "Training & Counseling", name_bn: "ট্রেনিং ও কাউন্সেলিং", icon: "🎓" },
-                { id: "accounts", name_en: "Accounts & Payout", name_bn: "অ্যাকাউন্টস ও পে-আউট", icon: "💳" },
+                {
+                    id: "all",
+                    name_en: "All Contacts",
+                    name_bn: "সকল সাপোর্ট",
+                    icon: "✨",
+                },
+                {
+                    id: "customer_care",
+                    name_en: "Customer Care",
+                    name_bn: "কাস্টমার কেয়ার",
+                    icon: "🎧",
+                },
+                {
+                    id: "dropshipping",
+                    name_en: "Dropshipping",
+                    name_bn: "ড্রপশিপিং",
+                    icon: "📦",
+                },
+                {
+                    id: "business",
+                    name_en: "Business & Investor",
+                    name_bn: "বিজনেস ও ইনভেস্টর",
+                    icon: "💼",
+                },
+                {
+                    id: "technical",
+                    name_en: "Technical Support",
+                    name_bn: "টেকনিক্যাল সাপোর্ট",
+                    icon: "🛠️",
+                },
+                {
+                    id: "training",
+                    name_en: "Training & Counseling",
+                    name_bn: "ট্রেনিং ও কাউন্সেলিং",
+                    icon: "🎓",
+                },
+                {
+                    id: "accounts",
+                    name_en: "Accounts & Payout",
+                    name_bn: "অ্যাকাউন্টস ও পে-আউট",
+                    icon: "💳",
+                },
             ];
 
             return list.map((cat) => {
                 const count =
                     cat.id === "all"
                         ? this.contacts.length
-                        : this.contacts.filter((c) => c.category === cat.id).length;
+                        : this.contacts.filter((c) => c.category === cat.id)
+                              .length;
                 return { ...cat, count };
             });
         },
 
         get featuredContacts() {
-            return this.contacts.filter((c) => Boolean(Number(c.is_primary))).slice(0, 3);
+            return this.contacts
+                .filter((c) => Boolean(Number(c.is_primary)))
+                .slice(0, 3);
         },
 
         get filteredContacts() {
@@ -227,7 +282,9 @@ export function registerContacts(Alpine) {
         getServiceLabel(c) {
             if (!c) return "";
             if (this.isBn) {
-                return c.service_label_bn || c.badge || c.service_label_en || "";
+                return (
+                    c.service_label_bn || c.badge || c.service_label_en || ""
+                );
             }
             return c.service_label_en || c.badge || c.service_label_bn || "";
         },
@@ -235,7 +292,9 @@ export function registerContacts(Alpine) {
         getDescription(c) {
             if (!c) return "";
             if (this.isBn) {
-                return c.description_bn || c.description || c.description_en || "";
+                return (
+                    c.description_bn || c.description || c.description_en || ""
+                );
             }
             return c.description_en || c.description || c.description_bn || "";
         },
@@ -243,9 +302,19 @@ export function registerContacts(Alpine) {
         getHours(c) {
             if (!c) return "";
             if (this.isBn) {
-                return c.hours_bn || c.available_hours || c.hours_en || "১০:০০ AM - ০৮:০০ PM";
+                return (
+                    c.hours_bn ||
+                    c.available_hours ||
+                    c.hours_en ||
+                    "১০:০০ AM - ০৮:০০ PM"
+                );
             }
-            return c.hours_en || c.available_hours || c.hours_bn || "10:00 AM - 08:00 PM";
+            return (
+                c.hours_en ||
+                c.available_hours ||
+                c.hours_bn ||
+                "10:00 AM - 08:00 PM"
+            );
         },
 
         getCleanPhone(c) {
@@ -266,7 +335,8 @@ export function registerContacts(Alpine) {
                 return {
                     status: "verified",
                     label: this.isBn ? "✓ ভেরিফাইড" : "✓ Verified",
-                    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                    badgeClass:
+                        "bg-emerald-50 text-emerald-700 border-emerald-200",
                     description: this.isBn
                         ? "এসবিএল কর্তৃক নিশ্চিত অফিসিয়াল সাপোর্ট চ্যানেল"
                         : "Official confirmed SBL support channel",
@@ -324,7 +394,9 @@ export function registerContacts(Alpine) {
                     window.dispatchEvent(
                         new CustomEvent("notify", {
                             detail: {
-                                message: (this.isBn ? title + " কপি হয়েছে!" : title + " copied to clipboard!"),
+                                message: this.isBn
+                                    ? title + " কপি হয়েছে!"
+                                    : title + " copied to clipboard!",
                                 type: "success",
                             },
                         }),
@@ -337,7 +409,8 @@ export function registerContacts(Alpine) {
             if (!c) return;
             const dept = this.getDeptName(c);
             const hours = this.getHours(c);
-            const shareText = `📞 SBL Support: ${dept}\n` +
+            const shareText =
+                `📞 SBL Support: ${dept}\n` +
                 (c.contact_person ? `👤 Contact: ${c.contact_person}\n` : "") +
                 `☎️ Phone: ${c.phone}\n` +
                 (c.whatsapp ? `💬 WhatsApp: ${c.whatsapp}\n` : "") +
@@ -354,7 +427,10 @@ export function registerContacts(Alpine) {
                     })
                     .catch(() => {});
             } else {
-                this.copyToClipboard(shareText, this.isBn ? "কন্টাক্ট তথ্য" : "Contact Details");
+                this.copyToClipboard(
+                    shareText,
+                    this.isBn ? "কন্টাক্ট তথ্য" : "Contact Details",
+                );
             }
         },
 
@@ -367,8 +443,10 @@ export function registerContacts(Alpine) {
                 phone: c.phone || "",
                 whatsapp: c.whatsapp || c.phone || "",
                 email: c.email || "",
-                available_hours: c.available_hours || c.hours_en || "10:00 AM - 08:00 PM",
-                hours_en: c.hours_en || c.available_hours || "10:00 AM - 08:00 PM",
+                available_hours:
+                    c.available_hours || c.hours_en || "10:00 AM - 08:00 PM",
+                hours_en:
+                    c.hours_en || c.available_hours || "10:00 AM - 08:00 PM",
                 hours_bn: c.hours_bn || "সকাল ১০:০০ - রাত ০৮:০০",
                 days: c.days || "Daily",
                 description_en: c.description_en || c.description || "",
@@ -386,4 +464,3 @@ export function registerContacts(Alpine) {
         },
     }));
 }
-

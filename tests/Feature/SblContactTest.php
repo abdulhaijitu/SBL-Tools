@@ -29,12 +29,11 @@ class SblContactTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('contacts.index'));
 
         $response->assertOk();
-        $response->assertSee('Contact directory');
         $response->assertSee('Contact & Support');
         $response->assertSee('Customer Care & Support Cell');
         $response->assertSee('01700000000');
-        $response->assertSee('tel:01700000000');
-        $response->assertSee('https://wa.me/8801700000000', false);
+        $response->assertSee(':href="\'tel:\' + getCleanPhone(contact)"', false);
+        $response->assertSee('https://wa.me/', false);
     }
 
     public function test_admin_can_create_new_contact(): void

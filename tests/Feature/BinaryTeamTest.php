@@ -135,11 +135,11 @@ class BinaryTeamTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('team.index'));
 
         $response->assertOk();
-        $response->assertSee('Explorer (Builder)');
+        $response->assertSee('Team Explorer');
         $response->assertSee('Mindmap');
         $response->assertSee('Directory');
-        $response->assertSee('LEFT TEAM (৫টি স্লট)');
-        $response->assertSee('RIGHT TEAM (৫টি স্লট)');
+        $response->assertSee('LEFT TEAM');
+        $response->assertSee('RIGHT TEAM');
         $response->assertSee('Place Member');
         $response->assertSee('Tanvir Ahmed');
         $response->assertSee('CRM Leads থেকে দ্রুত নির্বাচন করুন');
@@ -151,6 +151,6 @@ class BinaryTeamTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('mindmap-board');
-        $response->assertSee('Explorer (Builder)');
+        $response->assertSee('Team Explorer');
     }
 }

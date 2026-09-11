@@ -6,11 +6,13 @@ import "./bootstrap";
 import "./toolkit-analytics";
 
 import Alpine from "alpinejs";
+import collapse from "@alpinejs/collapse";
 import Sortable from "sortablejs";
 import { registerShell } from "./shell";
 import { registerSearch } from "./search";
 import { enhanceAccessibility } from "./accessibility";
 
+Alpine.plugin(collapse);
 window.Alpine = Alpine;
 window.Sortable = Sortable;
 

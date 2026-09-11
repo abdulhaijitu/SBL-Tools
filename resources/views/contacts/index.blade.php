@@ -321,7 +321,7 @@
         <div class="fixed inset-0 flex justify-end pointer-events-none">
             <!-- Sheet Container -->
             <div class="pointer-events-auto w-full md:max-w-md bg-white shadow-2xl h-full flex flex-col justify-between overflow-y-auto"
-                 x-show="drawerOpen"
+                 x-show="drawerOpen && selectedContact"
                  x-transition:enter="transform transition ease-in-out duration-300"
                  x-transition:enter-start="translate-y-full md:translate-y-0 md:translate-x-full"
                  x-transition:enter-end="translate-y-0 md:translate-x-0"

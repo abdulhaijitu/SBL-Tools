@@ -560,9 +560,11 @@
 
             <div class="py-2 flex flex-col items-center">
                 <div class="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm inline-block">
-                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(qrTarget.url)" 
-                         :alt="qrTarget.title" 
-                         class="w-48 h-48 rounded-lg object-contain">
+                    <template x-if="qrModalOpen && qrTarget && qrTarget.url">
+                        <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(qrTarget.url)" 
+                             :alt="qrTarget.title" 
+                             class="w-48 h-48 rounded-lg object-contain">
+                    </template>
                 </div>
                 <div class="mt-3 text-xs font-mono text-slate-500 truncate max-w-xs" x-text="qrTarget.url"></div>
                 <p class="text-[11px] text-slate-400 mt-1" data-en="Scan with camera for instant mobile access during meetings" data-bn="মিটিং বা সেমিনারে ক্যামেরায় স্ক্যান করে সরাসরি ওপেন করুন">
