@@ -111,6 +111,209 @@ async function ensureD1Schema(db) {
             )
             .run();
     } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN type TEXT DEFAULT 'external'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN is_official INTEGER DEFAULT 0",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN verification_status TEXT DEFAULT 'unverified'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE ecosystem_links ADD COLUMN verified_at TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE ecosystem_links ADD COLUMN verified_by TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN is_featured INTEGER DEFAULT 0",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN is_public INTEGER DEFAULT 1",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE ecosystem_links ADD COLUMN tags TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE ecosystem_links ADD COLUMN notes TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE ecosystem_links ADD COLUMN health_status TEXT DEFAULT 'not_checked'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN short_title TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN resource_type TEXT DEFAULT 'leaflet'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN thumbnail_url TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN version TEXT DEFAULT 'v1.0'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE marketing_resources ADD COLUMN source TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_official INTEGER DEFAULT 0",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN verification_status TEXT DEFAULT 'needs_verification'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN verified_at TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN verified_by TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN issue_date TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN expiry_date TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN issued_by TEXT",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE marketing_resources ADD COLUMN tags TEXT")
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN language TEXT DEFAULT 'bilingual'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_featured INTEGER DEFAULT 0",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_counseling_toolkit INTEGER DEFAULT 0",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_public INTEGER DEFAULT 1",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_downloadable INTEGER DEFAULT 1",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN is_shareable INTEGER DEFAULT 1",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare(
+                "ALTER TABLE marketing_resources ADD COLUMN status TEXT DEFAULT 'current'",
+            )
+            .run();
+    } catch (e) {}
+    try {
+        await db
+            .prepare("ALTER TABLE marketing_resources ADD COLUMN notes TEXT")
+            .run();
+    } catch (e) {}
     schemaMigrated = true;
 }
 
@@ -703,6 +906,17 @@ export default {
                                     this._map[k] !== null
                                     ? String(this._map[k])
                                     : null;
+                            },
+                            getAll(k) {
+                                const cleanKey = k.replace("[]", "");
+                                const val =
+                                    this._map[k] !== undefined
+                                        ? this._map[k]
+                                        : this._map[cleanKey];
+                                if (Array.isArray(val)) return val.map(String);
+                                if (val !== undefined && val !== null)
+                                    return [String(val)];
+                                return [];
                             },
                             has(k) {
                                 return (
@@ -1810,15 +2024,24 @@ export default {
             }
 
             // 4c. Team & Users Handlers (Auth Users - Mobile + Password)
+            const normalizeD1Phone = (raw) => {
+                let clean = (raw || "")
+                    .toString()
+                    .trim()
+                    .replace(/[^0-9]/g, "");
+                if (clean.startsWith("8801") && clean.length === 13) {
+                    clean = clean.substring(2);
+                }
+                return clean;
+            };
+
             if (path === "/users" && effectiveMethod === "POST" && formData) {
                 if (db) {
                     try {
                         const name = (formData.get("name") || "New User")
                             .toString()
                             .trim();
-                        const phone = (formData.get("phone") || "")
-                            .toString()
-                            .trim();
+                        const phone = normalizeD1Phone(formData.get("phone"));
                         const rawPass = (formData.get("password") || "")
                             .toString()
                             .trim();
@@ -1886,6 +2109,50 @@ export default {
                     if (db) {
                         try {
                             if (userId > 1) {
+                                // Check if user has associated leads or tasks
+                                const hasForce =
+                                    formData?.get("force_delete") === "1" ||
+                                    url.searchParams.get("force_delete") ===
+                                        "1";
+                                let leadsCount = 0;
+                                let tasksCount = 0;
+                                try {
+                                    const lRes = await db
+                                        .prepare(
+                                            "SELECT COUNT(*) as c FROM leads WHERE owner_user_id = ?",
+                                        )
+                                        .bind(userId)
+                                        .first();
+                                    const tRes = await db
+                                        .prepare(
+                                            "SELECT COUNT(*) as c FROM tasks WHERE user_id = ?",
+                                        )
+                                        .bind(userId)
+                                        .first();
+                                    leadsCount = lRes?.c || 0;
+                                    tasksCount = tRes?.c || 0;
+                                } catch (countErr) {}
+
+                                if (
+                                    (leadsCount > 0 || tasksCount > 0) &&
+                                    !hasForce
+                                ) {
+                                    // Deactivate instead of deleting
+                                    await db
+                                        .prepare(
+                                            "UPDATE users SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                        )
+                                        .bind(userId)
+                                        .run();
+                                    return Response.redirect(
+                                        new URL(
+                                            "/users?notice=deactivated",
+                                            request.url,
+                                        ),
+                                        302,
+                                    );
+                                }
+
                                 // Never delete root admin
                                 await db
                                     .prepare(
@@ -1917,9 +2184,9 @@ export default {
                             let email = (formData.get("email") || "")
                                 .toString()
                                 .trim();
-                            const phone = (formData.get("phone") || "")
-                                .toString()
-                                .trim();
+                            const phone = normalizeD1Phone(
+                                formData.get("phone"),
+                            );
                             const designation = (
                                 formData.get("designation") || ""
                             )
@@ -2008,35 +2275,87 @@ export default {
                     try {
                         const department =
                             formData.get("department") || "General Support";
+                        const departmentEn =
+                            formData.get("department_en") || department;
+                        const departmentBn =
+                            formData.get("department_bn") || departmentEn;
                         const contactPerson =
                             formData.get("contact_person") || null;
                         const phone = formData.get("phone") || "";
-                        const whatsapp = formData.get("whatsapp") || null;
+                        const whatsapp = formData.get("whatsapp") || phone;
                         const email = formData.get("email") || null;
                         const availableHours =
                             formData.get("available_hours") ||
                             "10:00 AM - 08:00 PM";
+                        const hoursEn =
+                            formData.get("hours_en") || availableHours;
+                        const hoursBn =
+                            formData.get("hours_bn") || availableHours;
+                        const days = formData.get("days") || "Daily";
                         const description = formData.get("description") || null;
+                        const descriptionEn =
+                            formData.get("description_en") || description;
+                        const descriptionBn =
+                            formData.get("description_bn") || description;
                         const icon = formData.get("icon") || "📞";
                         const badge = formData.get("badge") || null;
+                        const serviceLabelEn =
+                            formData.get("service_label_en") || badge;
+                        const serviceLabelBn =
+                            formData.get("service_label_bn") || serviceLabelEn;
+                        const category =
+                            formData.get("category") || "customer_care";
+                        const verificationStatus =
+                            formData.get("verification_status") ||
+                            "needs_review";
+                        const isOfficial = formData.has("is_official") ? 1 : 0;
+                        const isActive = formData.has("is_active") ? 1 : 1;
+                        const isPublic = formData.has("is_public") ? 1 : 1;
+                        const is24Hours = formData.has("is_24_hours") ? 1 : 0;
                         const isPrimary = formData.has("is_primary") ? 1 : 0;
+                        const sortOrder = parseInt(
+                            formData.get("sort_order") || "0",
+                            10,
+                        );
+                        const openTime = formData.get("open_time") || null;
+                        const closeTime = formData.get("close_time") || null;
+                        const notes = formData.get("notes") || null;
 
                         await db
                             .prepare(
-                                "INSERT INTO sbl_contacts (department, contact_person, phone, whatsapp, email, available_hours, description, icon, badge, is_primary, sort_order, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO sbl_contacts (department, department_en, department_bn, contact_person, phone, whatsapp, email, available_hours, hours_en, hours_bn, days, description, description_en, description_bn, icon, badge, service_label_en, service_label_bn, category, verification_status, is_official, is_active, is_public, is_24_hours, is_primary, sort_order, open_time, close_time, notes, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 department,
+                                departmentEn,
+                                departmentBn,
                                 contactPerson,
                                 phone,
                                 whatsapp,
                                 email,
                                 availableHours,
+                                hoursEn,
+                                hoursBn,
+                                days,
                                 description,
+                                descriptionEn,
+                                descriptionBn,
                                 icon,
                                 badge,
+                                serviceLabelEn,
+                                serviceLabelBn,
+                                category,
+                                verificationStatus,
+                                isOfficial,
+                                isActive,
+                                isPublic,
+                                is24Hours,
                                 isPrimary,
+                                sortOrder,
+                                openTime,
+                                closeTime,
+                                notes,
                             )
                             .run();
                     } catch (e) {
@@ -2079,37 +2398,95 @@ export default {
                         try {
                             const department =
                                 formData.get("department") || "General Support";
+                            const departmentEn =
+                                formData.get("department_en") || department;
+                            const departmentBn =
+                                formData.get("department_bn") || departmentEn;
                             const contactPerson =
                                 formData.get("contact_person") || null;
                             const phone = formData.get("phone") || "";
-                            const whatsapp = formData.get("whatsapp") || null;
+                            const whatsapp = formData.get("whatsapp") || phone;
                             const email = formData.get("email") || null;
                             const availableHours =
                                 formData.get("available_hours") ||
                                 "10:00 AM - 08:00 PM";
+                            const hoursEn =
+                                formData.get("hours_en") || availableHours;
+                            const hoursBn =
+                                formData.get("hours_bn") || availableHours;
+                            const days = formData.get("days") || "Daily";
                             const description =
                                 formData.get("description") || null;
+                            const descriptionEn =
+                                formData.get("description_en") || description;
+                            const descriptionBn =
+                                formData.get("description_bn") || description;
                             const icon = formData.get("icon") || "📞";
                             const badge = formData.get("badge") || null;
+                            const serviceLabelEn =
+                                formData.get("service_label_en") || badge;
+                            const serviceLabelBn =
+                                formData.get("service_label_bn") ||
+                                serviceLabelEn;
+                            const category =
+                                formData.get("category") || "customer_care";
+                            const verificationStatus =
+                                formData.get("verification_status") ||
+                                "needs_review";
+                            const isOfficial = formData.has("is_official")
+                                ? 1
+                                : 0;
+                            const isActive = formData.has("is_active") ? 1 : 1;
+                            const isPublic = formData.has("is_public") ? 1 : 1;
+                            const is24Hours = formData.has("is_24_hours")
+                                ? 1
+                                : 0;
                             const isPrimary = formData.has("is_primary")
                                 ? 1
                                 : 0;
+                            const sortOrder = parseInt(
+                                formData.get("sort_order") || "0",
+                                10,
+                            );
+                            const openTime = formData.get("open_time") || null;
+                            const closeTime =
+                                formData.get("close_time") || null;
+                            const notes = formData.get("notes") || null;
 
                             await db
                                 .prepare(
-                                    "UPDATE sbl_contacts SET department = ?, contact_person = ?, phone = ?, whatsapp = ?, email = ?, available_hours = ?, description = ?, icon = ?, badge = ?, is_primary = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    "UPDATE sbl_contacts SET department = ?, department_en = ?, department_bn = ?, contact_person = ?, phone = ?, whatsapp = ?, email = ?, available_hours = ?, hours_en = ?, hours_bn = ?, days = ?, description = ?, description_en = ?, description_bn = ?, icon = ?, badge = ?, service_label_en = ?, service_label_bn = ?, category = ?, verification_status = ?, is_official = ?, is_active = ?, is_public = ?, is_24_hours = ?, is_primary = ?, sort_order = ?, open_time = ?, close_time = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 )
                                 .bind(
                                     department,
+                                    departmentEn,
+                                    departmentBn,
                                     contactPerson,
                                     phone,
                                     whatsapp,
                                     email,
                                     availableHours,
+                                    hoursEn,
+                                    hoursBn,
+                                    days,
                                     description,
+                                    descriptionEn,
+                                    descriptionBn,
                                     icon,
                                     badge,
+                                    serviceLabelEn,
+                                    serviceLabelBn,
+                                    category,
+                                    verificationStatus,
+                                    isOfficial,
+                                    isActive,
+                                    isPublic,
+                                    is24Hours,
                                     isPrimary,
+                                    sortOrder,
+                                    openTime,
+                                    closeTime,
+                                    notes,
                                     contactId,
                                 )
                                 .run();
@@ -2329,6 +2706,32 @@ export default {
                             console.error("D1 Tasks delete error:", e);
                         }
                     }
+                    if (
+                        request.headers
+                            .get("accept")
+                            ?.includes("application/json") ||
+                        request.headers
+                            .get("content-type")
+                            ?.includes("application/json")
+                    ) {
+                        return new Response(
+                            JSON.stringify({
+                                success: true,
+                                message: "Task deleted successfully",
+                            }),
+                            {
+                                headers: { "Content-Type": "application/json" },
+                            },
+                        );
+                    }
+                    const ref = request.headers.get("referer") || "";
+                    const m = ref.match(/\/leads\/(\d+)/);
+                    if (m) {
+                        return Response.redirect(
+                            new URL("/leads/" + m[1], request.url),
+                            302,
+                        );
+                    }
                     return Response.redirect(
                         new URL("/tasks", request.url),
                         302,
@@ -2351,12 +2754,26 @@ export default {
                         const badge = formData.get("badge") || null;
                         const description = formData.get("description") || null;
                         const icon = formData.get("icon") || "🌐";
-                        const isActive = formData.has("is_active") ? 1 : 0;
+                        const isActive = formData.has("is_active") ? 1 : 1;
+                        const type = formData.get("type") || "external";
+                        const isOfficial = formData.has("is_official") ? 1 : 0;
+                        const verificationStatus =
+                            formData.get("verification_status") || "unverified";
+                        const verifiedAt =
+                            verificationStatus === "verified"
+                                ? new Date().toISOString()
+                                : null;
+                        const verifiedBy =
+                            verificationStatus === "verified"
+                                ? "Administrator"
+                                : null;
+                        const tags = formData.get("tags") || null;
+                        const notes = formData.get("notes") || null;
 
                         await db
                             .prepare(
-                                "INSERT INTO ecosystem_links (title, url, category, badge, description, icon, is_active, sort_order, created_at, updated_at) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO ecosystem_links (title, url, category, badge, description, icon, is_active, type, is_official, verification_status, verified_at, verified_by, tags, notes, sort_order, created_at, updated_at) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 title,
@@ -2366,6 +2783,13 @@ export default {
                                 description,
                                 icon,
                                 isActive,
+                                type,
+                                isOfficial,
+                                verificationStatus,
+                                verifiedAt,
+                                verifiedBy,
+                                tags,
+                                notes,
                             )
                             .run();
                     } catch (e) {
@@ -2421,10 +2845,27 @@ export default {
                                 formData.get("description") || null;
                             const icon = formData.get("icon") || "🌐";
                             const isActive = formData.has("is_active") ? 1 : 0;
+                            const type = formData.get("type") || "external";
+                            const isOfficial = formData.has("is_official")
+                                ? 1
+                                : 0;
+                            const verificationStatus =
+                                formData.get("verification_status") ||
+                                "unverified";
+                            const verifiedAt =
+                                verificationStatus === "verified"
+                                    ? new Date().toISOString()
+                                    : null;
+                            const verifiedBy =
+                                verificationStatus === "verified"
+                                    ? "Administrator"
+                                    : null;
+                            const tags = formData.get("tags") || null;
+                            const notes = formData.get("notes") || null;
 
                             await db
                                 .prepare(
-                                    "UPDATE ecosystem_links SET title = ?, url = ?, category = ?, badge = ?, description = ?, icon = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    "UPDATE ecosystem_links SET title = ?, url = ?, category = ?, badge = ?, description = ?, icon = ?, is_active = ?, type = ?, is_official = ?, verification_status = ?, verified_at = ?, verified_by = ?, tags = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 )
                                 .bind(
                                     title,
@@ -2434,6 +2875,13 @@ export default {
                                     description,
                                     icon,
                                     isActive,
+                                    type,
+                                    isOfficial,
+                                    verificationStatus,
+                                    verifiedAt,
+                                    verifiedBy,
+                                    tags,
+                                    notes,
                                     linkId,
                                 )
                                 .run();
@@ -2465,31 +2913,89 @@ export default {
                     try {
                         const title =
                             formData.get("title") || "Untitled Resource";
-                        const category =
-                            formData.get("category") || "Leaflets & Sheets";
+                        const shortTitle = formData.get("short_title") || null;
+                        const category = formData.get("category") || "Leaflets";
+                        const resourceType =
+                            formData.get("resource_type") || "leaflet";
                         const fileType = formData.get("file_type") || "pdf";
                         const fileUrl = formData.get("file_url") || "#";
+                        const thumbnailUrl =
+                            formData.get("thumbnail_url") || null;
                         const fileSize = formData.get("file_size") || null;
                         const badge = formData.get("badge") || null;
+                        const version = formData.get("version") || "v1.0";
+                        const source = formData.get("source") || null;
+                        const isOfficial = formData.has("is_official") ? 1 : 0;
+                        const verificationStatus =
+                            formData.get("verification_status") ||
+                            "needs_verification";
+                        const verifiedAt =
+                            verificationStatus === "official_verified" ||
+                            verificationStatus === "verified_document"
+                                ? new Date().toISOString()
+                                : null;
+                        const verifiedBy = verifiedAt ? "Admin" : null;
+                        const issueDate = formData.get("issue_date") || null;
+                        const expiryDate = formData.get("expiry_date") || null;
+                        const issuedBy = formData.get("issued_by") || null;
+                        const tags = formData.get("tags") || null;
+                        const language =
+                            formData.get("language") || "bilingual";
+                        const isFeatured = formData.has("is_featured") ? 1 : 0;
+                        const isCounselingToolkit = formData.has(
+                            "is_counseling_toolkit",
+                        )
+                            ? 1
+                            : 0;
+                        const isPublic = formData.has("is_public") ? 1 : 1;
+                        const isDownloadable = formData.has("is_downloadable")
+                            ? 1
+                            : 1;
+                        const isShareable = formData.has("is_shareable")
+                            ? 1
+                            : 1;
+                        const status = formData.get("status") || "current";
                         const description = formData.get("description") || null;
+                        const notes = formData.get("notes") || null;
                         const sortOrder = parseInt(
                             formData.get("sort_order") || "0",
                             10,
                         );
-                        const isActive = formData.has("is_active") ? 1 : 1;
+                        const isActive = 1;
 
                         await db
                             .prepare(
-                                "INSERT INTO marketing_resources (title, category, file_type, file_url, file_size, badge, description, sort_order, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO marketing_resources (title, short_title, category, resource_type, file_type, file_url, thumbnail_url, file_size, badge, version, source, is_official, verification_status, verified_at, verified_by, issue_date, expiry_date, issued_by, tags, language, is_featured, is_counseling_toolkit, is_public, is_downloadable, is_shareable, status, description, notes, sort_order, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(
                                 title,
+                                shortTitle,
                                 category,
+                                resourceType,
                                 fileType,
                                 fileUrl,
+                                thumbnailUrl,
                                 fileSize,
                                 badge,
+                                version,
+                                source,
+                                isOfficial,
+                                verificationStatus,
+                                verifiedAt,
+                                verifiedBy,
+                                issueDate,
+                                expiryDate,
+                                issuedBy,
+                                tags,
+                                language,
+                                isFeatured,
+                                isCounselingToolkit,
+                                isPublic,
+                                isDownloadable,
+                                isShareable,
+                                status,
                                 description,
+                                notes,
                                 sortOrder,
                                 isActive,
                             )
@@ -2533,14 +3039,55 @@ export default {
                         try {
                             const title =
                                 formData.get("title") || "Untitled Resource";
+                            const shortTitle =
+                                formData.get("short_title") || null;
                             const category =
-                                formData.get("category") || "Leaflets & Sheets";
+                                formData.get("category") || "Leaflets";
+                            const resourceType =
+                                formData.get("resource_type") || "leaflet";
                             const fileType = formData.get("file_type") || "pdf";
                             const fileUrl = formData.get("file_url") || "#";
+                            const thumbnailUrl =
+                                formData.get("thumbnail_url") || null;
                             const fileSize = formData.get("file_size") || null;
                             const badge = formData.get("badge") || null;
+                            const version = formData.get("version") || "v1.0";
+                            const source = formData.get("source") || null;
+                            const isOfficial = formData.has("is_official")
+                                ? 1
+                                : 0;
+                            const verificationStatus =
+                                formData.get("verification_status") ||
+                                "needs_verification";
+                            const issueDate =
+                                formData.get("issue_date") || null;
+                            const expiryDate =
+                                formData.get("expiry_date") || null;
+                            const issuedBy = formData.get("issued_by") || null;
+                            const tags = formData.get("tags") || null;
+                            const language =
+                                formData.get("language") || "bilingual";
+                            const isFeatured = formData.has("is_featured")
+                                ? 1
+                                : 0;
+                            const isCounselingToolkit = formData.has(
+                                "is_counseling_toolkit",
+                            )
+                                ? 1
+                                : 0;
+                            const isPublic = formData.has("is_public") ? 1 : 1;
+                            const isDownloadable = formData.has(
+                                "is_downloadable",
+                            )
+                                ? 1
+                                : 1;
+                            const isShareable = formData.has("is_shareable")
+                                ? 1
+                                : 1;
+                            const status = formData.get("status") || "current";
                             const description =
                                 formData.get("description") || null;
+                            const notes = formData.get("notes") || null;
                             const sortOrder = parseInt(
                                 formData.get("sort_order") || "0",
                                 10,
@@ -2549,16 +3096,35 @@ export default {
 
                             await db
                                 .prepare(
-                                    "UPDATE marketing_resources SET title = ?, category = ?, file_type = ?, file_url = ?, file_size = ?, badge = ?, description = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                                    "UPDATE marketing_resources SET title = ?, short_title = ?, category = ?, resource_type = ?, file_type = ?, file_url = ?, thumbnail_url = ?, file_size = ?, badge = ?, version = ?, source = ?, is_official = ?, verification_status = ?, issue_date = ?, expiry_date = ?, issued_by = ?, tags = ?, language = ?, is_featured = ?, is_counseling_toolkit = ?, is_public = ?, is_downloadable = ?, is_shareable = ?, status = ?, description = ?, notes = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                 )
                                 .bind(
                                     title,
+                                    shortTitle,
                                     category,
+                                    resourceType,
                                     fileType,
                                     fileUrl,
+                                    thumbnailUrl,
                                     fileSize,
                                     badge,
+                                    version,
+                                    source,
+                                    isOfficial,
+                                    verificationStatus,
+                                    issueDate,
+                                    expiryDate,
+                                    issuedBy,
+                                    tags,
+                                    language,
+                                    isFeatured,
+                                    isCounselingToolkit,
+                                    isPublic,
+                                    isDownloadable,
+                                    isShareable,
+                                    status,
                                     description,
+                                    notes,
                                     sortOrder,
                                     isActive,
                                     resId,
@@ -2864,24 +3430,47 @@ export default {
                             name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
                         ).replace(/^-|-$/g, "");
                         const description = formData.get("description") || null;
+                        const copyRoleId = formData.get("copy_role_id");
                         const permissions =
                             formData.getAll("permissions[]") || [];
                         const insRes = await db
                             .prepare(
-                                "INSERT INTO roles (name, slug, description, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                                "INSERT INTO roles (name, slug, description, is_system, created_at, updated_at) VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                             )
                             .bind(name, slug, description)
                             .run();
 
                         const roleId = insRes?.meta?.last_row_id;
-                        if (roleId && permissions.length > 0) {
-                            for (const pId of permissions) {
-                                await db
+                        if (roleId) {
+                            if (copyRoleId) {
+                                const copyPerms = await db
                                     .prepare(
-                                        "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                        "SELECT permission_id FROM permission_role WHERE role_id = ?",
                                     )
-                                    .bind(roleId, Number(pId))
-                                    .run();
+                                    .bind(Number(copyRoleId))
+                                    .all();
+                                if (copyPerms?.results) {
+                                    for (const cp of copyPerms.results) {
+                                        await db
+                                            .prepare(
+                                                "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                            )
+                                            .bind(
+                                                roleId,
+                                                Number(cp.permission_id),
+                                            )
+                                            .run();
+                                    }
+                                }
+                            } else if (permissions.length > 0) {
+                                for (const pId of permissions) {
+                                    await db
+                                        .prepare(
+                                            "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                        )
+                                        .bind(roleId, Number(pId))
+                                        .run();
+                                }
                             }
                         }
                     } catch (e) {
@@ -2897,24 +3486,35 @@ export default {
                 if (effectiveMethod === "DELETE" && roleId) {
                     if (db) {
                         try {
-                            if (roleId > 4) {
-                                // Keep core roles intact
-                                await db
+                            const roleToCheck = await db
+                                .prepare("SELECT * FROM roles WHERE id = ?")
+                                .bind(roleId)
+                                .first();
+                            if (
+                                roleToCheck &&
+                                !roleToCheck.is_system &&
+                                roleToCheck.slug !== "super-admin"
+                            ) {
+                                const assignedUsers = await db
                                     .prepare(
-                                        "DELETE FROM permission_role WHERE role_id = ?",
+                                        "SELECT count(*) as c FROM role_user WHERE role_id = ?",
                                     )
                                     .bind(roleId)
-                                    .run();
-                                await db
-                                    .prepare(
-                                        "DELETE FROM role_user WHERE role_id = ?",
-                                    )
-                                    .bind(roleId)
-                                    .run();
-                                await db
-                                    .prepare("DELETE FROM roles WHERE id = ?")
-                                    .bind(roleId)
-                                    .run();
+                                    .first();
+                                if (!assignedUsers || assignedUsers.c === 0) {
+                                    await db
+                                        .prepare(
+                                            "DELETE FROM permission_role WHERE role_id = ?",
+                                        )
+                                        .bind(roleId)
+                                        .run();
+                                    await db
+                                        .prepare(
+                                            "DELETE FROM roles WHERE id = ?",
+                                        )
+                                        .bind(roleId)
+                                        .run();
+                                }
                             }
                         } catch (e) {
                             console.error("D1 Role delete error:", e);
@@ -2933,25 +3533,36 @@ export default {
                                 formData.get("description") || null;
                             const permissions =
                                 formData.getAll("permissions[]") || [];
-                            await db
-                                .prepare(
-                                    "UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                                )
-                                .bind(name, description, roleId)
-                                .run();
-                            await db
-                                .prepare(
-                                    "DELETE FROM permission_role WHERE role_id = ?",
-                                )
+
+                            const roleToUpdate = await db
+                                .prepare("SELECT * FROM roles WHERE id = ?")
                                 .bind(roleId)
-                                .run();
-                            for (const pId of permissions) {
+                                .first();
+
+                            if (roleToUpdate) {
                                 await db
                                     .prepare(
-                                        "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                        "UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                                     )
-                                    .bind(roleId, Number(pId))
+                                    .bind(name, description, roleId)
                                     .run();
+
+                                if (roleToUpdate.slug !== "super-admin") {
+                                    await db
+                                        .prepare(
+                                            "DELETE FROM permission_role WHERE role_id = ?",
+                                        )
+                                        .bind(roleId)
+                                        .run();
+                                    for (const pId of permissions) {
+                                        await db
+                                            .prepare(
+                                                "INSERT INTO permission_role (role_id, permission_id) VALUES (?, ?)",
+                                            )
+                                            .bind(roleId, Number(pId))
+                                            .run();
+                                    }
+                                }
                             }
                         } catch (e) {
                             console.error("D1 Role update error:", e);
@@ -3002,6 +3613,7 @@ export default {
         let deletedNodeIds = [];
         let liveContacts = [];
         let liveTasks = [];
+        let deletedTaskIds = [];
         let liveEcosystem = [];
         let liveUsers = [];
         let deletedUserIds = [];
@@ -3055,6 +3667,7 @@ export default {
                     db
                         .prepare(
                             "SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id DESC",
+                            "SELECT * FROM sbl_contacts ORDER BY sort_order ASC, id ASC",
                         )
                         .all(),
                     db
@@ -3123,6 +3736,16 @@ export default {
                 }
                 if (contactsRes?.results) liveContacts = contactsRes.results;
                 if (tasksRes?.results) liveTasks = tasksRes.results;
+                if (tasksRes?.results) {
+                    liveTasks = tasksRes.results;
+                    const activeTaskIds = new Set(
+                        (liveTasks || []).map((t) => Number(t.id)),
+                    );
+                    deletedTaskIds = [
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        17, 18, 19, 20,
+                    ].filter((id) => !activeTaskIds.has(id));
+                }
                 if (ecoRes?.results) liveEcosystem = ecoRes.results;
                 if (usersRes?.results) liveUsers = usersRes.results;
                 if (presRes?.results) livePresentations = presRes.results;
@@ -3459,12 +4082,13 @@ export default {
             // 6. Helplines & Contacts
             for (const c of liveContacts || []) {
                 const searchStr =
-                    `${c.department || ""} ${c.contact_person || ""} ${c.phone || ""} ${c.mobile || ""}`.toLowerCase();
+                    `${c.department || ""} ${c.department_en || ""} ${c.department_bn || ""} ${c.contact_person || ""} ${c.phone || ""} ${c.whatsapp || ""} ${c.email || ""} ${c.service_label_en || ""} ${c.service_label_bn || ""} ${c.description_en || ""} ${c.description_bn || ""}`.toLowerCase();
                 if (searchStr.includes(query)) {
                     results.contacts.push({
                         id: c.id,
-                        title: c.department || c.contact_person,
-                        subtitle: `${c.contact_person ? c.contact_person + " • " : ""}${c.phone || c.mobile || ""}`,
+                        title:
+                            c.department_en || c.department || c.contact_person,
+                        subtitle: `${c.contact_person ? c.contact_person + " • " : ""}${c.phone || c.whatsapp || ""}`,
                         category: "Contact",
                         url: "/contacts",
                     });
@@ -4036,16 +4660,19 @@ export default {
             const viewMode = url.searchParams.get("view");
             if (viewMode === "table") {
                 html = PAGES.binary_table || PAGES.binary;
+                html = PAGES.binary_table || PAGES.binary || PAGES.dashboard;
             } else if (viewMode === "mindmap" || viewMode === "tree") {
                 html = PAGES.binary_mindmap || PAGES.binary;
+                html = PAGES.binary_mindmap || PAGES.binary || PAGES.dashboard;
             } else {
                 html = PAGES.binary;
+                html = PAGES.binary || PAGES.dashboard;
             }
         } else {
             html = PAGES.dashboard;
         }
 
-        let responseHtml = html;
+        let responseHtml = html || PAGES.dashboard || "";
 
         if (authUser && authUser.name) {
             responseHtml = responseHtml.replace(
@@ -4080,6 +4707,7 @@ export default {
             deletedNodes: deletedNodeIds,
             contacts: liveContacts,
             tasks: liveTasks,
+            deletedTasks: deletedTaskIds,
             ecosystem: liveEcosystem,
             users: safeUsers,
             deletedUsers: deletedUserIds,
@@ -4145,10 +4773,23 @@ export default {
                         )
                         .join(", ") + " { display: none !important; }\n";
             }
+            if (deletedTaskIds.length > 0) {
+                syncStyles +=
+                    deletedTaskIds
+                        .map((id) => '[data-task-id="' + id + '"]')
+                        .join(", ") + " { display: none !important; }\n";
+            }
+
+            let fontLinks = "";
+            if (!responseHtml.includes("Hind+Siliguri")) {
+                fontLinks =
+                    '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">\n';
+            }
 
             responseHtml = responseHtml.replace(
                 "</head>",
                 () =>
+                    fontLinks +
                     '<style id="sbl-edge-styles">\n' +
                     CSS_CONTENT +
                     "\n" +

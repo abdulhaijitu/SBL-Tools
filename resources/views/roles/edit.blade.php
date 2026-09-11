@@ -99,6 +99,9 @@
                     <!-- Permissions List -->
                     <div class="p-4 space-y-3 flex-1">
                         @foreach($permissions as $perm)
+                        @php
+                            $isDangerous = in_array($perm->slug, ['users.manage', 'roles.manage', 'leads.delete', 'tasks.delete']) || str_contains($perm->slug, 'delete');
+                        @endphp
                         <label class="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors">
                             <input type="checkbox" 
                                    name="permissions[]" 
@@ -108,8 +111,13 @@
                             
                             <div class="text-xs">
                                 <div class="font-semibold text-slate-800 flex items-center gap-2">
+                            <div class="text-xs flex-1 min-w-0">
+                                <div class="font-semibold text-slate-800 flex items-center gap-2 flex-wrap">
                                     <span>{{ $perm->name }}</span>
                                     <span class="text-[10px] font-mono text-slate-400">({{ $perm->slug }})</span>
+                                    @if($isDangerous)
+                                        <span class="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">⚠️ Sensitive</span>
+                                    @endif
                                 </div>
                                 <div class="text-[11px] text-slate-500 mt-0.5">{{ $perm->description }}</div>
                             </div>

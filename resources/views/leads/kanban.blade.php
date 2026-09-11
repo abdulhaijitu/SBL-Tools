@@ -111,7 +111,18 @@
                             </div>
 
                             <div class="text-xs text-slate-500 mt-1 flex items-center justify-between">
-                                <span>📞 {{ $lead->mobile }}</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-mono text-[11px]">{{ $lead->mobile }}</span>
+                                    <a href="tel:{{ $lead->mobile }}" title="Call" class="text-emerald-600 hover:text-emerald-800 p-0.5 active:scale-95 transition-transform">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.96.35 1.9.69 2.79a2 2 0 01-.45 2.11L8.09 9.89a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.89.34 1.83.57 2.79.69A2 2 0 0122 16.92z"/></svg>
+                                    </a>
+                                    @php $waNum = \App\Support\PhoneNumber::whatsapp($lead->whatsapp ?: $lead->mobile); @endphp
+                                    @if($waNum)
+                                    <a href="https://wa.me/{{ $waNum }}" target="_blank" rel="noopener noreferrer" title="WhatsApp" class="text-emerald-600 hover:text-emerald-800 p-0.5 active:scale-95 transition-transform">
+                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.196 8.196 0 01-5.82 2.42c-1.45 0-2.87-.38-4.12-1.11l-.3-.18-3.12.82.83-3.04-.19-.31a8.18 8.18 0 01-1.25-4.42c0-4.54 3.7-8.24 8.23-8.24m4.52 11.66c-.25.7-.72 1.29-1.37 1.63-.52.27-1.18.42-2.12.06-.94-.37-1.92-.99-2.73-1.8-.81-.81-1.43-1.79-1.8-2.73-.36-.94-.21-1.6.06-2.12.34-.65.93-1.12 1.63-1.37.22-.08.45-.04.62.1l1.3 1.6c.14.17.17.41.07.61l-.6 1.2c-.1.2-.06.45.1.61.62.62 1.36 1.12 2.19 1.48.2.09.43.05.57-.1l.98-.98c.18-.18.44-.22.66-.1l1.96.98c.22.11.35.34.33.59-.02.26-.14.5-.32.67z"/></svg>
+                                    </a>
+                                    @endif
+                                </div>
                                 <span class="font-bold text-slate-700">{{ $lead->score }} pts</span>
                             </div>
 

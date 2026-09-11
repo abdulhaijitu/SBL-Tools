@@ -22,9 +22,14 @@ class RoleController extends Controller
             ->get();
 
         $permissions = Permission::orderBy('module')->orderBy('name')->get();
+        $permissions = Permission::with('roles')->orderBy('module')->orderBy('name')->get();
         $allPermissionsCount = $permissions->count();
 
         return view('roles.index', compact('roles', 'allPermissionsCount', 'permissions'));
+        // Group permissions by module for in-page permissions editor
+        $modules = $permissions->groupBy('module');
+
+        return view('roles.index', compact('roles', 'allPermissionsCount', 'permissions', 'modules'));
     }
 
     /**
@@ -35,6 +40,7 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:roles,name',
             'description' => 'nullable|string|max:255',
+            'copy_role_id' => 'nullable|exists:roles,id',
         ]);
 
         $slug = $this->uniqueSlug($validated['name']);
@@ -46,7 +52,14 @@ class RoleController extends Controller
             'is_system' => false,
         ]);
 
-        return redirect()->route('roles.edit', $role)->with('success', "Role '{$role->name}' created. Now select permissions.");
+        if (!empty($validated['copy_role_id'])) {
+            $sourceRole = Role::with('permissions')->find($validated['copy_role_id']);
+            if ($sourceRole) {
+                $role->permissions()->sync($sourceRole->permissions->pluck('id')->toArray());
+            }
+        }
+
+        return redirect()->route('roles.index')->with('success', "Role '{$role->name}' created successfully.");
     }
 
     /**
@@ -89,6 +102,12 @@ class RoleController extends Controller
         }
 
         $permissionIds = $request->input('permissions', []);
+
+        // Super admin protection: super-admin always retains full permissions
+        if ($role->slug === 'super-admin') {
+            $permissionIds = Permission::pluck('id')->toArray();
+        }
+
         if (!$request->user()->isSuperAdmin()) {
             foreach (Permission::whereIn('id', $permissionIds)->get() as $permission) {
                 abort_unless($request->user()->hasPermission($permission->slug), 403);
@@ -113,9 +132,11 @@ class RoleController extends Controller
 
         if ($role->users()->count() > 0) {
             return redirect()->route('roles.index')->with('error', "Cannot delete role '{$role->name}' because it is assigned to {$role->users()->count()} member(s). Reassign them first.");
+            return redirect()->route('roles.index')->with('error', "Cannot delete role '{$role->name}' because it is assigned to {$role->users()->count()} user(s). Reassign them first.");
         }
 
         $roleName = $role->name;
+        $role->permissions()->detach();
         $role->delete();
 
         return redirect()->route('roles.index')->with('success', "Role '{$roleName}' deleted successfully.");
@@ -128,7 +149,7 @@ class RoleController extends Controller
         if ($base === 'super-admin') $base = 'custom-super-admin';
         $slug = $base;
         $suffix = 2;
-        while (Role::where('slug', $slug)->when($ignore, fn ($query) => $query->where('id', '!=', $ignore))->exists()) {
+        while (Role::where('slug', $slug)->when($ignore, fn($query) => $query->where('id', '!=', $ignore))->exists()) {
             $slug = $base . '-' . $suffix++;
         }
         return $slug;

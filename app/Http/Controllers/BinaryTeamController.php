@@ -49,6 +49,7 @@ class BinaryTeamController extends Controller
         }
 
         $nodeId = $memberId ?: ($request->query('node_id') ?: $request->query('member_id'));
+        $nodeId = $memberId ?: ($request->query('node_id') ?: ($request->query('member_id') ?: $request->query('member')));
         if ($nodeId) {
             $requestedNode = BinaryNode::findOrFail($nodeId);
             if ($isSuperAdmin && !$request->filled('owner_id')) $ownerId = $requestedNode->tree_owner_id;

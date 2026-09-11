@@ -1,9 +1,12 @@
 @extends('layouts.app')
 
 @section('meta-title', 'Links | SBL Marketing')
+@section('meta-title', 'SBL Resource Hub | Official Portals, Websites & Marketing Tools')
 @section('page-title', 'Links')
 @section('page-subtitle', 'Official SBL Portals, E-Commerce Stores & Tools')
 @section('meta-description', 'Official SBL website directory, partner links, customer portals, seller hubs and marketing tools.')
+@section('page-subtitle', 'SBL Resource Hub - Official Portals, E-Commerce Stores & Marketing Tools')
+@section('meta-description', 'Verified SBL website directory, partner links, customer portals, seller hubs and marketing tools.')
 
 @section('content')
 <div class="space-y-6"
@@ -238,4 +241,5 @@
             </div>
         </div>
 </div>
+    @include('toolkit.partials.links-hub')
 @endsection

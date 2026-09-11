@@ -89,12 +89,12 @@
                 <span>Team Explorer</span>
             </a>
 
-            <!-- Abbreviation -->
+            <!-- Business Glossary -->
             <a href="{{ route('abbreviations.index') }}" 
                @if(request()->routeIs('abbreviations.*')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('abbreviations.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">📖</span>
-                <span>Abbreviation</span>
+                <span data-en="Business Glossary" data-bn="বিজনেস গ্লসারি">Business Glossary</span>
             </a>
         </div>
     </div>

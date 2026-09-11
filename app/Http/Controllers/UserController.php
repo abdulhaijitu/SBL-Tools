@@ -43,9 +43,22 @@ class UserController extends Controller
         }
 
         $users = $query->orderBy('name')->get();
-        $roles = Role::orderBy('name')->get();
+        $roles = Role::with('permissions')->orderBy('name')->get();
 
         return view('users.index', compact('users', 'roles'));
+    }
+
+    /**
+     * Normalize Bangladesh phone number to 11 digits (01XXXXXXXXX)
+     */
+    protected function normalizePhone(?string $phone): ?string
+    {
+        if (!$phone) return null;
+        $clean = preg_replace('/[^0-9]/', '', $phone);
+        if (str_starts_with($clean, '8801') && strlen($clean) === 13) {
+            $clean = substr($clean, 2);
+        }
+        return $clean;
     }
 
     /**
@@ -59,6 +72,9 @@ class UserController extends Controller
                 $this->authorizeRole($role);
             }
         }
+
+        $phoneInput = $this->normalizePhone($request->input('phone'));
+        $request->merge(['phone' => $phoneInput]);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -100,6 +116,9 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): RedirectResponse
     {
+        $phoneInput = $this->normalizePhone($request->input('phone'));
+        $request->merge(['phone' => $phoneInput]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20|unique:users,phone,' . $user->id,
@@ -143,7 +162,7 @@ class UserController extends Controller
     /**
      * Remove the specified user from storage.
      */
-    public function destroy(User $user): RedirectResponse
+    public function destroy(Request $request, User $user): RedirectResponse
     {
         abort_if($user->isSuperAdmin() && !auth()->user()->isSuperAdmin(), 403);
         if ($user->id === auth()->id()) {
@@ -154,7 +173,15 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'The primary administrator account cannot be deleted.');
         }
 
+        // Check related records
+        $leadsCount = $user->leads()->count();
+        $tasksCount = $user->tasks()->count();
+        if (($leadsCount > 0 || $tasksCount > 0) && !$request->boolean('force_delete')) {
+            return redirect()->route('users.index')->with('error', "এই ইউজারের সাথে {$leadsCount}টি লিড এবং {$tasksCount}টি টাস্ক যুক্ত আছে, তাই সরাসরি ডিলিট করা ঝুঁকিপূর্ণ। অনুগ্রহ করে অ্যাকাউন্টটি নিষ্ক্রিয় (Deactivate) করুন।");
+        }
+
         $userName = $user->name;
+        $user->roles()->detach();
         $user->delete();
 
         return redirect()->route('users.index')->with('success', "Team member '{$userName}' deleted successfully.");

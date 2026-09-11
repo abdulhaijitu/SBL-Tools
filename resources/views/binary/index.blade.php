@@ -53,6 +53,15 @@ function teamExplorerData() {
     placementEmail: '',
     placementNotes: '',
     selectedLeadId: '',
+    selectedPackage: 'National 120k',
+    placementStep: 'form',
+    goToPlacementConfirm() {
+        if (!this.placementMemberName || !this.placementMemberName.trim()) {
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Please enter member name', type: 'error' } }));
+            return;
+        }
+        this.placementStep = 'confirm';
+    },
     crmLeads: @json($crmLeads ?? []),
     onSelectLead(leadId) {
         if (!leadId) return;
@@ -91,6 +100,7 @@ function teamExplorerData() {
         this.placementPhone = '';
         this.placementEmail = '';
         this.placementNotes = '';
+        this.placementStep = 'form';
         this.placementModalOpen = true;
     },
     copyToClipboard(text, label) {
@@ -191,6 +201,7 @@ function teamExplorerData() {
         this.placementPhone = '';
         this.placementEmail = '';
         this.placementNotes = '';
+        this.placementStep = 'form';
         this.placementModalOpen = true;
     },
     addContributionRow() {
@@ -336,19 +347,31 @@ function teamExplorerData() {
     <div class="app-panel space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-                <a class="btn-secondary" href="{{ route('team.index', ['owner_id' => $ownerId]) }}">Main team</a>
-                @if(!empty($treeData['parent_node']))<a class="btn-secondary" href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => $ownerId]) }}">Parent team</a>@endif
+                <a class="btn-secondary" href="{{ route('team.index', ['owner_id' => $ownerId]) }}" data-en="🏠 My Team" data-bn="🏠 আমার টিম">
+                    <span>🏠</span> <span data-en="My Team" data-bn="আমার টিম">My Team</span>
+                </a>
+                @if(!empty($treeData['parent_node']))
+                    <a class="btn-secondary" href="{{ route('team.show', ['memberId' => $treeData['parent_node']->id, 'owner_id' => $ownerId]) }}" data-en="← Back" data-bn="← পূর্ববর্তী">
+                        <span>←</span> <span data-en="Back" data-bn="পূর্ববর্তী">Back</span>
+                    </a>
+                @endif
                 <button type="button" 
                         @click="openAddMemberModal()" 
                         class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer">
                     <span>➕</span>
-                    <span>Add Member</span>
+                    <span data-en="Add Member" data-bn="মেম্বার যুক্ত করুন">Add Member</span>
                 </button>
             </div>
             <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Builder">⚡ Explorer (Builder)</a>
-                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'mindmap' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'mindmap', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Mindmap Canvas Tree">🗺️ Mindmap</a>
-                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}" title="Directory List">📋 Directory</a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Explorer" data-en="⚡ Team Explorer" data-bn="⚡ টিম এক্সপ্লোরার">
+                    <span data-en="⚡ Team Explorer" data-bn="⚡ টিম এক্সপ্লোরার">⚡ Team Explorer</span>
+                </a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'mindmap' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'mindmap', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Mindmap Canvas Tree" data-en="🗺️ Mindmap" data-bn="🗺️ মাইন্ডম্যাপ">
+                    <span data-en="🗺️ Mindmap" data-bn="🗺️ মাইন্ডম্যাপ">🗺️ Mindmap</span>
+                </a>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'table' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'table', 'owner_id' => $ownerId]) }}" title="Directory List" data-en="📋 Directory" data-bn="📋 ডিরেক্টরি">
+                    <span data-en="📋 Directory" data-bn="📋 ডিরেক্টরি">📋 Directory</span>
+                </a>
             </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
@@ -390,7 +413,6 @@ function teamExplorerData() {
                     </div>
                 </div>
                 <datalist id="team_search_datalist">@foreach($allNodes as $an)<option value="{{ $an->member_code }}">{{ $an->member_name }}</option>@endforeach</datalist>
-                <button class="btn-primary">Search</button>
             </form>
             @if($isSuperAdmin && count($users))
             <form action="{{ route('team.index') }}" method="GET" class="sm:max-w-56">
@@ -403,7 +425,7 @@ function teamExplorerData() {
     </div>
 
     <!-- ==================== 2. BREADCRUMB NAVIGATION TRAIL ==================== -->
-    @if(!empty($treeData['breadcrumbs']) && count($treeData['breadcrumbs']) > 0)
+    @if($viewMode !== 'builder' && !empty($treeData['breadcrumbs']) && count($treeData['breadcrumbs']) > 0)
     <div class="flex items-center gap-2 text-xs bg-white rounded-2xl px-4 py-2.5 border border-slate-200/80 text-slate-600 shadow-xs overflow-x-auto">
         <span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Genealogy Path:</span>
         @foreach($treeData['breadcrumbs'] as $idx => $bc)
@@ -908,6 +930,8 @@ function teamExplorerData() {
             <form action="{{ route('binary.store') }}" method="POST" class="space-y-4">
                 @csrf
 
+                <div x-show="placementStep === 'form'" class="space-y-4">
+
                 <!-- ==================== CRM LEADS QUICK IMPORT ==================== -->
                 @if(isset($crmLeads) && count($crmLeads) > 0)
                 <div class="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50/60 rounded-2xl border border-amber-200/90 space-y-1.5 shadow-2xs">
@@ -1038,6 +1062,7 @@ function teamExplorerData() {
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Username / Member Code</label>
                         <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                        <input type="text" name="member_code" x-model="placementMemberCode" placeholder="Auto-generated or @@username" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
                     </div>
                 </div>
 
@@ -1076,6 +1101,7 @@ function teamExplorerData() {
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Select Package</label>
                         <select name="package_name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
+                        <select name="package_name" x-model="selectedPackage" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium">
                             @foreach($packages as $pkg)
                             <option value="{{ $pkg['name'] }}">{{ $pkg['label'] }}</option>
                             @endforeach
@@ -1105,12 +1131,71 @@ function teamExplorerData() {
 
                 <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                     <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+                    <button type="button" @click="placementModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer" data-en="Cancel" data-bn="বাতিল">
                         Cancel
                     </button>
                     <button type="submit" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer">
                         Save & Place Member
+                    <button type="button" @click="goToPlacementConfirm()" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5" data-en="Review & Place Member →" data-bn="রিভিউ ও প্লেসমেন্ট নিশ্চিত করুন →">
+                        <span data-en="Review & Place Member" data-bn="রিভিউ ও প্লেসমেন্ট নিশ্চিত করুন">Review & Place Member</span>
+                        <span>→</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- ==================== PLACEMENT CONFIRMATION REVIEW STEP ==================== -->
+            <div x-show="placementStep === 'confirm'" class="space-y-4" x-cloak>
+                <div class="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-1">
+                    <h4 class="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                        <span>🛡️</span>
+                        <span data-en="Placement Confirmation Review" data-bn="প্লেসমেন্ট কনফার্মেশন রিভিউ">Placement Confirmation Review</span>
+                    </h4>
+                    <p class="text-[11px] text-amber-800" data-en="Please review the placement position carefully before submitting to avoid errors." data-bn="ভুল প্লেসমেন্ট এড়াতে সাবমিট করার আগে তথ্যগুলো ভালোভাবে যাচাই করুন।">
+                        Please review the placement position carefully before submitting to avoid errors.
+                    </p>
+                </div>
+
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <span class="text-slate-500 font-semibold" data-en="New Member:" data-bn="নতুন সদস্য:">New Member:</span>
+                        <div class="text-right">
+                            <span class="font-black text-slate-900" x-text="placementMemberName"></span>
+                            <span class="block text-[10px] text-slate-400 font-mono" x-text="placementMemberCode || 'Auto-generated'"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <span class="text-slate-500 font-semibold" data-en="Placement Connector:" data-bn="প্লেসমেন্ট কানেক্টর:">Placement Connector:</span>
+                        <span class="font-bold text-slate-900" x-text="selectedParentName || 'Root'"></span>
+                    </div>
+
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <span class="text-slate-500 font-semibold" data-en="Position Assigned:" data-bn="নির্ধারিত পজিশন:">Position Assigned:</span>
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-black"
+                              :class="selectedBranch === 'LEFT' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'"
+                              x-text="(selectedBranch === 'LEFT' ? '👈 LEFT' : '👉 RIGHT') + ' • Slot ' + selectedSlotNumber"></span>
+                    </div>
+
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <span class="text-slate-500 font-semibold" data-en="Sponsor (Referrer):" data-bn="স্পন্সর (রেফারার):">Sponsor (Referrer):</span>
+                        <span class="font-bold text-slate-900" x-text="sponsorName || selectedParentName || 'Self'"></span>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500 font-semibold" data-en="Package:" data-bn="প্যাকেজ:">Package:</span>
+                        <span class="font-bold text-orange-600" x-text="selectedPackage"></span>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-between gap-2 border-t border-slate-100">
+                    <button type="button" @click="placementStep = 'form'" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer" data-en="← Edit Details" data-bn="← তথ্য পরিবর্তন">
+                        ← Edit Details
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5" data-en="Confirm & Place Member ✓" data-bn="নিশ্চিত ও প্লেস করুন ✓">
+                        <span>Confirm & Place Member ✓</span>
+                    </button>
+                </div>
+            </div>
             </form>
         </div>
     </div>

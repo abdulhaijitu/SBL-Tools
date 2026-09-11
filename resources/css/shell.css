@@ -38,16 +38,21 @@ body {
     width: 100%;
     font-family:
         Inter,
+        "Inter",
+        "Hind Siliguri",
         ui-sans-serif,
         system-ui,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
+        Roboto,
         sans-serif;
     font-size: 14px;
     line-height: 1.5;
     color: var(--ink);
     background: var(--canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 button,
 a,

@@ -214,6 +214,14 @@ class LeadController extends Controller
             }
         });
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'lead_id' => $lead->id,
+                'message' => 'Lead created successfully!',
+            ]);
+        }
+
         return redirect()->route('leads.show', $lead->id)
             ->with('success', 'Lead created successfully!');
     }
@@ -388,7 +396,7 @@ class LeadController extends Controller
     /**
      * Add quick interaction activity (Call, WhatsApp, Note, etc.)
      */
-    public function addActivity(Request $request, Lead $lead): RedirectResponse
+    public function addActivity(Request $request, Lead $lead): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'type' => 'required|string',
@@ -428,6 +436,16 @@ class LeadController extends Controller
 
         $lead->calculateScoreAndTemperature();
         $lead->save();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Activity recorded successfully!',
+                'next_action_type' => $lead->next_action_type,
+                'next_action_at' => $lead->next_action_at ? $lead->next_action_at->format('d M, h:i A') : null,
+                'is_overdue' => $lead->is_next_action_overdue,
+            ]);
+        }
 
         return redirect()->route('leads.show', $lead->id)
             ->with('success', 'Activity recorded successfully!');

@@ -481,6 +481,10 @@
             if (overdueBadge) {
                 overdueBadge.textContent = overdueLeads.length + " Overdue";
             }
+            const attentionBadge = document.getElementById("dashboard-attention-badge");
+            if (attentionBadge) {
+                attentionBadge.innerHTML = overdueLeads.length + ' <span data-en="items" data-bn="আইটেম">items</span>';
+            }
             const overdueContainer = document.getElementById(
                 "dashboard-overdue-container",
             );
@@ -1994,6 +1998,10 @@
                 ) {
                     viewedMemberId = parseInt(bParts[1], 10);
                 }
+                const urlParams = new URLSearchParams(window.location.search);
+                if (!viewedMemberId && (urlParams.get("member") || urlParams.get("node_id") || urlParams.get("member_id"))) {
+                    viewedMemberId = parseInt(urlParams.get("member") || urlParams.get("node_id") || urlParams.get("member_id"), 10);
+                }
                 let currentMember = null;
                 if (viewedMemberId) {
                     currentMember = nodeMap[viewedMemberId];
@@ -2003,6 +2011,35 @@
                         return !n.parent_id;
                     });
                     currentMember = roots.length > 0 ? roots[0] : DATA.nodes[0];
+                }
+
+                // Subtree BV & Network calculation helper
+                function getDescendantStats(startNodeId, targetBranch) {
+                    let count = 0;
+                    let bv = 0;
+                    const directChildren = DATA.nodes.filter(function (c) {
+                        return (
+                            Number(c.parent_id) === Number(startNodeId) &&
+                            (c.branch === targetBranch ||
+                                (c.position && c.position.toUpperCase() === targetBranch))
+                        );
+                    });
+                    const queue = directChildren.slice();
+                    const visited = new Set();
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        if (!curr || visited.has(curr.id)) continue;
+                        visited.add(curr.id);
+                        count++;
+                        bv += Number(curr.point_value) || 100;
+                        const children = DATA.nodes.filter(function (c) {
+                            return Number(c.parent_id) === Number(curr.id);
+                        });
+                        for (let i = 0; i < children.length; i++) {
+                            queue.push(children[i]);
+                        }
+                    }
+                    return { count: count, bv: bv };
                 }
 
                 const activeCurr =
@@ -2156,6 +2193,12 @@
 
                     const btnDetails = document.querySelector(
                         "[data-btn-full-details]",
+                    // Sync 4 Summary Cards (Left BV, Right BV, Pairs, Carry)
+                    const leftStats = getDescendantStats(currentMember.id, "LEFT");
+                    const rightStats = getDescendantStats(currentMember.id, "RIGHT");
+                    const matchedPairs = Math.min(
+                        Math.floor(leftStats.bv / 100),
+                        Math.floor(rightStats.bv / 100)
                     );
                     if (btnDetails) {
                         btnDetails.onclick = function () {
@@ -2176,6 +2219,31 @@
                                 c._x_dataStack[0].openEditModal(currentMember);
                         };
                     }
+                    const carryLeft = leftStats.bv - (matchedPairs * 100);
+                    const carryRight = rightStats.bv - (matchedPairs * 100);
+
+                    const statLBV = document.querySelector("[data-stat-left-bv]");
+                    if (statLBV) statLBV.textContent = leftStats.bv.toLocaleString();
+                    const statRBV = document.querySelector("[data-stat-right-bv]");
+                    if (statRBV) statRBV.textContent = rightStats.bv.toLocaleString();
+
+                    const statLNet = document.querySelector("[data-stat-left-network]");
+                    if (statLNet) statLNet.textContent = leftStats.count;
+                    const statRNet = document.querySelector("[data-stat-right-network]");
+                    if (statRNet) statRNet.textContent = rightStats.count;
+
+                    const statPairs = document.querySelector("[data-stat-matched-pairs]");
+                    if (statPairs) statPairs.textContent = matchedPairs;
+
+                    const statCarryL = document.querySelector("[data-stat-carry-left]");
+                    if (statCarryL) statCarryL.textContent = carryLeft;
+                    const statCarryR = document.querySelector("[data-stat-carry-right]");
+                    if (statCarryR) statCarryR.textContent = carryRight;
+
+                    const tabLCount = document.querySelector("[data-tab-left-count]");
+                    if (tabLCount) tabLCount.textContent = (currentMember.direct_left_count || 0) + "/5";
+                    const tabRCount = document.querySelector("[data-tab-right-count]");
+                    if (tabRCount) tabRCount.textContent = (currentMember.direct_right_count || 0) + "/5";
 
                     // Render Slot Card Helper
                     function renderSlotCard(
@@ -2188,19 +2256,27 @@
                     ) {
                         const isLeft = branch === "LEFT";
                         const slotLabel = (isLeft ? "L-" : "R-") + slotNumber;
+                        const slotLabel = (isLeft ? "L" : "R") + slotNumber;
                         if (!node || node.is_vacant) {
                             return (
                                 '<div class="p-4 rounded-2xl border-2 border-dashed ' +
+                                '<div class="p-3.5 rounded-2xl border-2 border-dashed ' +
                                 (isLeft
                                     ? "border-emerald-300/80 bg-emerald-50/20 hover:bg-emerald-50/60"
                                     : "border-blue-300/80 bg-blue-50/20 hover:bg-blue-50/60") +
+                                    ? "border-emerald-300/80 bg-emerald-50/20 hover:bg-emerald-50/50"
+                                    : "border-blue-300/80 bg-blue-50/20 hover:bg-blue-50/50") +
                                 ' transition-all flex items-center justify-between gap-3 group">' +
                                 '<div class="flex items-center gap-3">' +
                                 '<div class="w-10 h-10 rounded-xl ' +
+                                '<div class="w-9 h-9 rounded-xl ' +
                                 (isLeft
                                     ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                                     : "bg-blue-100 text-blue-700 border-blue-200") +
                                 ' font-bold flex items-center justify-center text-xs border">' +
+                                    ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                    : "bg-blue-100 text-blue-800 border-blue-200") +
+                                ' font-black flex items-center justify-center text-xs border flex-shrink-0">' +
                                 slotLabel +
                                 "</div>" +
                                 "<div>" +
@@ -2208,6 +2284,8 @@
                                 slotLabel +
                                 " (খালি রয়েছে)</div>" +
                                 '<div class="text-[11px] text-slate-400">নতুন মেম্বারকে এই পজিশনে বসান</div>' +
+                                ' <span class="text-slate-400 font-normal">(Available)</span></div>' +
+                                '<div class="text-[11px] text-slate-400">Click to place member</div>' +
                                 "</div>" +
                                 "</div>" +
                                 '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openPlacementModal(' +
@@ -2221,6 +2299,7 @@
                                 "', " +
                                 slotNumber +
                                 '); } })() : null" class="px-3.5 py-2 rounded-xl ' +
+                                '); } })() : null" class="px-3 py-1.5 rounded-xl ' +
                                 (isLeft
                                     ? "bg-emerald-600 hover:bg-emerald-700"
                                     : "bg-blue-600 hover:bg-blue-700") +
@@ -2238,6 +2317,7 @@
                             /[^0-9]/g,
                             "",
                         );
+                        let cleanPhone = (node.phone || "").replace(/[^0-9]/g, "");
                         let waNum = cleanPhone;
                         if (waNum.startsWith("01") && waNum.length === 11) {
                             waNum = "88" + waNum;
@@ -2271,10 +2351,13 @@
                             }
                         }
 
+                        const childDirectTotal = (node.direct_left_count || 0) + (node.direct_right_count || 0);
+
                         return (
                             '<div data-node-id="' +
                             node.id +
                             '" class="p-4 rounded-2xl bg-white border border-slate-200 hover:' +
+                            '" class="p-3.5 rounded-2xl bg-white border border-slate-200 hover:' +
                             (isLeft
                                 ? "border-emerald-400/80"
                                 : "border-blue-400/80") +
@@ -2282,6 +2365,10 @@
                             '<div class="flex items-start justify-between gap-3">' +
                             '<div class="flex items-center gap-3">' +
                             '<div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-orange-400 font-black text-sm flex items-center justify-center shadow-xs flex-shrink-0 border border-slate-700">' +
+                            ' shadow-xs hover:shadow-md transition-all space-y-2.5">' +
+                            '<div class="flex items-start justify-between gap-2.5">' +
+                            '<div class="flex items-center gap-2.5 min-w-0">' +
+                            '<div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-orange-400 font-black text-sm flex items-center justify-center shadow-xs flex-shrink-0 border border-slate-700">' +
                             escapeHtml(
                                 (node.member_name || "M")
                                     .charAt(0)
@@ -2291,6 +2378,9 @@
                             "<div>" +
                             '<div class="flex items-center gap-2">' +
                             '<span class="px-2 py-0.5 rounded-md ' +
+                            '<div class="min-w-0">' +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                            '<span class="px-1.5 py-0.5 rounded-md ' +
                             (isLeft
                                 ? "bg-emerald-100 text-emerald-800"
                                 : "bg-blue-100 text-blue-800") +
@@ -2304,24 +2394,30 @@
                                 : "") +
                             "</div>" +
                             '<div class="font-black text-slate-900 text-sm mt-0.5 hover:text-orange-600 cursor-pointer" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
+                            '<div class="font-black text-slate-900 text-xs sm:text-sm mt-0.5 hover:text-orange-600 cursor-pointer truncate" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
                             node.id +
                             '); } })() : null">' +
                             escapeHtml(node.member_name) +
                             "</div>" +
                             '<div class="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">' +
                             "<span>" +
+                            '<div class="flex items-center gap-1 text-xs text-slate-500 font-mono mt-0.5">' +
+                            '<span class="truncate">' +
                             escapeHtml(cCode) +
                             "</span>" +
                             "</div>" +
                             "</div>" +
                             "</div>" +
                             '<div class="flex items-center gap-1">' +
+                            '<div class="flex items-center gap-1 flex-shrink-0">' +
                             phoneIconsHtml +
                             "</div>" +
                             "</div>" +
                             '<div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">' +
                             '<div class="flex items-center gap-2">' +
                             '<span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">' +
+                            '<div class="flex items-center gap-1.5 flex-wrap">' +
+                            '<span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[10px]">' +
                             escapeHtml(node.rank_name || "Member") +
                             "</span>" +
                             '<span class="font-black ' +
@@ -2329,16 +2425,24 @@
                                 ? "text-emerald-700 bg-emerald-50 border-emerald-200/80"
                                 : "text-blue-700 bg-blue-50 border-blue-200/80") +
                             ' px-2 py-0.5 rounded border text-[11px]">' +
+                                ? "text-emerald-800 bg-emerald-50 border-emerald-200/80"
+                                : "text-blue-800 bg-blue-50 border-blue-200/80") +
+                            ' px-2 py-0.5 rounded border text-[10px]">' +
                             cPv +
                             " BV</span>" +
                             '<span class="text-slate-400 text-[11px]">' +
+                            '<span class="text-slate-400 text-[10px]">' +
                             escapeHtml(node.package_name || "National") +
+                            "</span>" +
+                            '<span class="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold text-[10px] border border-purple-200">' +
+                            "Team: " + childDirectTotal + "/10" +
                             "</span>" +
                             "</div>" +
                             '<div class="flex items-center gap-1.5">' +
                             '<a href="/team/' +
                             node.id +
                             '" class="px-2.5 py-1 rounded-lg bg-orange-50 hover:bg-orange-600 text-orange-700 hover:text-white font-bold text-xs transition-all flex items-center gap-1 border border-orange-200/60 shadow-2xs"><span>👥</span> <span>Explore Team</span></a>' +
+                            '" class="px-2.5 py-1 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs transition-all flex items-center gap-1 shadow-2xs"><span>👥</span> <span data-en="Explore Team" data-bn="টিম দেখুন">Explore Team</span></a>' +
                             '<button type="button" onclick="window.Alpine && window.Alpine.raw ? (function(){ var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openDetailsModal(' +
                             node.id +
                             '); } })() : null" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer" title="View Details">👁️</button>' +
@@ -2499,384 +2603,14 @@
 
         // 6. CONTACTS SYNC - ONLY on /contacts!
         if (curPath === "/contacts" || curPath.startsWith("/contacts?")) {
-            const contactsTbody = document.getElementById(
-                "contacts-table-body",
-            );
-            const contactsMobileCards = document.getElementById(
-                "contacts-mobile-cards",
-            );
-
             if (DATA.contacts && Array.isArray(DATA.contacts)) {
-                // Desktop Table Rendering
-                if (contactsTbody) {
-                    contactsTbody.innerHTML = DATA.contacts
-                        .map(function (c) {
-                            const isPrimary = Number(c.is_primary) === 1;
-                            const iconBg = isPrimary
-                                ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                                : "bg-slate-100 border border-slate-200/80 text-slate-700";
-                            const badgeHtml = c.badge
-                                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
-                                  (isPrimary
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                      : "bg-slate-100 text-slate-700 border border-slate-200") +
-                                  '">' +
-                                  escapeHtml(c.badge) +
-                                  "</span>"
-                                : "";
-                            const descHtml = c.description
-                                ? '<p class="text-xs text-slate-500 line-clamp-1 mt-0.5 max-w-xs" title="' +
-                                  escapeHtml(c.description) +
-                                  '">' +
-                                  escapeHtml(c.description) +
-                                  "</p>"
-                                : "";
-                            const cleanPhone = (c.phone || "").replace(
-                                /[^0-9+]/g,
-                                "",
-                            );
-                            let cleanWa = (c.whatsapp || c.phone || "").replace(
-                                /[^0-9]/g,
-                                "",
-                            );
-                            if (cleanWa.startsWith("01")) {
-                                cleanWa = "88" + cleanWa;
-                            }
-
-                            let personHtml =
-                                '<span class="text-slate-400 text-xs">—</span>';
-                            if (c.contact_person) {
-                                personHtml =
-                                    '<div class="flex items-center gap-2 text-sm text-slate-800 font-medium">' +
-                                    '<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>' +
-                                    "<span>" +
-                                    escapeHtml(c.contact_person) +
-                                    "</span>" +
-                                    "</div>";
-                            }
-
-                            let phoneHtml =
-                                '<span class="text-slate-400 text-xs">—</span>';
-                            if (c.phone) {
-                                phoneHtml =
-                                    '<div class="flex items-center gap-2">' +
-                                    '<span class="font-bold text-slate-900 text-sm font-mono">' +
-                                    escapeHtml(c.phone) +
-                                    "</span>" +
-                                    '<button type="button" onclick="window.copyContactToClipboard(\'' +
-                                    escapeHtml(c.phone) +
-                                    '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
-                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
-                                    "</button>" +
-                                    '<a href="tel:' +
-                                    cleanPhone +
-                                    '" title="সরাসরি ফোন কল করুন" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-emerald-400 text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
-                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
-                                    "<span>কল</span>" +
-                                    "</a>" +
-                                    "</div>";
-                            }
-
-                            const targetWa = c.whatsapp || c.phone;
-                            let waHtml =
-                                '<span class="text-slate-400 text-xs">—</span>';
-                            if (targetWa) {
-                                waHtml =
-                                    '<div class="flex items-center gap-2">' +
-                                    '<span class="font-bold text-slate-900 text-sm font-mono">' +
-                                    escapeHtml(targetWa) +
-                                    "</span>" +
-                                    '<button type="button" onclick="window.copyContactToClipboard(\'' +
-                                    escapeHtml(targetWa) +
-                                    '\', \'WhatsApp number\')" title="Copy WhatsApp" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer">' +
-                                    '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
-                                    "</button>" +
-                                    '<a href="https://wa.me/' +
-                                    cleanWa +
-                                    "?text=" +
-                                    encodeURIComponent(
-                                        "আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।",
-                                    ) +
-                                    '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে মেসেজ পাঠান" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors active:scale-95">' +
-                                    '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
-                                    "<span>মেসেজ</span>" +
-                                    "</a>" +
-                                    '<a href="https://wa.me/' +
-                                    cleanWa +
-                                    '" target="_blank" rel="noopener noreferrer" title="হোয়াটসঅ্যাপে কল / ডায়াল করুন" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors active:scale-95">' +
-                                    "<span>📱 কল</span>" +
-                                    "</a>" +
-                                    "</div>";
-                            }
-
-                            let emailHtml =
-                                '<span class="text-slate-400 text-xs">—</span>';
-                            if (c.email) {
-                                emailHtml =
-                                    '<a href="mailto:' +
-                                    escapeHtml(c.email) +
-                                    '" class="text-xs text-slate-700 hover:text-emerald-600 font-medium truncate max-w-[160px] inline-flex items-center gap-1.5" title="' +
-                                    escapeHtml(c.email) +
-                                    '">' +
-                                    '<svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>' +
-                                    "<span>" +
-                                    escapeHtml(c.email) +
-                                    "</span>" +
-                                    "</a>";
-                            }
-
-                            const hoursHtml =
-                                '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-medium">' +
-                                '<svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' +
-                                "<span>" +
-                                escapeHtml(
-                                    c.available_hours || "10:00 AM - 08:00 PM",
-                                ) +
-                                "</span>" +
-                                "</span>";
-
-                            const searchData = (
-                                (c.department || "") +
-                                " " +
-                                (c.contact_person || "") +
-                                " " +
-                                (c.phone || "") +
-                                " " +
-                                (c.whatsapp || "") +
-                                " " +
-                                (c.email || "") +
-                                " " +
-                                (c.badge || "") +
-                                " " +
-                                (c.description || "")
-                            ).toLowerCase();
-
-                            return (
-                                '<tr data-contact-id="' +
-                                c.id +
-                                '" data-search="' +
-                                escapeHtml(searchData) +
-                                '" class="hover:bg-slate-50/75 transition-colors group">' +
-                                '<td class="py-4 px-4 align-middle">' +
-                                '<div class="flex items-center gap-3">' +
-                                '<div class="w-10 h-10 rounded-xl ' +
-                                iconBg +
-                                ' flex items-center justify-center text-xl flex-shrink-0">' +
-                                escapeHtml(c.icon || "📞") +
-                                "</div>" +
-                                '<div class="min-w-0">' +
-                                '<div class="flex items-center gap-2 flex-wrap">' +
-                                '<span class="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">' +
-                                escapeHtml(c.department) +
-                                "</span>" +
-                                badgeHtml +
-                                "</div>" +
-                                descHtml +
-                                "</div>" +
-                                "</div>" +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                                personHtml +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                                phoneHtml +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                                waHtml +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                                emailHtml +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle whitespace-nowrap">' +
-                                hoursHtml +
-                                "</td>" +
-                                '<td class="py-4 px-4 align-middle text-right whitespace-nowrap">' +
-                                '<div class="inline-flex items-center gap-1.5">' +
-                                '<button type="button" onclick="window.openContactEditModalById(' +
-                                c.id +
-                                ')" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="Edit Contact">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
-                                "</button>" +
-                                '<form action="/contacts/' +
-                                c.id +
-                                '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
-                                '<input type="hidden" name="_method" value="DELETE">' +
-                                '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete Contact">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
-                                "</button>" +
-                                "</form>" +
-                                "</div>" +
-                                "</td>" +
-                                "</tr>"
-                            );
-                        })
-                        .join("");
-                }
-
-                // Mobile Cards Rendering
-                if (contactsMobileCards) {
-                    contactsMobileCards.innerHTML = DATA.contacts
-                        .map(function (c) {
-                            const isPrimary = Number(c.is_primary) === 1;
-                            const iconBg = isPrimary
-                                ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
-                                : "bg-slate-100 border border-slate-200 text-slate-700";
-                            const badgeHtml = c.badge
-                                ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ' +
-                                  (isPrimary
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                      : "bg-slate-100 text-slate-700 border border-slate-200") +
-                                  '">' +
-                                  escapeHtml(c.badge) +
-                                  "</span>"
-                                : "";
-                            const descHtml = c.description
-                                ? '<p class="text-xs text-slate-600 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 leading-relaxed">' +
-                                  escapeHtml(c.description) +
-                                  "</p>"
-                                : "";
-                            const cleanPhone = (c.phone || "").replace(
-                                /[^0-9+]/g,
-                                "",
-                            );
-                            let cleanWa = (c.whatsapp || c.phone || "").replace(
-                                /[^0-9]/g,
-                                "",
-                            );
-                            if (cleanWa.startsWith("01")) {
-                                cleanWa = "88" + cleanWa;
-                            }
-
-                            const personHtml = c.contact_person
-                                ? '<p class="text-xs text-slate-600 mt-0.5 flex items-center gap-1"><span>👤</span> ' +
-                                  escapeHtml(c.contact_person) +
-                                  "</p>"
-                                : "";
-
-                            const searchData = (
-                                (c.department || "") +
-                                " " +
-                                (c.contact_person || "") +
-                                " " +
-                                (c.phone || "") +
-                                " " +
-                                (c.whatsapp || "") +
-                                " " +
-                                (c.email || "") +
-                                " " +
-                                (c.badge || "") +
-                                " " +
-                                (c.description || "")
-                            ).toLowerCase();
-
-                            return (
-                                '<div data-contact-id="' +
-                                c.id +
-                                '" data-search="' +
-                                escapeHtml(searchData) +
-                                '" class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3.5 transition-all">' +
-                                '<div class="flex items-start justify-between gap-3">' +
-                                '<div class="flex items-center gap-3">' +
-                                '<div class="w-11 h-11 rounded-2xl ' +
-                                iconBg +
-                                ' flex items-center justify-center text-2xl flex-shrink-0 shadow-xs">' +
-                                escapeHtml(c.icon || "📞") +
-                                "</div>" +
-                                "<div>" +
-                                '<div class="flex items-center gap-1.5 flex-wrap">' +
-                                '<h3 class="font-bold text-slate-900 text-sm">' +
-                                escapeHtml(c.department) +
-                                "</h3>" +
-                                badgeHtml +
-                                "</div>" +
-                                personHtml +
-                                "</div>" +
-                                "</div>" +
-                                '<div class="flex items-center gap-1">' +
-                                '<button type="button" onclick="window.openContactEditModalById(' +
-                                c.id +
-                                ')" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>' +
-                                "</button>" +
-                                '<form action="/contacts/' +
-                                c.id +
-                                '" method="POST" onsubmit="return confirm(\'Delete this contact hotline?\');" class="inline">' +
-                                '<input type="hidden" name="_method" value="DELETE">' +
-                                '<button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>' +
-                                "</button>" +
-                                "</form>" +
-                                "</div>" +
-                                "</div>" +
-                                descHtml +
-                                '<div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 flex-wrap gap-2">' +
-                                '<div class="flex items-center gap-1.5">' +
-                                '<span class="font-bold text-slate-900 font-mono">' +
-                                escapeHtml(c.phone) +
-                                "</span>" +
-                                '<button type="button" onclick="window.copyContactToClipboard(\'' +
-                                escapeHtml(c.phone) +
-                                '\', \'Phone number\')" title="Copy Phone" class="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-100">' +
-                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' +
-                                "</button>" +
-                                "</div>" +
-                                '<span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 font-medium">🕒 ' +
-                                escapeHtml(
-                                    c.available_hours || "10:00 AM - 08:00 PM",
-                                ) +
-                                "</span>" +
-                                "</div>" +
-                                '<div class="grid grid-cols-3 gap-2 pt-1">' +
-                                '<a href="tel:' +
-                                cleanPhone +
-                                '" title="Direct Phone Call" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-900 hover:bg-black text-emerald-400 shadow-xs active:scale-95 transition-all text-center">' +
-                                '<svg class="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>' +
-                                '<span class="text-[11px] font-bold">ফোন কল</span>' +
-                                "</a>" +
-                                '<a href="https://wa.me/' +
-                                cleanWa +
-                                "?text=" +
-                                encodeURIComponent(
-                                    "আসসালামু আলাইকুম, এসবিএল সংক্রান্ত বিষয়ে যোগাযোগ করতে চাচ্ছি।",
-                                ) +
-                                '" target="_blank" rel="noopener noreferrer" title="WhatsApp Message" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95 transition-all text-center">' +
-                                '<svg class="w-4 h-4 mb-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.769.815 2.796.815 3.182 0 5.768-2.587 5.768-5.766 0-3.18-2.586-5.767-5.768-5.767zm3.385 8.163c-.143.402-.832.744-1.144.789-.312.046-.713.064-2.032-.477-.735-.302-1.396-.757-1.93-1.288-.535-.53-.992-1.19-1.295-1.924-.543-1.319-.525-1.72-.479-2.032.045-.312.387-1.001.789-1.144.135-.048.277-.024.38.064l.872 1.071c.092.113.109.269.043.4l-.391.783c-.066.131-.038.29.068.396.406.407.886.732 1.413.957.147.063.315.029.426-.083l.635-.634c.121-.122.302-.152.455-.075l1.28.639c.143.072.224.223.199.381l-.105.794z"/></svg>' +
-                                '<span class="text-[11px] font-bold">হোয়াটসঅ্যাপ</span>' +
-                                "</a>" +
-                                '<a href="https://wa.me/' +
-                                cleanWa +
-                                '" target="_blank" rel="noopener noreferrer" title="WhatsApp Call / Direct" class="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all text-center">' +
-                                '<span class="text-base mb-0.5 leading-tight">📱</span>' +
-                                '<span class="text-[11px] font-bold">ডায়াল / কল</span>' +
-                                "</a>" +
-                                "</div>" +
-                                "</div>"
-                            );
-                        })
-                        .join("");
-                }
-            }
-
-            // Live search filter on input (filters BOTH table rows and mobile cards)
-            const contactSearchInput = document.getElementById(
-                "contacts-search-input",
-            );
-            if (contactSearchInput && !contactSearchInput.__hasListener) {
-                contactSearchInput.__hasListener = true;
-                contactSearchInput.addEventListener("input", function (e) {
-                    const q = (e.target.value || "").toLowerCase().trim();
-                    const items = document.querySelectorAll(
-                        "#contacts-table-body tr[data-contact-id], #contacts-mobile-cards div[data-contact-id]",
-                    );
-                    items.forEach(function (el) {
-                        const txt = (
-                            el.getAttribute("data-search") ||
-                            el.textContent ||
-                            ""
-                        ).toLowerCase();
-                        el.style.display = !q || txt.includes(q) ? "" : "none";
-                    });
-                });
+                window.DATA = window.DATA || {};
+                window.DATA.contacts = DATA.contacts;
+                window.dispatchEvent(
+                    new CustomEvent("contacts-updated", {
+                        detail: { contacts: DATA.contacts },
+                    }),
+                );
             }
         }
 
@@ -3140,6 +2874,12 @@
                                   )
                                 : "Scheduled";
                             const isCompleted = task.status === "Completed";
+            const activeTasks = DATA.tasks || [];
+            const activeTaskIds = new Set(
+                activeTasks.map(function (t) {
+                    return String(t.id);
+                }),
+            );
 
                             const editDataJson = JSON.stringify({
                                 id: task.id,
@@ -3152,6 +2892,13 @@
                                     : "",
                                 notes: task.notes || "",
                             }).replace(/"/g, "&quot;");
+            // 8a. Remove any task rows in the DOM that are no longer active in D1
+            document.querySelectorAll("[data-task-id]").forEach(function (row) {
+                const id = row.getAttribute("data-task-id");
+                if (!activeTaskIds.has(String(id))) {
+                    row.remove();
+                }
+            });
 
                             let actionsHtml =
                                 '<div class="flex items-center gap-2 self-end sm:self-center">';
@@ -3163,14 +2910,65 @@
                                     (task.title || "").replace(/'/g, "\\'") +
                                     '\'; c._x_dataStack[0].completeModal = true; }" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors">✓ Complete</button>';
                             }
+            if (DATA.deletedTasks && Array.isArray(DATA.deletedTasks)) {
+                DATA.deletedTasks.forEach(function (delId) {
+                    document
+                        .querySelectorAll('[data-task-id="' + delId + '"]')
+                        .forEach(function (el) {
+                            el.remove();
+                        });
+                });
+            }
+
+            const tasksContainer = document.querySelector(
+                'div.divide-y[class*="rounded-2xl"]',
+            );
+
+            if (tasksContainer) {
+                activeTasks.forEach(function (task) {
+                    let row = document.querySelector(
+                        '[data-task-id="' + task.id + '"]',
+                    );
+                    if (!row) {
+                        row = document.createElement("div");
+                        row.setAttribute("data-task-id", task.id);
+                        row.className =
+                            "p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors bg-orange-50/10";
+                        const dtStr = task.due_at
+                            ? new Date(task.due_at).toLocaleString("en-US", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                              })
+                            : "Scheduled";
+                        const isCompleted = task.status === "Completed";
+
+                        let actionsHtml =
+                            '<div class="flex items-center gap-2 self-end sm:self-center">';
+                        if (!isCompleted) {
                             actionsHtml +=
                                 '<button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openEditTask(' +
                                 JSON.stringify(task).replace(/"/g, "&quot;") +
                                 '); }" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-700 font-semibold text-xs transition-colors">Edit</button>';
                             actionsHtml +=
                                 '<form action="/tasks/' +
+                                '<button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].completeTaskId = ' +
                                 task.id +
                                 '" method="POST" onsubmit="return confirm(&quot;Delete task?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Delete Task">🗑️</button></form></div>';
+                                "; c._x_dataStack[0].completeTaskTitle = '" +
+                                (task.title || "").replace(/'/g, "\\'") +
+                                '\'; c._x_dataStack[0].completeModal = true; }" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors">✓ Complete</button>';
+                        }
+                        actionsHtml +=
+                            '<button type="button" onclick="var c = document.querySelector(\'[x-data]\'); if (c && c._x_dataStack) { c._x_dataStack[0].openEditTask(' +
+                            JSON.stringify(task).replace(/"/g, "&quot;") +
+                            '); }" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-700 font-semibold text-xs transition-colors">Edit</button>';
+                        actionsHtml +=
+                            '<form action="/tasks/' +
+                            task.id +
+                            '" method="POST" onsubmit="return confirm(&quot;Delete task?&quot;);" class="inline"><input type="hidden" name="_method" value="DELETE"><button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg" title="Delete Task">🗑️</button></form></div>';
 
                             row.innerHTML =
                                 '<div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 flex-shrink-0 mt-0.5">' +
@@ -3210,10 +3008,155 @@
                                 "</div></div>" +
                                 actionsHtml;
                             tasksContainer.prepend(row);
+                        row.innerHTML =
+                            '<div class="flex items-start gap-3"><span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-200 flex-shrink-0 mt-0.5">' +
+                            (task.priority || "Medium") +
+                            '</span><div><div class="text-sm font-bold text-slate-900 flex items-center gap-2"><span>' +
+                            task.title +
+                            '</span><span class="px-2 py-0.5 rounded text-[10px] font-medium border ' +
+                            (isCompleted
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-blue-50 text-blue-700 border-blue-200") +
+                            '">' +
+                            (task.status || "Pending") +
+                            '</span></div><div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-3"><span class="font-medium text-slate-700">' +
+                            (task.type || "Follow-up") +
+                            "</span>" +
+                            (task.related_lead_id
+                                ? '<span>•</span><a href="/leads/' +
+                                  task.related_lead_id +
+                                  '" class="text-orange-600 font-semibold hover:underline">Lead: ' +
+                                  (task.lead_name ||
+                                      "#" + task.related_lead_id) +
+                                  "</a>"
+                                : "") +
+                            "<span>•</span><span>Due: " +
+                            dtStr +
+                            "</span></div>" +
+                            (task.notes
+                                ? '<p class="text-xs text-slate-600 mt-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100 inline-block">' +
+                                  task.notes +
+                                  "</p>"
+                            : "") +
+                            (task.outcome
+                                ? '<div class="mt-2 text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-flex items-center gap-1.5"><span>✓ Outcome:</span><span class="font-medium">' +
+                                  task.outcome +
+                                  "</span></div>"
+                            : "") +
+                            "</div></div>" +
+                            actionsHtml;
+                        tasksContainer.prepend(row);
+                    }
+                });
+
+                // Check empty state
+                const remainingRows =
+                    tasksContainer.querySelectorAll("[data-task-id]");
+                let emptyMsg = document.getElementById("sbl-tasks-empty-notice");
+                if (remainingRows.length === 0) {
+                    if (!emptyMsg) {
+                        emptyMsg = document.createElement("div");
+                        emptyMsg.id = "sbl-tasks-empty-notice";
+                        emptyMsg.className =
+                            "p-12 text-center text-slate-400 text-xs";
+                        emptyMsg.textContent = "No tasks found for this filter.";
+                        tasksContainer.appendChild(emptyMsg);
+                    }
+                } else if (emptyMsg) {
+                    emptyMsg.remove();
+                }
+
+                // 8b. Intercept all delete forms for optimistic removal & instant D1 deletion
+                document
+                    .querySelectorAll('form[action^="/tasks/"]')
+                    .forEach(function (form) {
+                        const mInput = form.querySelector(
+                            'input[name="_method"][value="DELETE"]',
+                        );
+                        if (mInput && !form.__hasAjaxDelete) {
+                            form.__hasAjaxDelete = true;
+                            form.addEventListener("submit", function (e) {
+                                e.preventDefault();
+                                if (!confirm("Delete task?")) return;
+                                const row = form.closest("[data-task-id]");
+                                const tId = row
+                                    ? row.getAttribute("data-task-id")
+                                    : null;
+                                if (row) row.remove();
+
+                                const fd = new FormData(form);
+                                fetch(form.action, {
+                                    method: "POST",
+                                    body: fd,
+                                    headers: { Accept: "application/json" },
+                                })
+                                    .then(function () {
+                                        if (DATA.tasks && tId) {
+                                            DATA.tasks = DATA.tasks.filter(
+                                                function (t) {
+                                                    return (
+                                                        String(t.id) !==
+                                                        String(tId)
+                                                    );
+                                                },
+                                            );
+                                        }
+                                        updateTaskCounters();
+                                        if (window.showToast) {
+                                            window.showToast(
+                                                "Task deleted successfully",
+                                                "success",
+                                            );
+                                        }
+                                    })
+                                    .catch(function (err) {
+                                        console.error(
+                                            "Task deletion error:",
+                                            err,
+                                        );
+                                    });
+                            });
                         }
                     });
+            }
+
+            // 8c. Live Update Stats Counters
+            function updateTaskCounters() {
+                const tasks = DATA.tasks || [];
+                const now = new Date();
+                const todayStr = now.toISOString().slice(0, 10);
+                let pendingCount = 0;
+                let todayCount = 0;
+                let overdueCount = 0;
+                let completedCount = 0;
+
+                tasks.forEach(function (t) {
+                    if (t.status === "Completed") {
+                        completedCount++;
+                    } else if (t.status !== "Cancelled") {
+                        pendingCount++;
+                        if (t.due_at) {
+                            const dStr = t.due_at.slice(0, 10);
+                            if (dStr === todayStr) {
+                                todayCount++;
+                            } else if (new Date(t.due_at) < now) {
+                                overdueCount++;
+                            }
+                        }
+                    }
+                });
+
+                const statNums = document.querySelectorAll(
+                    "div.text-2xl.font-extrabold",
+                );
+                if (statNums.length >= 4) {
+                    statNums[0].textContent = todayCount;
+                    statNums[1].textContent = overdueCount;
+                    statNums[2].textContent = pendingCount;
+                    statNums[3].textContent = completedCount;
                 }
             }
+            updateTaskCounters();
         }
 
         // 9. MARKETING CONTENT CALENDAR SYNC - ONLY on /marketing/content-calendar!
