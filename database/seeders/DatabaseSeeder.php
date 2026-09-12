@@ -28,10 +28,15 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 0. Seed Roles, Permissions, and Team Structure
-        $this->call(RoleAndPermissionSeeder::class);
-        $this->call(EcosystemLinkSeeder::class);
-        $this->call(SblContactSeeder::class);
-        $this->call(BinaryTeamSeeder::class);
+        $this->call([
+            RoleAndPermissionSeeder::class,
+            MemberRoleSeeder::class,
+            EcosystemLinkSeeder::class,
+            SblContactSeeder::class,
+            MarketingResourceSeeder::class,
+            SblPdfDataSeeder::class,
+            BinaryTeamSeeder::class,
+        ]);
 
         // 1. Create Admin User
         $admin = User::firstOrCreate(
@@ -211,133 +216,137 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        foreach ($leadsData as $data) {
-            $sourceModel = $sourceModels[$data['lead_source']] ?? $sourceModels['Other'];
+        if (Lead::count() === 0) {
+            foreach ($leadsData as $data) {
+                $sourceModel = $sourceModels[$data['lead_source']] ?? $sourceModels['Other'];
 
-            $lead = Lead::create([
-                'name' => $data['name'],
-                'mobile' => $data['mobile'],
-                'whatsapp' => $data['whatsapp'],
-                'email' => $data['email'],
-                'facebook_url' => $data['facebook_url'],
-                'location' => $data['location'],
-                'profession_or_business' => $data['profession_or_business'],
-                'lead_source_id' => $sourceModel->id,
-                'lead_source_detail' => 'Sample Inbound Lead',
-                'interest_types' => $data['interests'],
-                'lead_tag' => $data['lead_tag'],
-                'stage' => $data['stage'],
-                'temperature' => $data['temperature'],
-                'score' => $data['score'],
-                'budget_range' => $data['budget_range'],
-                'decision_timeline' => $data['decision_timeline'],
-                'owner_user_id' => $admin->id,
-                'next_action_type' => $data['next_action_type'],
-                'next_action_at' => $data['next_action_at'],
-                'last_contact_at' => $data['last_contact_at'],
-                'converted_at' => $data['converted_at'] ?? null,
-                'notes' => $data['notes'],
-            ]);
-
-            foreach ($data['interests'] as $interest) {
-                LeadInterest::create([
-                    'lead_id' => $lead->id,
-                    'interest' => $interest,
+                $lead = Lead::create([
+                    'name' => $data['name'],
+                    'mobile' => $data['mobile'],
+                    'whatsapp' => $data['whatsapp'],
+                    'email' => $data['email'],
+                    'facebook_url' => $data['facebook_url'],
+                    'location' => $data['location'],
+                    'profession_or_business' => $data['profession_or_business'],
+                    'lead_source_id' => $sourceModel->id,
+                    'lead_source_detail' => 'Sample Inbound Lead',
+                    'interest_types' => $data['interests'],
+                    'lead_tag' => $data['lead_tag'],
+                    'stage' => $data['stage'],
+                    'temperature' => $data['temperature'],
+                    'score' => $data['score'],
+                    'budget_range' => $data['budget_range'],
+                    'decision_timeline' => $data['decision_timeline'],
+                    'owner_user_id' => $admin->id,
+                    'next_action_type' => $data['next_action_type'],
+                    'next_action_at' => $data['next_action_at'],
+                    'last_contact_at' => $data['last_contact_at'],
+                    'converted_at' => $data['converted_at'] ?? null,
+                    'notes' => $data['notes'],
                 ]);
-            }
 
-            // Create initial activity
-            Activity::create([
-                'lead_id' => $lead->id,
-                'user_id' => $admin->id,
-                'type' => 'lead_created',
-                'title' => 'Lead Created',
-                'description' => "Lead added via {$data['lead_source']}",
-                'performed_at' => $lead->created_at,
-            ]);
+                foreach ($data['interests'] as $interest) {
+                    LeadInterest::create([
+                        'lead_id' => $lead->id,
+                        'interest' => $interest,
+                    ]);
+                }
 
-            // Add sample activities and tasks
-            if ($lead->stage === LeadStage::PRESENTATION) {
-                Presentation::create([
+                // Create initial activity
+                Activity::create([
                     'lead_id' => $lead->id,
                     'user_id' => $admin->id,
-                    'date_time' => now()->setHour(16)->setMinute(30),
-                    'type' => PresentationType::ONLINE,
-                    'topic' => 'SBL Ecosystem Overview & Affiliate Compensation Plan',
-                    'interest_focus' => 'Affiliate / Network Opportunity',
-                    'questions' => 'What is the minimum weekly commitment?',
-                    'objections' => null,
-                    'outcome' => PresentationOutcome::HOT,
-                    'next_follow_up_at' => now()->addDay(),
-                    'notes' => 'Scheduled 1-on-1 Zoom call presentation.',
+                    'type' => 'lead_created',
+                    'title' => 'Lead Created',
+                    'description' => "Lead added via {$data['lead_source']}",
+                    'performed_at' => $lead->created_at,
                 ]);
 
-                Task::create([
-                    'title' => 'Host 1-on-1 Presentation with Farhana',
-                    'type' => TaskType::PRESENTATION,
-                    'related_lead_id' => $lead->id,
-                    'user_id' => $admin->id,
-                    'due_at' => now()->setHour(16)->setMinute(30),
-                    'priority' => TaskPriority::HIGH,
-                    'status' => TaskStatus::PENDING,
-                    'notes' => 'Prepare slides on dropshipping margin and affiliate model.',
-                ]);
-            }
+                // Add sample activities and tasks
+                if ($lead->stage === LeadStage::PRESENTATION) {
+                    Presentation::create([
+                        'lead_id' => $lead->id,
+                        'user_id' => $admin->id,
+                        'date_time' => now()->setHour(16)->setMinute(30),
+                        'type' => PresentationType::ONLINE,
+                        'topic' => 'SBL Ecosystem Overview & Affiliate Compensation Plan',
+                        'interest_focus' => 'Affiliate / Network Opportunity',
+                        'questions' => 'What is the minimum weekly commitment?',
+                        'objections' => null,
+                        'outcome' => PresentationOutcome::HOT,
+                        'next_follow_up_at' => now()->addDay(),
+                        'notes' => 'Scheduled 1-on-1 Zoom call presentation.',
+                    ]);
 
-            if ($lead->stage === LeadStage::INTERESTED) {
-                Task::create([
-                    'title' => 'Follow-up Call with Rafiqul regarding product catalogue',
-                    'type' => TaskType::FOLLOW_UP,
-                    'related_lead_id' => $lead->id,
-                    'user_id' => $admin->id,
-                    'due_at' => now()->addDay()->setHour(11)->setMinute(0),
-                    'priority' => TaskPriority::MEDIUM,
-                    'status' => TaskStatus::PENDING,
-                    'notes' => 'Send wholesale price list on WhatsApp before calling.',
-                ]);
-            }
+                    Task::create([
+                        'title' => 'Host 1-on-1 Presentation with Farhana',
+                        'type' => TaskType::PRESENTATION,
+                        'related_lead_id' => $lead->id,
+                        'user_id' => $admin->id,
+                        'due_at' => now()->setHour(16)->setMinute(30),
+                        'priority' => TaskPriority::HIGH,
+                        'status' => TaskStatus::PENDING,
+                        'notes' => 'Prepare slides on dropshipping margin and affiliate model.',
+                    ]);
+                }
 
-            if ($lead->stage === LeadStage::QUALIFIED) {
-                Task::create([
-                    'title' => 'Overdue Follow-up with Kamal Hossain',
-                    'type' => TaskType::CALL,
-                    'related_lead_id' => $lead->id,
-                    'user_id' => $admin->id,
-                    'due_at' => now()->subDay(),
-                    'priority' => TaskPriority::HIGH,
-                    'status' => TaskStatus::PENDING,
-                    'notes' => 'Clarify capital protection terms and legal structure.',
-                ]);
+                if ($lead->stage === LeadStage::INTERESTED) {
+                    Task::create([
+                        'title' => 'Follow-up Call with Rafiqul regarding product catalogue',
+                        'type' => TaskType::FOLLOW_UP,
+                        'related_lead_id' => $lead->id,
+                        'user_id' => $admin->id,
+                        'due_at' => now()->addDay()->setHour(11)->setMinute(0),
+                        'priority' => TaskPriority::MEDIUM,
+                        'status' => TaskStatus::PENDING,
+                        'notes' => 'Send wholesale price list on WhatsApp before calling.',
+                    ]);
+                }
+
+                if ($lead->stage === LeadStage::QUALIFIED) {
+                    Task::create([
+                        'title' => 'Overdue Follow-up with Kamal Hossain',
+                        'type' => TaskType::CALL,
+                        'related_lead_id' => $lead->id,
+                        'user_id' => $admin->id,
+                        'due_at' => now()->subDay(),
+                        'priority' => TaskPriority::HIGH,
+                        'status' => TaskStatus::PENDING,
+                        'notes' => 'Clarify capital protection terms and legal structure.',
+                    ]);
+                }
             }
         }
 
         // 5. Content Calendar Items
-        ContentItem::create([
-            'campaign_id' => $campaign->id,
-            'user_id' => $admin->id,
-            'title' => 'How to Start E-commerce Without Big Inventory in 2026',
-            'platform' => ContentPlatform::REEL,
-            'content_type' => 'Short Video Reel',
-            'topic' => 'Dropshipping & SBL Supply Chain',
-            'caption' => 'Start your e-commerce business in 3 simple steps without purchasing any inventory! Details in comments.',
-            'scheduled_at' => now()->addDays(1)->setHour(19)->setMinute(0),
-            'status' => ContentStatus::READY,
-            'cta' => 'Comment "INFO" or DM to get free guideline',
-            'notes' => 'High quality vertical video, ready for publishing.',
-        ]);
+        if (ContentItem::count() === 0) {
+            ContentItem::create([
+                'campaign_id' => $campaign->id,
+                'user_id' => $admin->id,
+                'title' => 'How to Start E-commerce Without Big Inventory in 2026',
+                'platform' => ContentPlatform::REEL,
+                'content_type' => 'Short Video Reel',
+                'topic' => 'Dropshipping & SBL Supply Chain',
+                'caption' => 'Start your e-commerce business in 3 simple steps without purchasing any inventory! Details in comments.',
+                'scheduled_at' => now()->addDays(1)->setHour(19)->setMinute(0),
+                'status' => ContentStatus::READY,
+                'cta' => 'Comment "INFO" or DM to get free guideline',
+                'notes' => 'High quality vertical video, ready for publishing.',
+            ]);
 
-        ContentItem::create([
-            'campaign_id' => $campaign->id,
-            'user_id' => $admin->id,
-            'title' => 'Case Study: From 0 to 50k BDT monthly income',
-            'platform' => ContentPlatform::FACEBOOK_PAGE,
-            'content_type' => 'Storytelling Post',
-            'topic' => 'Member Success Story',
-            'caption' => 'Real-world success story: How Shafiqul started part-time and built a sustainable career.',
-            'scheduled_at' => now()->addDays(3)->setHour(20)->setMinute(0),
-            'status' => ContentStatus::PLANNED,
-            'cta' => 'Send WhatsApp Message',
-            'notes' => 'Needs graphics from designer.',
-        ]);
+            ContentItem::create([
+                'campaign_id' => $campaign->id,
+                'user_id' => $admin->id,
+                'title' => 'Case Study: From 0 to 50k BDT monthly income',
+                'platform' => ContentPlatform::FACEBOOK_PAGE,
+                'content_type' => 'Storytelling Post',
+                'topic' => 'Member Success Story',
+                'caption' => 'Real-world success story: How Shafiqul started part-time and built a sustainable career.',
+                'scheduled_at' => now()->addDays(3)->setHour(20)->setMinute(0),
+                'status' => ContentStatus::PLANNED,
+                'cta' => 'Send WhatsApp Message',
+                'notes' => 'Needs graphics from designer.',
+            ]);
+        }
     }
 }

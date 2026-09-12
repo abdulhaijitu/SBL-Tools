@@ -11,8 +11,10 @@ class BinaryTeamSeeder extends Seeder
 {
     public function run(): void
     {
-        // Truncate/clean existing nodes to re-seed authentic data
-        BinaryNode::query()->delete();
+        // Only seed binary team if no nodes exist yet, preserving user-created tree data
+        if (BinaryNode::count() > 0) {
+            return;
+        }
 
         $service = new BinaryTreeService();
         $admin = User::first();

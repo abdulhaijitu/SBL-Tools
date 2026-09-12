@@ -73,7 +73,7 @@
                     @click="openCreateModal()" 
                     class="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-xs">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                <span x-text="$store.lang && $store.lang.current === 'bn' ? '+ নতুন রোল তৈরি করুন' : '+ Create Role'">+ Create Role</span>
+                <span x-text="$store.lang && $store.lang.current === 'bn' ? 'নতুন রোল তৈরি করুন' : 'Create Role'">Create Role</span>
             </button>
             @endcan
         </div>

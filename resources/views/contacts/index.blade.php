@@ -41,7 +41,7 @@
                     @click="createModalOpen = true" 
                     class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow transition-all active:scale-95 cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                <span data-en="+ Add Contact" data-bn="+ নতুন কন্টাক্ট">+ Add Contact</span>
+                <span data-en="Add Contact" data-bn="নতুন কন্টাক্ট">Add Contact</span>
             </button>
         </div>
         @endif

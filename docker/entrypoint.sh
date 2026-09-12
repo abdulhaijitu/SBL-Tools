@@ -28,17 +28,16 @@ if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
     if [ ! -f "$DB_PATH" ]; then
         echo "Creating fresh SQLite database at $DB_PATH..."
         touch "$DB_PATH"
-        chown www-data:www-data "$DB_PATH"
-        chmod 664 "$DB_PATH"
-        php artisan migrate --force
-        php artisan db:seed --force
-    else
-        echo "SQLite database found. Running pending migrations..."
-        php artisan migrate --force
     fi
-else
-    echo "Running migrations for $DB_CONNECTION..."
+    chown www-data:www-data "$DB_PATH"
+    chmod 664 "$DB_PATH"
+    echo "Running SQLite migrations and database sync..."
     php artisan migrate --force
+    php artisan db:seed --force
+else
+    echo "Running migrations and database sync for $DB_CONNECTION..."
+    php artisan migrate --force
+    php artisan db:seed --force
 fi
 
 # Ensure storage symlink exists

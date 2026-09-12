@@ -30,8 +30,7 @@
 
             @if($parentNode)
                 <a href="{{ route('team.show', ['memberId' => $parentNode->id, 'owner_id' => $ownerId]) }}" 
-                   class="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-800 text-xs font-bold transition-all flex items-center gap-1.5 border border-orange-200/80 shadow-2xs"
-                   data-en="← Back" data-bn="← পূর্ববর্তী">
+                   class="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-800 text-xs font-bold transition-all flex items-center gap-1.5 border border-orange-200/80 shadow-2xs">
                     <span>←</span>
                     <span data-en="Back" data-bn="পূর্ববর্তী">Back</span>
                     <span class="text-[11px] text-orange-600 font-normal hidden sm:inline">({{ $parentNode->member_name }})</span>

@@ -36,7 +36,7 @@
     <div class="flex items-center justify-between">
         <a href="{{ route('leads.index') }}" class="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-orange-600 transition-colors bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs min-h-[40px]">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-            <span data-en="← Back to Leads" data-bn="← লিডস তালিকায় ফিরুন">← Back to Leads</span>
+            <span data-en="Back to Leads" data-bn="লিডস তালিকায় ফিরুন">Back to Leads</span>
         </a>
 
         <div class="flex items-center gap-2">
@@ -187,7 +187,7 @@
                     @click="modalType = 'task'; modalTitle = 'Set Next Action'; actionModal = true" 
                     class="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5 min-h-[40px]">
                 <span>➕</span>
-                <span data-en="+ Set Next Action" data-bn="+ পরবর্তী অ্যাকশন নির্ধারণ">+ Set Next Action</span>
+                <span data-en="Set Next Action" data-bn="পরবর্তী অ্যাকশন নির্ধারণ">Set Next Action</span>
             </button>
         </div>
 

@@ -33,6 +33,12 @@ export function userManagement(config = {}) {
         roles: Array.isArray(config.roles) ? config.roles : [],
         currentUserId: Number(config.currentUserId) || 0,
         currentUserIsSuperAdmin: Boolean(config.isSuperAdmin),
+        csrfToken:
+            config.csrfToken ||
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content") ||
+            "",
 
         // Search & Filters
         searchQuery: "",
@@ -110,7 +116,10 @@ export function userManagement(config = {}) {
 
                 // Status filter
                 if (this.selectedStatus) {
-                    if ((u.status || "active").toLowerCase() !== this.selectedStatus.toLowerCase()) {
+                    if (
+                        (u.status || "active").toLowerCase() !==
+                        this.selectedStatus.toLowerCase()
+                    ) {
                         return false;
                     }
                 }
@@ -138,9 +147,13 @@ export function userManagement(config = {}) {
             const all = this.users || [];
             return {
                 total: all.length,
-                active: all.filter((u) => (u.status || "active") === "active").length,
-                staff: all.filter((u) => (u.role_slug || "") !== "super-admin").length,
-                superAdmins: all.filter((u) => (u.role_slug || "") === "super-admin").length,
+                active: all.filter((u) => (u.status || "active") === "active")
+                    .length,
+                staff: all.filter((u) => (u.role_slug || "") !== "super-admin")
+                    .length,
+                superAdmins: all.filter(
+                    (u) => (u.role_slug || "") === "super-admin",
+                ).length,
                 inactive: all.filter((u) => u.status === "inactive").length,
             };
         },
@@ -172,7 +185,8 @@ export function userManagement(config = {}) {
                 email: user.email || "",
                 phone: user.phone || "",
                 designation: user.designation || "",
-                role_id: user.role_id || (this.roles[0] ? this.roles[0].id : ""),
+                role_id:
+                    user.role_id || (this.roles[0] ? this.roles[0].id : ""),
                 status: user.status || "active",
             };
             this.editModalOpen = true;
@@ -203,11 +217,16 @@ export function userManagement(config = {}) {
             }
 
             if (user.email === "admin@sbl.test") {
-                alert("মূল সিস্টেম অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট ডিলিট করা সম্ভব নয়।");
+                alert(
+                    "মূল সিস্টেম অ্যাডমিনিস্ট্রেটর অ্যাকাউন্ট ডিলিট করা সম্ভব নয়।",
+                );
                 return;
             }
 
-            if (user.role_slug === "super-admin" && !this.currentUserIsSuperAdmin) {
+            if (
+                user.role_slug === "super-admin" &&
+                !this.currentUserIsSuperAdmin
+            ) {
                 alert("সুপার অ্যাডমিন অ্যাকাউন্ট ডিলিট করার অনুমতি আপনার নেই।");
                 return;
             }
@@ -222,7 +241,11 @@ export function userManagement(config = {}) {
             }
 
             // Normal confirm if zero workload
-            if (confirm(`আপনি কি নিশ্চিত যে ইউজার '${user.name}' সম্পূর্ণ মুছে ফেলতে চান?`)) {
+            if (
+                confirm(
+                    `আপনি কি নিশ্চিত যে ইউজার '${user.name}' সম্পূর্ণ মুছে ফেলতে চান?`,
+                )
+            ) {
                 this.submitDeleteForm(user.id);
             }
         },
@@ -235,7 +258,12 @@ export function userManagement(config = {}) {
             const csrfInput = document.createElement("input");
             csrfInput.type = "hidden";
             csrfInput.name = "_token";
-            csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+            csrfInput.value =
+                this.csrfToken ||
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute("content") ||
+                "";
             form.appendChild(csrfInput);
 
             const methodInput = document.createElement("input");
@@ -264,7 +292,12 @@ export function userManagement(config = {}) {
             const csrfInput = document.createElement("input");
             csrfInput.type = "hidden";
             csrfInput.name = "_token";
-            csrfInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+            csrfInput.value =
+                this.csrfToken ||
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute("content") ||
+                "";
             form.appendChild(csrfInput);
 
             const methodInput = document.createElement("input");
