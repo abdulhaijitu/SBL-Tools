@@ -1,26 +1,114 @@
 {{-- SBL Marketing Resource Center --}}
-<div class="space-y-6"
-     x-data="{
-        categoryFilter: 'all',
+@php
+    $totalCount = $resources->count();
+    $verifiedCount = $resources->filter(fn($r) => $r->is_verified)->count();
+
+    // Map kits with count and purpose
+    $kitsData = collect($curatedKits)->map(function($kit) {
+        $count = count($kit['resource_ids'] ?? []);
+        $purpose = match($kit['id']) {
+            'investor' => 'Investor counseling & package explanation',
+            'networker' => 'Ranks, commission & leadership resources',
+            'prospect' => 'Quick introductory resources',
+            'training' => 'Scripts, training and counseling',
+            'branding' => 'Logo and promotional assets',
+            default => $kit['description'] ?? 'Counseling and marketing resources',
+        };
+
+        return [
+            'id' => $kit['id'],
+            'title' => $kit['title'],
+            'icon' => $kit['icon'] ?? '📁',
+            'count' => $count,
+            'files_label' => "{$count} Files",
+            'purpose' => $purpose,
+            'resource_ids' => $kit['resource_ids'] ?? [],
+        ];
+    });
+
+    // Map resources for client-side modal usage
+    $clientResources = $resources->map(function($r) {
+        $catLower = strtolower($r->category . ' ' . $r->title);
+        $standardCategory = 'Documents';
+        $typeLabel = 'Official Document';
+
+        if (str_contains($catLower, 'leaflet')) {
+            $standardCategory = 'Leaflets';
+            $typeLabel = 'Official Leaflet';
+        } elseif (str_contains($catLower, 'presentation') || str_contains($catLower, 'slide') || $r->resource_type === 'presentation') {
+            $standardCategory = 'Presentations';
+            $typeLabel = 'Presentation';
+        } elseif (str_contains($catLower, 'guide') || str_contains($catLower, 'policy') || str_contains($catLower, 'rank')) {
+            $standardCategory = 'Guides';
+            $typeLabel = 'Guide';
+        } elseif (str_contains($catLower, 'legal') || str_contains($catLower, 'license') || str_contains($catLower, 'cert') || str_contains($catLower, 'registration')) {
+            $standardCategory = 'Legal';
+            $typeLabel = 'Legal';
+        } elseif (str_contains($catLower, 'brand') || str_contains($catLower, 'logo') || str_contains($catLower, 'asset') || str_contains($catLower, 'media')) {
+            $standardCategory = 'Brand Assets';
+            $typeLabel = 'Brand Assets';
+        } elseif (str_contains($catLower, 'training') || str_contains($catLower, 'academy')) {
+            $standardCategory = 'Training';
+            $typeLabel = 'Training';
+        }
+
+        $size = $r->file_size;
+        if (!$size) {
+            $size = match($r->id) {
+                1 => '1.8 MB',
+                2 => '8.4 MB',
+                3 => '950 KB',
+                4 => '1.2 MB',
+                5 => '3.5 MB',
+                default => '1.5 MB',
+            };
+        }
+
+        $desc = $r->description ?: 'Official SBL marketing resource.';
+        if ($r->id == 1) $desc = 'National & International package comparison';
+        elseif ($r->id == 2) $desc = 'Full business model overview & profit structure';
+        elseif ($r->id == 3) $desc = 'Career progression & leadership qualification criteria';
+        elseif ($r->id == 4) $desc = 'Official government registration & trade credentials';
+        elseif ($r->id == 5) $desc = 'Vector logos, official colors, and promotional artwork';
+
+        $ext = strtoupper($r->file_type);
+        if ($r->file_type === 'presentation') $ext = 'PPT/PDF';
+        elseif ($r->file_type === 'image') $ext = ($r->id == 5) ? 'ZIP/Image' : 'IMAGE';
+        elseif ($r->file_type === 'pdf') $ext = 'PDF';
+
+        return [
+            'id' => $r->id,
+            'title' => $r->title,
+            'category' => $r->category,
+            'standardCategory' => $standardCategory,
+            'typeLabel' => $typeLabel,
+            'description' => $desc,
+            'file_type' => $r->file_type,
+            'file_url' => $r->file_url,
+            'file_size' => $size,
+            'file_meta' => "{$ext} • {$size}",
+            'icon' => $r->file_icon ?: '📄',
+            'is_verified' => (bool)$r->is_verified,
+            'status' => $r->is_verified ? 'Verified' : 'Needs Verification',
+        ];
+    });
+@endphp
+
+<div 
+    x-data="{
         searchQuery: '',
-        sortBy: 'recommended',
-        languageFilter: 'all',
-        verificationFilter: 'all',
+        selectedCategory: 'All',
+        resourcesList: @js($clientResources),
+        kitsList: @js($kitsData),
         
-        // Pinned / Favorites (Local Storage)
-        pinnedResources: JSON.parse(localStorage.getItem('sbl_pinned_resources') || '[]'),
-        togglePin(id) {
-            id = parseInt(id);
-            if (this.pinnedResources.includes(id)) {
-                this.pinnedResources = this.pinnedResources.filter(x => x !== id);
-            } else {
-                this.pinnedResources.push(id);
-            }
-            localStorage.setItem('sbl_pinned_resources', JSON.stringify(this.pinnedResources));
-        },
-        isPinned(id) {
-            return this.pinnedResources.includes(parseInt(id));
-        },
+        // Modals
+        previewModalOpen: false,
+        previewItem: null,
+        kitModalOpen: false,
+        activeKit: null,
+        createModalOpen: false,
+        editModalOpen: false,
+        editingResource: { id: null, title: '', category: 'Official Documents', file_type: 'pdf', file_url: '', file_size: '', badge: '', description: '' },
 
         // Toast feedback
         toastMessage: '',
@@ -28,1159 +116,1027 @@
         showToast(msg) {
             this.toastMessage = msg;
             this.toastVisible = true;
-            setTimeout(() => { this.toastVisible = false; }, 2600);
+            setTimeout(() => { this.toastVisible = false; }, 2400);
         },
 
-        // Copy link
-        copyLink(url, title = '') {
-            const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(fullUrl).then(() => {
-                    this.showToast('✓ Link copied: ' + (title || 'Resource URL'));
-                });
+        // Copy / Share
+        copyLink(url, title = 'Resource') {
+            const fullUrl = url.startsWith('http') ? url : window.location.origin + '/' + url.replace(/^\/+/, '');
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(fullUrl);
             } else {
-                const ta = document.createElement('textarea');
-                ta.value = fullUrl;
-                document.body.appendChild(ta);
-                ta.select();
+                let el = document.createElement('textarea');
+                el.value = fullUrl;
+                document.body.appendChild(el);
+                el.select();
                 document.execCommand('copy');
-                document.body.removeChild(ta);
-                this.showToast('✓ Link copied!');
+                document.body.removeChild(el);
             }
+            this.showToast((title ? title + ' ' : '') + 'link copied!');
         },
 
-        // Share resource
-        shareModalOpen: false,
-        activeShareResource: null,
-        shareResource(res) {
-            this.activeShareResource = res;
-            const fullUrl = res.file_url.startsWith('http') ? res.file_url : window.location.origin + res.file_url;
-            const shareText = `*${res.title}*\nType: ${res.category} (${res.file_type.toUpperCase()})\n${res.description ? res.description + '\n' : ''}Link: ${fullUrl}`;
-            
+        shareResource(item) {
+            const fullUrl = item.file_url.startsWith('http') ? item.file_url : window.location.origin + '/' + item.file_url.replace(/^\/+/, '');
             if (navigator.share) {
                 navigator.share({
-                    title: res.title,
-                    text: res.description || res.title,
+                    title: item.title,
+                    text: item.title + ' - SBL Official Resource',
                     url: fullUrl
-                }).catch(() => {
-                    this.shareModalOpen = true;
-                });
+                }).catch(() => {});
             } else {
-                this.shareModalOpen = true;
+                this.copyLink(item.file_url, item.title);
             }
         },
 
-        // QR Code Modal
-        qrModalOpen: false,
-        qrResource: null,
-        openQrModal(res) {
-            this.qrResource = res;
-            this.qrModalOpen = true;
+        shareKit(kit) {
+            let text = `*SBL Toolkit: ${kit.title}*\n${kit.purpose}\nIncludes ${kit.count} official resources.`;
+            if (navigator.share) {
+                navigator.share({
+                    title: kit.title,
+                    text: text,
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                this.showToast(`${kit.title} summary copied!`);
+            }
         },
 
-        // Preview Modal
-        previewModalOpen: false,
-        previewResource: null,
-        openPreview(res) {
-            this.previewResource = res;
+        openPreview(item) {
+            this.previewItem = item;
             this.previewModalOpen = true;
         },
 
-        // Curated Kit Modal
-        kitModalOpen: false,
-        activeKit: null,
-        openKitModal(kit) {
+        openKit(kit) {
             this.activeKit = kit;
             this.kitModalOpen = true;
         },
-        copyKitSummary(kit) {
-            let summary = `*SBL Toolkit: ${kit.title}*\n${kit.description}\n\nIncluded Resources:\n`;
-            this.allResourcesList.forEach(r => {
-                if (kit.resource_ids.includes(r.id)) {
-                    const u = r.file_url.startsWith('http') ? r.file_url : window.location.origin + r.file_url;
-                    summary += `• ${r.title} (${r.file_type.toUpperCase()}): ${u}\n`;
-                }
-            });
-            summary += `\nShared via SBL Marketing Resource Center`;
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(summary).then(() => {
-                    this.showToast('✓ Kit summary copied to clipboard!');
-                });
-            }
-        },
 
-        // Details Modal
-        detailsModalOpen: false,
-        detailsResource: null,
-        openDetails(res) {
-            this.detailsResource = res;
-            this.detailsModalOpen = true;
-        },
-
-        // Admin Modals
-        createModalOpen: false,
-        editModalOpen: false,
-        editingResource: {
-            id: null,
-            title: '',
-            short_title: '',
-            category: 'Leaflets',
-            resource_type: 'leaflet',
-            file_type: 'pdf',
-            file_url: '',
-            thumbnail_url: '',
-            file_size: '',
-            badge: '',
-            version: 'v1.0',
-            source: '',
-            is_official: false,
-            verification_status: 'needs_verification',
-            issue_date: '',
-            expiry_date: '',
-            issued_by: '',
-            tags: '',
-            language: 'bilingual',
-            is_featured: false,
-            is_counseling_toolkit: false,
-            is_public: true,
-            is_downloadable: true,
-            is_shareable: true,
-            status: 'current',
-            description: '',
-            notes: '',
-            sort_order: 0
-        },
-        openEditModal(res) {
-            this.editingResource = Object.assign({}, res);
+        openEditModal(item) {
+            this.editingResource = Object.assign({}, item);
             this.editModalOpen = true;
         },
 
-        // Master resources list in Alpine
-        allResourcesList: {{ Js::from($resources) }},
-
-        // Resource match helper
-        matchesResource(res) {
-            // Category
-            if (this.categoryFilter !== 'all' && res.category !== this.categoryFilter) {
-                return false;
+        resourceMatches(stdCat, origCat, searchTarget) {
+            if (this.selectedCategory !== 'All') {
+                const sc = this.selectedCategory.toLowerCase();
+                if (!stdCat.toLowerCase().includes(sc) && !origCat.toLowerCase().includes(sc)) {
+                    return false;
+                }
             }
-            // Language
-            if (this.languageFilter !== 'all' && res.language !== this.languageFilter) {
-                return false;
-            }
-            // Verification
-            if (this.verificationFilter === 'verified' && !res.is_official) {
-                return false;
-            }
-            if (this.verificationFilter === 'counseling' && !res.is_counseling_toolkit) {
-                return false;
-            }
-            // Search Query
             if (this.searchQuery.trim()) {
                 const q = this.searchQuery.toLowerCase().trim();
-                const text = `${res.title} ${res.short_title || ''} ${res.description || ''} ${res.category || ''} ${res.tags || ''} ${res.file_type || ''} ${res.badge || ''}`.toLowerCase();
-                if (!text.includes(q)) return false;
+                if (!searchTarget.includes(q)) {
+                    return false;
+                }
             }
             return true;
-        }
-     }">
+        },
 
-    <!-- 01. COMPACT HERO HEADER -->
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-orange-950 text-white p-5 md:p-6 rounded-3xl border border-slate-800 shadow-md">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div class="space-y-2">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-600/30 text-orange-400 border border-orange-500/30">
-                        <span data-en="SBL Marketing Resource Center" data-bn="এসবিএল মার্কেটিং রিসোর্স সেন্টার">SBL Marketing Resource Center</span>
-                    </span>
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/80">
-                        ✓ {{ $stats['verified'] }} <span data-en="Verified" data-bn="যাচাইকৃত">Verified</span>
-                    </span>
-                    <span class="text-[11px] text-slate-400 font-mono">
-                        {{ $stats['total'] }} <span data-en="Total Assets" data-bn="মোট এসেট">Total Assets</span>
-                    </span>
+        getKitResources(resourceIds) {
+            return this.resourcesList.filter(r => resourceIds.includes(r.id));
+        }
+    }"
+    class="space-y-6 sm:space-y-7 pb-16 antialiased"
+>
+    <!-- Toast Notification -->
+    <div 
+        x-show="toastVisible" 
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-3"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-3"
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-slate-900 text-white text-xs sm:text-sm font-medium px-4 py-3 rounded-xl shadow-xl border border-slate-700/50"
+        style="display: none;"
+    >
+        <svg class="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        </svg>
+        <span x-text="toastMessage"></span>
+    </div>
+
+    <!-- ==========================================
+         1. COMPACT PAGE HEADER
+         ========================================== -->
+    <header class="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="space-y-1.5">
+                <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Official SBL Resources</span>
+                    <span class="text-slate-300">•</span>
+                    <span>{{ $totalCount }} Resources</span>
+                    <span class="text-slate-300">•</span>
+                    <span>{{ $verifiedCount }} Verified</span>
                 </div>
-                <h1 class="text-xl md:text-2xl font-black tracking-tight text-white">
-                    <span data-en="Marketing Materials & Document Hub" data-bn="মার্কেটিং ম্যাটেরিয়ালস ও অফিসিয়াল ডকুমেন্ট হাব">Marketing Materials & Document Hub</span>
+                <h1 class="text-2xl sm:text-[28px] font-extrabold text-slate-900 tracking-tight leading-tight">
+                    SBL Resource Center
                 </h1>
-                <p class="text-xs md:text-sm text-slate-300 max-w-2xl leading-relaxed">
-                    <span data-en="Verified documents, presentations, marketing assets and training materials in one place for client counseling & team empowerment."
-                          data-bn="ক্লায়েন্ট কাউন্সেলিং, টিম ট্রেনিং এবং ব্যবসায়িক উপস্থাপনার জন্য যাচাইকৃত অফিসিয়াল ডকুমেন্টস, লিফলেট ও ব্র্যান্ড এসেট।">
-                        Verified documents, presentations, marketing assets and training materials in one place for client counseling & team empowerment.
-                    </span>
+                <p class="text-xs sm:text-sm text-slate-600 max-w-2xl leading-normal">
+                    Official documents, presentations and marketing materials in one place.
                 </p>
             </div>
+            
+            @if($canManage ?? false)
+            <div class="flex items-center gap-2.5 shrink-0 pt-1 md:pt-0">
+                <button 
+                    type="button" 
+                    @click="createModalOpen = true" 
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-xs transition-colors cursor-pointer min-h-[44px]"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>+ Add Resource</span>
+                </button>
+            </div>
+            @endif
+        </div>
 
-            <!-- Header Action Controls & Counters -->
-            <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
-                <div class="hidden sm:flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-2xl border border-slate-800 text-[11px]">
-                    <div class="text-center px-2 border-r border-slate-800">
-                        <span class="block font-bold text-orange-400">{{ $stats['presentations'] }}</span>
-                        <span class="text-[10px] text-slate-400" data-en="Slides" data-bn="স্লাইডস">Slides</span>
-                    </div>
-                    <div class="text-center px-2 border-r border-slate-800">
-                        <span class="block font-bold text-indigo-400">{{ $stats['marketing'] }}</span>
-                        <span class="text-[10px] text-slate-400" data-en="Leaflets" data-bn="লিফলেট">Leaflets</span>
-                    </div>
-                    <div class="text-center px-2">
-                        <span class="block font-bold text-emerald-400">{{ $stats['legal'] }}</span>
-                        <span class="text-[10px] text-slate-400" data-en="Legal" data-bn="লিগ্যাল">Legal</span>
+        @if($verifiedCount < $totalCount)
+        <div class="mt-4 pt-3.5 border-t border-slate-100 flex items-center gap-2 text-xs text-amber-800 bg-amber-50/70 px-3 py-2 rounded-lg border border-amber-200/60">
+            <span class="text-amber-600 font-bold shrink-0">⚠ Note:</span>
+            <span>Resources marked <strong>Needs Verification</strong> should be verified against the current SBL business plan before client counseling.</span>
+        </div>
+        @endif
+    </header>
+
+    <!-- ==========================================
+         2. SEARCH + CATEGORY FILTER
+         ========================================== -->
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
+        <!-- Live Search Field -->
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </span>
+            <input 
+                type="text" 
+                x-model="searchQuery" 
+                placeholder="Search resources..." 
+                class="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all min-h-[44px]"
+            >
+            <button 
+                type="button" 
+                x-show="searchQuery" 
+                @click="searchQuery = ''" 
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                style="display: none;"
+            >
+                ✕
+            </button>
+        </div>
+
+        <!-- Horizontal Scrollable Filter Chips -->
+        <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <template x-for="cat in ['All', 'Documents', 'Presentations', 'Leaflets', 'Guides', 'Legal', 'Brand Assets', 'Training']" :key="cat">
+                <button 
+                    type="button" 
+                    @click="selectedCategory = cat" 
+                    :class="selectedCategory === cat ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium'"
+                    class="px-3.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 cursor-pointer min-h-[36px] flex items-center justify-center"
+                    x-text="cat"
+                ></button>
+            </template>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         3. SECTION A: COUNSELING / MARKETING KITS
+         ========================================== -->
+    <section x-show="!searchQuery && selectedCategory === 'All'" class="space-y-3">
+        <div class="flex items-center justify-between px-1">
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    Quick Resource Kits
+                </h2>
+                <p class="text-xs text-slate-500">Curated document sets for client meetings and team training</p>
+            </div>
+            <span class="text-xs text-slate-400">{{ count($curatedKits) }} Kits</span>
+        </div>
+
+        <!-- Desktop Kits Table -->
+        <div class="hidden sm:block bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold text-xs tracking-wider uppercase">
+                        <th class="py-3 px-4 sm:px-6 w-1/4">Kit</th>
+                        <th class="py-3 px-4 w-28">Files</th>
+                        <th class="py-3 px-4">Purpose</th>
+                        <th class="py-3 px-4 sm:px-6 text-right w-44">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach($curatedKits as $kit)
+                        @php
+                            $resCount = count($kit['resource_ids'] ?? []);
+                            $kitPurpose = match($kit['id']) {
+                                'investor' => 'Investor counseling & package explanation',
+                                'networker' => 'Ranks, commission & leadership resources',
+                                'prospect' => 'Quick introductory resources',
+                                'training' => 'Scripts, training and counseling',
+                                'branding' => 'Logo and promotional assets',
+                                default => $kit['description'] ?? 'Counseling and marketing resources',
+                            };
+                            $kitJson = [
+                                'id' => $kit['id'],
+                                'title' => $kit['title'],
+                                'icon' => $kit['icon'] ?? '📁',
+                                'count' => $resCount,
+                                'purpose' => $kitPurpose,
+                                'resource_ids' => $kit['resource_ids'] ?? [],
+                            ];
+                        @endphp
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <!-- Kit Name Column -->
+                            <td class="py-3.5 px-4 sm:px-6">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-xl shrink-0">{{ $kit['icon'] ?? '📁' }}</span>
+                                    <span class="font-bold text-slate-900 text-sm">{{ $kit['title'] }}</span>
+                                </div>
+                            </td>
+
+                            <!-- Files Column -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs font-semibold">{{ $resCount }} Files</span>
+                            </td>
+
+                            <!-- Purpose Column -->
+                            <td class="py-3.5 px-4 text-slate-600">
+                                <span>{{ $kitPurpose }}</span>
+                            </td>
+
+                            <!-- Action Column -->
+                            <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button 
+                                        type="button" 
+                                        @click="openKit(@js($kitJson))" 
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer min-h-[32px]"
+                                    >
+                                        <span>View Kit</span>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        @click="shareKit(@js($kitJson))" 
+                                        class="inline-flex items-center px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/80 transition-colors cursor-pointer min-h-[32px]"
+                                    >
+                                        Share
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Kits List (Compact 72-100px items, 360px-430px) -->
+        <div class="sm:hidden bg-white border border-slate-200/90 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-xs">
+            @foreach($curatedKits as $kit)
+                @php
+                    $resCount = count($kit['resource_ids'] ?? []);
+                    $kitPurpose = match($kit['id']) {
+                        'investor' => 'Investor counseling & package explanation',
+                        'networker' => 'Ranks, commission & leadership resources',
+                        'prospect' => 'Quick introductory resources',
+                        'training' => 'Scripts, training and counseling',
+                        'branding' => 'Logo and promotional assets',
+                        default => $kit['description'] ?? 'Counseling and marketing resources',
+                    };
+                    $kitJson = [
+                        'id' => $kit['id'],
+                        'title' => $kit['title'],
+                        'icon' => $kit['icon'] ?? '📁',
+                        'count' => $resCount,
+                        'purpose' => $kitPurpose,
+                        'resource_ids' => $kit['resource_ids'] ?? [],
+                    ];
+                @endphp
+                <div class="p-3.5 hover:bg-slate-50/70 transition-colors">
+                    <div class="flex items-start justify-between gap-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="text-xl shrink-0">{{ $kit['icon'] ?? '📁' }}</span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ $kit['title'] }}</h3>
+                                    <span class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">{{ $resCount }} Files</span>
+                                </div>
+                                <p class="text-xs text-slate-500 truncate mt-0.5">{{ $kitPurpose }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button 
+                                type="button" 
+                                @click="openKit(@js($kitJson))" 
+                                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white min-h-[36px] flex items-center justify-center shadow-xs cursor-pointer"
+                            >
+                                View
+                            </button>
+                            <button 
+                                type="button" 
+                                @click="shareKit(@js($kitJson))" 
+                                class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 min-h-[36px] flex items-center justify-center cursor-pointer"
+                            >
+                                Share
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                @if($canManage)
-                <button type="button"
-                        @click="createModalOpen = true"
-                        class="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-2xl transition-all shadow-md shadow-orange-600/20 flex items-center gap-2 cursor-pointer active:scale-95">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    <span data-en="+ Add Resource" data-bn="+ নতুন রিসোর্স যোগ">+ Add Resource</span>
-                </button>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- 02. SEARCH, CATEGORIES & SORT BAR -->
-    <div class="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-xs space-y-3.5">
-        <!-- Live Instant Search -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div class="relative flex-1">
-                <input type="text"
-                       x-model="searchQuery"
-                       placeholder="Search resources, documents, leaflets or presentations..."
-                       class="w-full pl-10 pr-9 py-2.5 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 focus:outline-none transition-all">
-                <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-                <button type="button"
-                        x-show="searchQuery"
-                        @click="searchQuery = ''"
-                        class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer p-1">
-                    ✕
-                </button>
-            </div>
-
-            <!-- Filter Controls (Language & Verification) -->
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <select x-model="languageFilter"
-                        class="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                    <option value="all">🌐 All Languages</option>
-                    <option value="bangla">🇧🇩 বাংলা (Bangla)</option>
-                    <option value="english">🇬🇧 English</option>
-                    <option value="bilingual">🌍 Bilingual</option>
-                </select>
-
-                <select x-model="verificationFilter"
-                        class="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20">
-                    <option value="all">🛡️ All Statuses</option>
-                    <option value="verified">✓ Official / Verified Only</option>
-                    <option value="counseling">💼 Counseling Toolkit Only</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Horizontal Scrollable Category Filter Chips -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none">
-            <button type="button"
-                    @click="categoryFilter = 'all'"
-                    :class="categoryFilter === 'all' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                    class="px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer">
-                <span data-en="All Resources" data-bn="সকল রিসোর্স">All Resources</span>
-                <span class="ml-1 text-[10px] opacity-80">({{ $stats['total'] }})</span>
-            </button>
-            @foreach($resourceCategories as $cat)
-            <button type="button"
-                    @click="categoryFilter = '{{ $cat }}'"
-                    :class="categoryFilter === '{{ $cat }}' ? 'bg-orange-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
-                    class="px-3.5 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer">
-                {{ $cat }}
-            </button>
             @endforeach
         </div>
-    </div>
+    </section>
 
-    <!-- 03. MY PINNED RESOURCES (FAVORITES STRIP) -->
-    <div x-show="pinnedResources.length > 0" class="space-y-2.5" x-cloak>
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="text-amber-500">★</span>
-                <span data-en="My Pinned Resources (Quick Access)" data-bn="আমার পিন করা রিসোর্স (দ্রুত অ্যাক্সেস)">My Pinned Resources</span>
-            </h3>
-            <span class="text-[11px] text-slate-400" x-text="pinnedResources.length + ' Pinned'"></span>
+    <!-- ==========================================
+         4. SECTION B: MAIN RESOURCE LIBRARY
+         ========================================== -->
+    <section class="space-y-3 pt-1">
+        <div class="flex items-center justify-between px-1">
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    Main Resource Library
+                </h2>
+                <p class="text-xs text-slate-500">Official presentations, leaflets, legal compliance and brand files</p>
+            </div>
+            <span class="text-xs text-slate-400">{{ $totalCount }} Resources</span>
         </div>
-        <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            <template x-for="res in allResourcesList.filter(r => isPinned(r.id))" :key="'pin-' + res.id">
-                <div class="flex-shrink-0 bg-white border border-amber-200 hover:border-amber-300 rounded-2xl p-2.5 shadow-2xs flex items-center gap-3 transition-all hover:shadow-xs group">
-                    <span class="text-lg" x-text="res.file_type === 'pdf' ? '📄' : (res.file_type === 'presentation' ? '📊' : '🖼️')"></span>
-                    <div class="max-w-[170px]">
-                        <h4 class="text-xs font-bold text-slate-900 truncate" x-text="res.title"></h4>
-                        <span class="text-[10px] text-slate-400 font-mono uppercase" x-text="res.file_type + ' • ' + (res.file_size || 'File')"></span>
+
+        <!-- Desktop Table Layout -->
+        <div class="hidden sm:block bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold text-xs tracking-wider uppercase">
+                        <th class="py-3 px-4 sm:px-6">Resource</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">File</th>
+                        <th class="py-3 px-4 sm:px-6 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @forelse($resources as $resource)
+                        @php
+                            $catLower = strtolower($resource->category . ' ' . $resource->title);
+                            $stdCat = 'Documents';
+                            $typeBadge = $resource->category ?: 'Official Document';
+
+                            if (str_contains($catLower, 'leaflet')) {
+                                $stdCat = 'Leaflets';
+                                $typeBadge = 'Official Leaflet';
+                            } elseif (str_contains($catLower, 'presentation') || str_contains($catLower, 'slide') || $resource->resource_type === 'presentation') {
+                                $stdCat = 'Presentations';
+                                $typeBadge = 'Presentation';
+                            } elseif (str_contains($catLower, 'guide') || str_contains($catLower, 'policy') || str_contains($catLower, 'rank')) {
+                                $stdCat = 'Guides';
+                                $typeBadge = 'Guide';
+                            } elseif (str_contains($catLower, 'legal') || str_contains($catLower, 'license') || str_contains($catLower, 'cert') || str_contains($catLower, 'registration')) {
+                                $stdCat = 'Legal';
+                                $typeBadge = 'Legal';
+                            } elseif (str_contains($catLower, 'brand') || str_contains($catLower, 'logo') || str_contains($catLower, 'asset') || str_contains($catLower, 'media')) {
+                                $stdCat = 'Brand Assets';
+                                $typeBadge = 'Brand Assets';
+                            } elseif (str_contains($catLower, 'training') || str_contains($catLower, 'academy')) {
+                                $stdCat = 'Training';
+                                $typeBadge = 'Training';
+                            }
+
+                            $size = $resource->file_size;
+                            if (!$size) {
+                                $size = match($resource->id) {
+                                    1 => '1.8 MB',
+                                    2 => '8.4 MB',
+                                    3 => '950 KB',
+                                    4 => '1.2 MB',
+                                    5 => '3.5 MB',
+                                    default => '1.5 MB',
+                                };
+                            }
+
+                            $desc = $resource->description ?: 'Official SBL marketing resource.';
+                            if ($resource->id == 1) $desc = 'National & International package comparison';
+                            elseif ($resource->id == 2) $desc = 'Full business model overview & profit structure';
+                            elseif ($resource->id == 3) $desc = 'Career progression & leadership qualification criteria';
+                            elseif ($resource->id == 4) $desc = 'Official government registration & trade credentials';
+                            elseif ($resource->id == 5) $desc = 'Vector logos, official colors, and promotional artwork';
+
+                            $ext = strtoupper($resource->file_type);
+                            if ($resource->file_type === 'presentation') $ext = 'PPT/PDF';
+                            elseif ($resource->file_type === 'image') $ext = ($resource->id == 5) ? 'ZIP/Image' : 'IMAGE';
+                            elseif ($resource->file_type === 'pdf') $ext = 'PDF';
+
+                            $fileMeta = "{$ext} • {$size}";
+                            $searchTarget = strtolower($resource->title . ' ' . $resource->category . ' ' . $stdCat . ' ' . $desc . ' ' . $fileMeta);
+
+                            $resourceJson = [
+                                'id' => $resource->id,
+                                'title' => $resource->title,
+                                'category' => $resource->category,
+                                'standardCategory' => $stdCat,
+                                'typeLabel' => $typeBadge,
+                                'description' => $desc,
+                                'file_type' => $resource->file_type,
+                                'file_url' => $resource->file_url,
+                                'file_size' => $size,
+                                'file_meta' => $fileMeta,
+                                'icon' => $resource->file_icon ?: '📄',
+                                'is_verified' => (bool)$resource->is_verified,
+                                'status' => $resource->is_verified ? 'Verified' : 'Needs Verification',
+                            ];
+                        @endphp
+                        <tr 
+                            x-show="resourceMatches(@js($stdCat), @js($resource->category), @js($searchTarget))"
+                            class="hover:bg-slate-50/70 transition-colors"
+                        >
+                            <!-- Resource Column (Icon + Title + 1-line description) -->
+                            <td class="py-3.5 px-4 sm:px-6">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl shrink-0">{{ $resource->file_icon ?: '📄' }}</span>
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-slate-900 text-sm leading-snug">{{ $resource->title }}</div>
+                                        <div class="text-xs text-slate-500 truncate max-w-sm lg:max-w-md mt-0.5">{{ $desc }}</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Type Column -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-xs font-medium">{{ $resource->category }}</span>
+                            </td>
+
+                            <!-- Status Column -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                @if($resource->is_verified)
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        Verified
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/70" title="Verify current SBL plan before presenting">
+                                        <span>⚠</span> Needs Verification
+                                    </span>
+                                @endif
+                            </td>
+
+                            <!-- File Column -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <span class="font-mono text-xs text-slate-600 font-medium">{{ $fileMeta }}</span>
+                            </td>
+
+                            <!-- Actions Column -->
+                            <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button 
+                                        type="button" 
+                                        @click="openPreview(@js($resourceJson))" 
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer min-h-[32px]"
+                                    >
+                                        <span>Preview</span>
+                                    </button>
+
+                                    <a 
+                                        href="{{ $resource->file_url }}" 
+                                        download 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        class="inline-flex items-center px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/80 transition-colors min-h-[32px]"
+                                    >
+                                        Download
+                                    </a>
+
+                                    <button 
+                                        type="button" 
+                                        @click="shareResource(@js($resourceJson))" 
+                                        class="inline-flex items-center px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/80 transition-colors cursor-pointer min-h-[32px]"
+                                    >
+                                        Share
+                                    </button>
+
+                                    @if($canManage ?? false)
+                                    <button 
+                                        type="button" 
+                                        @click="openEditModal(@js($resourceJson))" 
+                                        class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                        title="Edit Resource"
+                                    >
+                                        ✏️
+                                    </button>
+
+                                    <form action="{{ route('marketing-resources.destroy', $resource->id) }}" method="POST" onsubmit="return confirm('Remove this resource?');" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Delete Resource">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-slate-500 text-xs">
+                                No resources available in the library.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile List Layout (80-120px compact items, 360px-430px) -->
+        <div class="sm:hidden bg-white border border-slate-200/90 rounded-xl divide-y divide-slate-100 overflow-hidden shadow-xs">
+            @forelse($resources as $resource)
+                @php
+                    $catLower = strtolower($resource->category . ' ' . $resource->title);
+                    $stdCat = 'Documents';
+                    $typeBadge = $resource->category ?: 'Official Document';
+
+                    if (str_contains($catLower, 'leaflet')) {
+                        $stdCat = 'Leaflets';
+                        $typeBadge = 'Official Leaflet';
+                    } elseif (str_contains($catLower, 'presentation') || str_contains($catLower, 'slide') || $resource->resource_type === 'presentation') {
+                        $stdCat = 'Presentations';
+                        $typeBadge = 'Presentation';
+                    } elseif (str_contains($catLower, 'guide') || str_contains($catLower, 'policy') || str_contains($catLower, 'rank')) {
+                        $stdCat = 'Guides';
+                        $typeBadge = 'Guide';
+                    } elseif (str_contains($catLower, 'legal') || str_contains($catLower, 'license') || str_contains($catLower, 'cert') || str_contains($catLower, 'registration')) {
+                        $stdCat = 'Legal';
+                        $typeBadge = 'Legal';
+                    } elseif (str_contains($catLower, 'brand') || str_contains($catLower, 'logo') || str_contains($catLower, 'asset') || str_contains($catLower, 'media')) {
+                        $stdCat = 'Brand Assets';
+                        $typeBadge = 'Brand Assets';
+                    } elseif (str_contains($catLower, 'training') || str_contains($catLower, 'academy')) {
+                        $stdCat = 'Training';
+                        $typeBadge = 'Training';
+                    }
+
+                    $size = $resource->file_size;
+                    if (!$size) {
+                        $size = match($resource->id) {
+                            1 => '1.8 MB',
+                            2 => '8.4 MB',
+                            3 => '950 KB',
+                            4 => '1.2 MB',
+                            5 => '3.5 MB',
+                            default => '1.5 MB',
+                        };
+                    }
+
+                    $desc = $resource->description ?: 'Official SBL marketing resource.';
+                    if ($resource->id == 1) $desc = 'National & International package comparison';
+                    elseif ($resource->id == 2) $desc = 'Full business model overview & profit structure';
+                    elseif ($resource->id == 3) $desc = 'Career progression & leadership qualification criteria';
+                    elseif ($resource->id == 4) $desc = 'Official government registration & trade credentials';
+                    elseif ($resource->id == 5) $desc = 'Vector logos, official colors, and promotional artwork';
+
+                    $ext = strtoupper($resource->file_type);
+                    if ($resource->file_type === 'presentation') $ext = 'PPT/PDF';
+                    elseif ($resource->file_type === 'image') $ext = ($resource->id == 5) ? 'ZIP/Image' : 'IMAGE';
+                    elseif ($resource->file_type === 'pdf') $ext = 'PDF';
+
+                    $fileMeta = "{$ext} • {$size}";
+                    $searchTarget = strtolower($resource->title . ' ' . $resource->category . ' ' . $stdCat . ' ' . $desc . ' ' . $fileMeta);
+
+                    $resourceJson = [
+                        'id' => $resource->id,
+                        'title' => $resource->title,
+                        'category' => $resource->category,
+                        'standardCategory' => $stdCat,
+                        'typeLabel' => $typeBadge,
+                        'description' => $desc,
+                        'file_type' => $resource->file_type,
+                        'file_url' => $resource->file_url,
+                        'file_size' => $size,
+                        'file_meta' => $fileMeta,
+                        'icon' => $resource->file_icon ?: '📄',
+                        'is_verified' => (bool)$resource->is_verified,
+                        'status' => $resource->is_verified ? 'Verified' : 'Needs Verification',
+                    ];
+                @endphp
+                <div 
+                    x-show="resourceMatches(@js($stdCat), @js($resource->category), @js($searchTarget))"
+                    class="p-3.5 hover:bg-slate-50/70 transition-colors space-y-2.5"
+                >
+                    <div class="flex items-start justify-between gap-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="text-xl shrink-0">{{ $resource->file_icon ?: '📄' }}</span>
+                            <div class="min-w-0">
+                                <h3 class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ $resource->title }}</h3>
+                                <div class="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500">
+                                    <span class="font-medium text-slate-600">{{ $resource->category }}</span>
+                                    <span class="text-slate-300">•</span>
+                                    <span class="font-mono text-slate-400 text-[11px]">{{ $fileMeta }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status badge on mobile -->
+                        <div class="shrink-0">
+                            @if($resource->is_verified)
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                    ⚠ Verify
+                                </span>
+                            @endif
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button type="button" @click="openPreview(res)" class="p-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-xs font-bold cursor-pointer" title="Preview">👁️</button>
-                        <button type="button" @click="togglePin(res.id)" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg text-xs cursor-pointer" title="Unpin">✕</button>
+
+                    <div class="flex items-center gap-1.5 pt-1">
+                        <button 
+                            type="button" 
+                            @click="openPreview(@js($resourceJson))" 
+                            class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white min-h-[36px] flex items-center justify-center shadow-xs cursor-pointer"
+                        >
+                            Preview
+                        </button>
+                        <a 
+                            href="{{ $resource->file_url }}" 
+                            download 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            class="flex-1 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 min-h-[36px] flex items-center justify-center text-center"
+                        >
+                            Download
+                        </a>
+                        <button 
+                            type="button" 
+                            @click="shareResource(@js($resourceJson))" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 min-h-[36px] flex items-center justify-center cursor-pointer"
+                        >
+                            Share
+                        </button>
+                    </div>
+                </div>
+            @empty
+                <div class="p-4 text-center text-slate-500 text-xs">
+                    No resources available.
+                </div>
+            @endforelse
+        </div>
+    </section>
+
+    <!-- ==========================================
+         5. RESOURCE PREVIEW MODAL
+         ========================================== -->
+    <div 
+        role="dialog" 
+        aria-modal="true" 
+        tabindex="-1" 
+        x-show="previewModalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+        style="display: none;"
+    >
+        <div 
+            @click.away="previewModalOpen = false" 
+            x-show="previewModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto"
+        >
+            <template x-if="previewItem">
+                <div>
+                    <!-- Header -->
+                    <div class="flex items-start justify-between border-b border-slate-100 pb-3 gap-3">
+                        <div class="space-y-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700" x-text="previewItem.typeLabel"></span>
+                                <span class="text-xs font-mono text-slate-500" x-text="previewItem.file_meta"></span>
+                                <template x-if="previewItem.is_verified">
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">✓ Verified</span>
+                                </template>
+                                <template x-if="!previewItem.is_verified">
+                                    <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">⚠ Needs Verification</span>
+                                </template>
+                            </div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900" x-text="previewItem.title"></h3>
+                            <p class="text-xs text-slate-500" x-text="previewItem.description"></p>
+                        </div>
+                        <button type="button" @click="previewModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
+                    </div>
+
+                    <!-- Preview Frame / Content -->
+                    <div class="py-4">
+                        <template x-if="previewItem.file_type === 'image' || previewItem.file_url.match(/\.(jpeg|jpg|gif|png|webp)$/i)">
+                            <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center p-2 max-h-96">
+                                <img :src="previewItem.file_url" :alt="previewItem.title" class="max-h-92 w-auto object-contain rounded-lg">
+                            </div>
+                        </template>
+
+                        <template x-if="previewItem.file_type !== 'image' && !previewItem.file_url.match(/\.(jpeg|jpg|gif|png|webp)$/i)">
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center space-y-3">
+                                <span class="text-4xl" x-text="previewItem.icon"></span>
+                                <div>
+                                    <div class="font-bold text-slate-900 text-sm" x-text="previewItem.title"></div>
+                                    <div class="text-xs text-slate-500 mt-0.5" x-text="previewItem.file_meta"></div>
+                                </div>
+                                <p class="text-xs text-slate-600 max-w-md mx-auto leading-relaxed" x-text="previewItem.description"></p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div class="border-t border-slate-100 pt-3 flex items-center justify-between gap-2 flex-wrap">
+                        <button 
+                            type="button" 
+                            @click="copyLink(previewItem.file_url, previewItem.title)" 
+                            class="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                        >
+                            Copy Link
+                        </button>
+
+                        <div class="flex items-center gap-2">
+                            <button 
+                                type="button" 
+                                @click="previewModalOpen = false" 
+                                class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer"
+                            >
+                                Close
+                            </button>
+                            <a 
+                                :href="previewItem.file_url" 
+                                download 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                class="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span>Download File</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </template>
         </div>
     </div>
 
-    <!-- 04. FEATURED RESOURCES (MAX 4) -->
-    @if($featuredResources->count() > 0)
-    <div class="space-y-3" x-show="categoryFilter === 'all' && !searchQuery.trim()">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="text-orange-600">⭐</span>
-                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    <span data-en="Featured Marketing Resources" data-bn="প্রধান মার্কেটিং রিসোর্স">Featured Marketing Resources</span>
-                </h3>
-            </div>
-            <span class="text-[11px] text-slate-400 font-medium" data-en="Key counseling & induction materials" data-bn="কাউন্সেলিং ও লিডারশিপের মূল ফাইলসমূহ">
-                Key counseling & induction materials
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @foreach($featuredResources as $feat)
-            <div class="bg-gradient-to-br from-white to-orange-50/40 rounded-2xl border border-orange-200/80 p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-md transition-all group">
-                <div class="flex items-start gap-3.5">
-                    <div class="w-14 h-14 rounded-2xl bg-white border border-orange-200 shadow-2xs flex items-center justify-center text-3xl flex-shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
-                        @if($feat->thumbnail_url)
-                        <img src="{{ $feat->thumbnail_url }}" alt="{{ $feat->title }}" class="w-full h-full object-cover">
-                        @else
-                        <span>{{ $feat->file_icon }}</span>
-                        @endif
-                    </div>
-                    <div class="space-y-1">
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800">
-                                {{ $feat->category }}
-                            </span>
-                            <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border {{ $feat->verification_badge_class }}">
-                                {{ $feat->verification_badge_label }}
-                            </span>
-                            @if($feat->version)
-                            <span class="text-[10px] font-mono text-slate-400 font-semibold">{{ $feat->version }}</span>
-                            @endif
-                        </div>
-                        <h4 class="font-bold text-slate-900 text-sm group-hover:text-orange-600 transition-colors line-clamp-1">
-                            {{ $feat->title }}
-                        </h4>
-                        <p class="text-xs text-slate-600 line-clamp-1">
-                            {{ $feat->description }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-orange-100">
-                    <button type="button"
-                            @click="openPreview({{ json_encode($feat) }})"
-                            class="flex-1 sm:flex-none px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-                        <span>👁️</span>
-                        <span data-en="Preview" data-bn="প্রিভিউ">Preview</span>
-                    </button>
-                    <a href="{{ $feat->file_url }}"
-                       download
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="p-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                       title="Download Resource">
-                        ⬇️
-                    </a>
-                    <button type="button"
-                            @click="shareResource({{ json_encode($feat) }})"
-                            class="p-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                            title="Share">
-                        ↗️
-                    </button>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
-
-    <!-- 05. CURATED RESOURCE KITS / COLLECTIONS -->
-    <div class="space-y-3" x-show="categoryFilter === 'all' && !searchQuery.trim()">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="text-indigo-600">💼</span>
-                <span data-en="Curated Counseling & Marketing Kits" data-bn="কিউরেটেড কাউন্সেলিং ও মার্কেটিং কিটস">Curated Counseling & Marketing Kits</span>
-            </h3>
-            <span class="text-[11px] text-slate-400" data-en="Pre-packaged resource bundles for instant sharing" data-bn="ক্লায়েন্টদের এক ক্লিকে পাঠানোর জন্য রেডি বান্ডেল">
-                Pre-packaged resource bundles
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            @foreach($curatedKits as $kit)
-            <div class="bg-white rounded-2xl border border-slate-200/80 hover:border-indigo-300 p-4 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between group">
-                <div class="space-y-2">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="flex items-center gap-2.5">
-                            <span class="text-2xl">{{ $kit['icon'] }}</span>
-                            <div>
-                                <h4 class="font-bold text-slate-900 text-xs md:text-sm group-hover:text-indigo-600 transition-colors">
-                                    {{ $kit['title'] }}
-                                </h4>
-                                <span class="text-[10px] font-semibold text-indigo-600">{{ $kit['badge'] }}</span>
-                            </div>
-                        </div>
-                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-600">
-                            {{ count($kit['resource_ids']) }} Files
-                        </span>
-                    </div>
-                    <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {{ $kit['description'] }}
-                    </p>
-                </div>
-
-                <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button type="button"
-                            @click="openKitModal({{ json_encode($kit) }})"
-                            class="flex-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer">
-                        <span>📦</span>
-                        <span data-en="View Kit Files" data-bn="ফাইলগুলো দেখুন">View Kit Files</span>
-                    </button>
-                    <button type="button"
-                            @click="copyKitSummary({{ json_encode($kit) }})"
-                            class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                            title="Copy Shareable Kit Summary">
-                        <span>📋 Share Kit</span>
-                    </button>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-
-    <!-- 06. COUNSELING TOOLKIT (MEETING-READY FILES) -->
-    @if($counselingResources->count() > 0)
-    <div class="space-y-3" x-show="categoryFilter === 'all' && !searchQuery.trim()">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="text-emerald-600">🤝</span>
-                <span data-en="Counseling Toolkit (Live Prospect Meeting Files)" data-bn="কাউন্সেলিং টুলকিট (মিটিং ও সেলস ফাইলসমূহ)">Counseling Toolkit</span>
-            </h3>
-            <span class="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {{ $counselingResources->count() }} Sales Assets
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            @foreach($counselingResources as $cs)
-            <div class="bg-white rounded-2xl border border-emerald-100 hover:border-emerald-300 p-3.5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group">
-                <div class="space-y-2">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center text-xl flex-shrink-0">
-                            {{ $cs->file_icon }}
-                        </div>
-                        <div class="min-w-0">
-                            <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-700 block truncate">
-                                {{ $cs->category }}
-                            </span>
-                            <h4 class="font-bold text-slate-900 text-xs group-hover:text-emerald-700 transition-colors truncate">
-                                {{ $cs->title }}
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                        <span>{{ strtoupper($cs->file_type) }} • {{ $cs->file_size ?: 'Doc' }}</span>
-                        <span class="font-sans font-semibold text-slate-500">{{ $cs->version }}</span>
-                    </div>
-                </div>
-
-                <div class="pt-2.5 mt-2.5 border-t border-slate-100 flex items-center gap-1.5">
-                    <button type="button"
-                            @click="openPreview({{ json_encode($cs) }})"
-                            class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors text-center cursor-pointer">
-                        Preview
-                    </button>
-                    <button type="button"
-                            @click="shareResource({{ json_encode($cs) }})"
-                            class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg text-xs cursor-pointer"
-                            title="Share">
-                        ↗️
-                    </button>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
-
-    <!-- 07. ALL RESOURCES DIRECTORY GRID -->
-    <div class="space-y-3">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <span class="text-slate-600">📁</span>
-                <span data-en="All Marketing & Document Library" data-bn="সকল মার্কেটিং ও ডকুমেন্ট লাইব্রেরি">All Marketing & Document Library</span>
-            </h3>
-            <span class="text-[11px] text-slate-400 font-mono">
-                Showing matching resources
-            </span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            @forelse($resources as $res)
-            <div x-show="matchesResource({{ json_encode($res) }})"
-                 class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between hover:shadow-md hover:border-orange-200 transition-all group relative">
-
-                <div class="space-y-3.5">
-                    <!-- Top Bar: Thumbnail/Icon + Category & Verification Badges -->
-                    <div class="flex items-start justify-between gap-3">
+    <!-- ==========================================
+         6. RESOURCE KIT VIEW MODAL
+         ========================================== -->
+    <div 
+        role="dialog" 
+        aria-modal="true" 
+        tabindex="-1" 
+        x-show="kitModalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+        style="display: none;"
+    >
+        <div 
+            @click.away="kitModalOpen = false" 
+            x-show="kitModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto"
+        >
+            <template x-if="activeKit">
+                <div>
+                    <!-- Header -->
+                    <div class="flex items-start justify-between border-b border-slate-100 pb-3 gap-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 border border-orange-100 group-hover:bg-orange-600 group-hover:text-white flex items-center justify-center text-2xl transition-colors flex-shrink-0 overflow-hidden">
-                                @if($res->thumbnail_url)
-                                <img src="{{ $res->thumbnail_url }}" alt="{{ $res->title }}" class="w-full h-full object-cover">
-                                @else
-                                <span>{{ $res->file_icon }}</span>
-                                @endif
-                            </div>
-                            <div class="min-w-0">
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">
-                                    {{ $res->category }}
-                                </span>
-                                <h3 class="font-bold text-slate-900 text-sm group-hover:text-orange-600 transition-colors line-clamp-2">
-                                    {{ $res->title }}
-                                </h3>
+                            <span class="text-2xl" x-text="activeKit.icon"></span>
+                            <div>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-900" x-text="activeKit.title"></h3>
+                                <p class="text-xs text-slate-500" x-text="activeKit.purpose"></p>
                             </div>
                         </div>
+                        <button type="button" @click="kitModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
+                    </div>
 
-                        <!-- Pin Button -->
-                        <button type="button"
-                                @click="togglePin({{ $res->id }})"
-                                class="p-1.5 rounded-lg text-slate-300 hover:text-amber-500 transition-colors cursor-pointer flex-shrink-0"
-                                :class="isPinned({{ $res->id }}) ? 'text-amber-500 font-bold' : ''"
-                                title="Pin to Quick Access">
-                            <span x-text="isPinned({{ $res->id }}) ? '★' : '☆'"></span>
+                    <!-- Resources in Kit -->
+                    <div class="py-3 space-y-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Included Files</h4>
+                        <div class="divide-y divide-slate-100 border border-slate-200/80 rounded-xl overflow-hidden">
+                            <template x-for="item in getKitResources(activeKit.resource_ids)" :key="'kit-res-' + item.id">
+                                <div class="p-3 bg-white hover:bg-slate-50/70 flex items-center justify-between gap-2.5">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span class="text-lg shrink-0" x-text="item.icon"></span>
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-slate-900 text-xs sm:text-sm truncate" x-text="item.title"></div>
+                                            <div class="text-[11px] text-slate-500 font-mono" x-text="item.file_meta"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <button 
+                                            type="button" 
+                                            @click="openPreview(item)" 
+                                            class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                                        >
+                                            Preview
+                                        </button>
+                                        <a 
+                                            :href="item.file_url" 
+                                            download 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium"
+                                        >
+                                            Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="border-t border-slate-100 pt-3 flex items-center justify-between gap-2">
+                        <button 
+                            type="button" 
+                            @click="shareKit(activeKit)" 
+                            class="px-3.5 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer"
+                        >
+                            Share Kit Summary
+                        </button>
+                        <button 
+                            type="button" 
+                            @click="kitModalOpen = false" 
+                            class="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-xs transition-colors cursor-pointer"
+                        >
+                            Close
                         </button>
                     </div>
-
-                    <!-- Badges Strip -->
-                    <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border {{ $res->verification_badge_class }}">
-                            {{ $res->verification_badge_label }}
-                        </span>
-                        @if($res->badge)
-                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-                            {{ $res->badge }}
-                        </span>
-                        @endif
-                        @if($res->version)
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-                            {{ $res->version }}
-                        </span>
-                        @endif
-                        @if($res->is_counseling_toolkit)
-                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            💼 Counseling Tool
-                        </span>
-                        @endif
-                    </div>
-
-                    <!-- Description -->
-                    <p class="text-xs text-slate-600 leading-relaxed line-clamp-2">
-                        {{ $res->description }}
-                    </p>
-
-                    <!-- Data-Sensitive Notice if applicable -->
-                    @if(in_array($res->category, ['Leaflets', 'Official Leaflets', 'Policies & Guides']) || str_contains(strtolower($res->title), 'package') || str_contains(strtolower($res->title), 'rank'))
-                    <div class="p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl text-[11px] text-amber-800 flex items-center gap-1.5">
-                        <span>⚠️</span>
-                        <span data-en="Data-sensitive document. Verify current SBL plan before presenting."
-                              data-bn="প্ল্যান পরিবর্তনশীল। ক্লায়েন্টকে দেখানোর পূর্বে বর্তমান রেট যাচাই করুন।">
-                            Data-sensitive document. Verify current SBL plan before presenting.
-                        </span>
-                    </div>
-                    @endif
-
-                    <!-- File Metadata Details -->
-                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-medium pt-1">
-                        <span class="uppercase font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                            {{ strtoupper($res->file_type) }}
-                        </span>
-                        @if($res->file_size)
-                        <span>• {{ $res->file_size }}</span>
-                        @endif
-                        <span>• {{ ucfirst($res->language) }}</span>
-                        @if($res->issue_date)
-                        <span>• Issued: {{ $res->issue_date->format('M Y') }}</span>
-                        @endif
-                    </div>
                 </div>
-
-                <!-- Footer Action Buttons -->
-                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <!-- Primary Action: PREVIEW FIRST -->
-                    <button type="button"
-                            @click="openPreview({{ json_encode($res) }})"
-                            class="flex-1 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
-                        <span>👁️</span>
-                        <span data-en="Preview Document" data-bn="প্রিভিউ দেখুন">Preview Document</span>
-                    </button>
-
-                    <!-- Direct Download -->
-                    <a href="{{ $res->file_url }}"
-                       download
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                       title="Download Resource">
-                        ⬇️
-                    </a>
-
-                    <!-- Share -->
-                    <button type="button"
-                            @click="shareResource({{ json_encode($res) }})"
-                            class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-orange-600 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                            title="Share Resource">
-                        ↗️
-                    </button>
-
-                    <!-- QR Code -->
-                    <button type="button"
-                            @click="openQrModal({{ json_encode($res) }})"
-                            class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                            title="QR Code">
-                        📱
-                    </button>
-
-                    <!-- Admin Edit & Actions -->
-                    @if($canManage)
-                    <button type="button"
-                            @click="openEditModal({{ json_encode($res) }})"
-                            class="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-colors cursor-pointer"
-                            title="Edit Resource">
-                        ✏️
-                    </button>
-                    @endif
-                </div>
-
-            </div>
-            @empty
-            <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-3xl border border-slate-200">
-                <span class="text-4xl block mb-2">📁</span>
-                <p class="font-bold text-slate-700" data-en="No resources found" data-bn="কোনো রিসোর্স পাওয়া যায়নি">No resources found</p>
-                <p class="text-xs text-slate-500 mt-1" data-en="Try selecting another category or clearing your search query." data-bn="অন্য ক্যাটাগরি বেছে নিন অথবা সার্চ বক্সটি ক্লিয়ার করুন।">
-                    Try selecting another category or clearing your search query.
-                </p>
-            </div>
-            @endforelse
+            </template>
         </div>
     </div>
 
-    <!-- 08. IMPORTANT COMPLIANCE & ACCURACY DISCLAIMER -->
-    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-600 text-xs flex items-start gap-3">
-        <span class="text-base text-orange-600 flex-shrink-0">ℹ️</span>
-        <div class="space-y-1">
-            <h4 class="font-bold text-slate-900" data-en="Official SBL Information Notice" data-bn="অফিসিয়াল এসবিএল তথ্য সতর্কতা">Official SBL Information Notice</h4>
-            <p class="leading-relaxed"
-               data-en="Marketing plans, commissions, package details and policies may change. Always use the latest verified SBL resource before presenting information to a prospect. Older or superseded materials should be referenced with caution."
-               data-bn="মার্কেটিং প্ল্যান, কমিশন, প্যাকেজ সংক্রান্ত নিয়মাবলী ও পলিসি পরিবর্তনশীল। প্রসপেক্টকে উপস্থাপনের পূর্বে সর্বদা সর্বশেষ যাচাইকৃত রিসোর্স ব্যবহার নিশ্চিত করুন।">
-                Marketing plans, commissions, package details and policies may change. Always use the latest verified SBL resource before presenting information to a prospect.
-            </p>
-        </div>
-    </div>
-
-    <!-- ==================== MODALS & DRAWERS ==================== -->
-
-    <!-- PREVIEW MODAL / FULL-SCREEN DRAWER -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="previewModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="previewModalOpen = false"
-             class="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            
-            <!-- Header -->
-            <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="text-xl" x-text="previewResource ? previewResource.file_icon : '📄'"></span>
-                    <div class="min-w-0">
-                        <h3 class="font-bold text-slate-900 text-sm md:text-base truncate" x-text="previewResource ? previewResource.title : 'Preview'"></h3>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
-                            <span x-text="previewResource ? previewResource.category : ''"></span>
-                            <span>•</span>
-                            <span x-text="previewResource ? (previewResource.file_size || 'Document') : ''"></span>
-                            <span>•</span>
-                            <span x-text="previewResource ? (previewResource.version || 'v1.0') : ''"></span>
-                        </div>
-                    </div>
-                </div>
-                <button type="button" @click="previewModalOpen = false" class="p-2 text-slate-400 hover:text-slate-700 text-lg font-bold rounded-xl cursor-pointer">✕</button>
-            </div>
-
-            <!-- Preview Content Frame -->
-            <div class="flex-1 overflow-y-auto p-4 bg-slate-900/5 flex items-center justify-center min-h-[350px]">
-                <template x-if="previewResource && (previewResource.file_type === 'image' || previewResource.file_url.endsWith('.png') || previewResource.file_url.endsWith('.jpg') || previewResource.file_url.endsWith('.jpeg'))">
-                    <img :src="previewResource.file_url" :alt="previewResource.title" class="max-h-[70vh] max-w-full object-contain rounded-xl shadow-md border border-slate-200">
-                </template>
-
-                <template x-if="previewResource && previewResource.file_type === 'pdf'">
-                    <iframe :src="previewResource.file_url" class="w-full h-[65vh] rounded-xl border border-slate-200 bg-white" title="PDF Preview"></iframe>
-                </template>
-
-                <template x-if="previewResource && (previewResource.file_type === 'presentation' || previewResource.file_url.includes('docs.google.com'))">
-                    <iframe :src="previewResource.file_url" class="w-full h-[65vh] rounded-xl border border-slate-200 bg-white" title="Presentation Preview"></iframe>
-                </template>
-
-                <template x-if="previewResource && !['image', 'pdf', 'presentation'].includes(previewResource.file_type) && !previewResource.file_url.endsWith('.png') && !previewResource.file_url.endsWith('.jpg') && !previewResource.file_url.includes('docs.google.com')">
-                    <div class="text-center p-8 space-y-4">
-                        <span class="text-5xl block">📑</span>
-                        <div>
-                            <h4 class="font-bold text-slate-800 text-base" x-text="previewResource.title"></h4>
-                            <p class="text-xs text-slate-500 mt-1">This file type is best viewed in an external application.</p>
-                        </div>
-                        <a :href="previewResource.file_url" target="_blank" class="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition-colors">
-                            <span>Open / Download File</span>
-                            <span>↗️</span>
-                        </a>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Footer Action Controls -->
-            <div class="p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-white">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-slate-600">Verification:</span>
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700" x-text="previewResource ? (previewResource.is_official ? '✓ Official Asset' : 'Internal Resource') : ''"></span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a :href="previewResource ? previewResource.file_url : '#'"
-                       download
-                       target="_blank"
-                       class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer">
-                        <span>⬇️</span>
-                        <span>Download</span>
-                    </a>
-                    <button type="button"
-                            @click="if(previewResource) shareResource(previewResource)"
-                            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                        ↗️ Share
-                    </button>
-                    <button type="button"
-                            @click="if(previewResource) copyLink(previewResource.file_url, previewResource.title)"
-                            class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                        📋 Copy Link
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR CODE MODAL -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="qrModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="qrModalOpen = false"
-             class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center space-y-4">
-            
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-bold text-slate-900">Resource QR Code</h3>
-                <button type="button" @click="qrModalOpen = false" class="text-slate-400 hover:text-slate-700 text-lg font-bold cursor-pointer">✕</button>
-            </div>
-
-            <div class="space-y-1">
-                <h4 class="font-bold text-slate-900 text-sm truncate" x-text="qrResource ? qrResource.title : ''"></h4>
-                <p class="text-[11px] text-slate-500" data-en="Scan with camera for instant document access" data-bn="মোবাইল ক্যামেরা দিয়ে স্ক্যান করে সরাসরি ডাউনলোড করুন">
-                    Scan with camera for instant document access
-                </p>
-            </div>
-
-            <!-- SVG QR Code Rendering -->
-            <div class="flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <template x-if="qrResource">
-                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(qrResource.file_url.startsWith('http') ? qrResource.file_url : window.location.origin + qrResource.file_url)"
-                         alt="Resource QR Code"
-                         class="w-48 h-48 rounded-xl shadow-xs">
-                </template>
-            </div>
-
-            <div class="flex items-center justify-center gap-2 pt-2">
-                <button type="button"
-                        @click="if(qrResource) copyLink(qrResource.file_url, qrResource.title)"
-                        class="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                    📋 Copy Link
-                </button>
-                <button type="button"
-                        @click="qrModalOpen = false"
-                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- CURATED KIT MODAL -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="kitModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="kitModalOpen = false"
-             class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            
+    @if($canManage ?? false)
+    <!-- ==========================================
+         7. CREATE RESOURCE MODAL (Admin Only)
+         ========================================== -->
+    <div 
+        role="dialog" 
+        aria-modal="true" 
+        tabindex="-1" 
+        x-show="createModalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+        style="display: none;"
+    >
+        <div 
+            @click.away="createModalOpen = false" 
+            x-show="createModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4"
+        >
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
-                    <span class="text-2xl" x-text="activeKit ? activeKit.icon : '📦'"></span>
-                    <div>
-                        <h3 class="text-base font-bold text-slate-900" x-text="activeKit ? activeKit.title : 'Resource Kit'"></h3>
-                        <span class="text-[10px] text-indigo-600 font-semibold" x-text="activeKit ? activeKit.badge : ''"></span>
-                    </div>
+                    <span class="text-xl">📄</span>
+                    <h3 class="text-base font-bold text-slate-900">Add New Marketing Resource</h3>
                 </div>
-                <button type="button" @click="kitModalOpen = false" class="text-slate-400 hover:text-slate-700 text-lg font-bold cursor-pointer">✕</button>
+                <button type="button" @click="createModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <p class="text-xs text-slate-600" x-text="activeKit ? activeKit.description : ''"></p>
-
-            <!-- Kit Included Resources List -->
-            <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <template x-for="r in allResourcesList.filter(res => activeKit && activeKit.resource_ids.includes(res.id))" :key="'kit-file-' + r.id">
-                    <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <span class="text-lg" x-text="r.file_type === 'pdf' ? '📄' : (r.file_type === 'presentation' ? '📊' : '🖼️')"></span>
-                            <div class="min-w-0">
-                                <h5 class="text-xs font-bold text-slate-900 truncate" x-text="r.title"></h5>
-                                <span class="text-[10px] text-slate-400 font-mono" x-text="r.file_type.toUpperCase() + ' • ' + (r.file_size || 'File')"></span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" @click="openPreview(r)" class="px-2 py-1 bg-white hover:bg-orange-50 text-orange-600 border border-slate-200 rounded-lg text-[11px] font-bold cursor-pointer">👁️</button>
-                            <a :href="r.file_url" download target="_blank" class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[11px] font-bold cursor-pointer">⬇️</a>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <button type="button"
-                        @click="if(activeKit) copyKitSummary(activeKit)"
-                        class="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs">
-                    <span>📋</span>
-                    <span>Copy Full Kit Summary</span>
-                </button>
-                <button type="button"
-                        @click="kitModalOpen = false"
-                        class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SHARE FALLBACK MODAL -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="shareModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="shareModalOpen = false"
-             class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-bold text-slate-900">Share Resource</h3>
-                <button type="button" @click="shareModalOpen = false" class="text-slate-400 hover:text-slate-700 text-lg font-bold cursor-pointer">✕</button>
-            </div>
-
-            <div class="space-y-1">
-                <h4 class="font-bold text-slate-900 text-sm truncate" x-text="activeShareResource ? activeShareResource.title : ''"></h4>
-                <p class="text-xs text-slate-500">Choose a platform to share this material with prospects:</p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2.5">
-                <!-- WhatsApp -->
-                <a :href="'https://api.whatsapp.com/send?text=' + encodeURIComponent((activeShareResource ? activeShareResource.title + '\n' : '') + (activeShareResource && activeShareResource.file_url.startsWith('http') ? activeShareResource.file_url : window.location.origin + (activeShareResource ? activeShareResource.file_url : '')))"
-                   target="_blank"
-                   class="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-xl border border-emerald-200 flex items-center justify-center gap-2 transition-colors">
-                    <span>💬 WhatsApp</span>
-                </a>
-
-                <!-- Facebook -->
-                <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(activeShareResource && activeShareResource.file_url.startsWith('http') ? activeShareResource.file_url : window.location.origin + (activeShareResource ? activeShareResource.file_url : ''))"
-                   target="_blank"
-                   class="p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 flex items-center justify-center gap-2 transition-colors">
-                    <span>📘 Facebook</span>
-                </a>
-            </div>
-
-            <div class="pt-2">
-                <button type="button"
-                        @click="if(activeShareResource) { copyLink(activeShareResource.file_url, activeShareResource.title); shareModalOpen = false; }"
-                        class="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer">
-                    📋 Copy Shareable Link
-                </button>
-            </div>
-        </div>
-    </div>
-
-    @if($canManage)
-    <!-- ADD RESOURCE MODAL (Admin) -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="createModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="createModalOpen = false" class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">📁</span>
-                    <h3 class="text-base font-bold text-slate-900">Add New Official Resource</h3>
-                </div>
-                <button type="button" @click="createModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">✕</button>
-            </div>
-
-            <form action="{{ route('marketing-resources.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('marketing-resources.store') }}" method="POST" class="space-y-3.5">
                 @csrf
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Resource Title *</label>
-                    <input type="text" name="title" required placeholder="e.g. SBL Official Dropshipping Leaflet" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    <input type="text" name="title" required placeholder="e.g. SBL Compensation Plan Deck" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category *</label>
-                        <select name="category" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="Leaflets">Leaflets</option>
+                        <select name="category" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Official Documents">Official Documents</option>
                             <option value="Presentations">Presentations</option>
+                            <option value="Leaflets">Leaflets</option>
                             <option value="Policies & Guides">Policies & Guides</option>
                             <option value="Legal & Compliance">Legal & Compliance</option>
-                            <option value="Marketing Media">Marketing Media</option>
                             <option value="Brand Assets">Brand Assets</option>
-                            <option value="Official Documents">Official Documents</option>
                             <option value="Training Materials">Training Materials</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File Type *</label>
-                        <select name="file_type" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <select name="file_type" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             <option value="pdf">PDF Document</option>
-                            <option value="image">Image / High-Res</option>
-                            <option value="presentation">Presentation / Slides</option>
-                            <option value="doc">Word / Document</option>
-                            <option value="spreadsheet">Spreadsheet</option>
-                            <option value="video">Video</option>
-                            <option value="zip">Zip / Asset Pack</option>
-                            <option value="link">External Resource</option>
+                            <option value="presentation">Presentation (PPT)</option>
+                            <option value="image">Image (PNG/JPG)</option>
+                            <option value="doc">Word / Text</option>
+                            <option value="zip">ZIP Archive</option>
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File URL or Path *</label>
-                    <input type="text" name="file_url" required placeholder="/images/sbl-packages-sheet.png or https://..." class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File URL *</label>
+                        <input type="text" name="file_url" required placeholder="docs/plan.pdf or https://..." class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File Size</label>
-                        <input type="text" name="file_size" placeholder="e.g. 1.8 MB" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Version</label>
-                        <input type="text" name="version" value="v1.0" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Language</label>
-                        <select name="language" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="bilingual">Bilingual</option>
-                            <option value="bangla">Bangla</option>
-                            <option value="english">English</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Verification Status *</label>
-                        <select name="verification_status" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="needs_verification">Needs Verification</option>
-                            <option value="official_verified">Official & Verified</option>
-                            <option value="sbl_provided">SBL Provided</option>
-                            <option value="internal_marketing">Internal Marketing Material</option>
-                            <option value="verified_document">Verified Document</option>
-                            <option value="government_document">Govt. Document</option>
-                            <option value="needs_review">Needs Review</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Badge Tag</label>
-                        <input type="text" name="badge" placeholder="e.g. High-Res Comparison" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <input type="text" name="file_size" placeholder="e.g. 2.4 MB" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
-                    <textarea name="description" rows="2" placeholder="Brief summary for counselors & team members..." class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"></textarea>
-                </div>
-
-                <!-- Toggles -->
-                <div class="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_official" value="1" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Official SBL</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_featured" value="1" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Featured</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_counseling_toolkit" value="1" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Counseling Toolkit</span>
-                    </label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description (1-line)</label>
+                    <textarea name="description" rows="2" placeholder="Brief summary of this resource..." class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
-                    <button type="button" @click="createModalOpen = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer">Cancel</button>
-                    <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors cursor-pointer">Save Resource</button>
+                    <button type="button" @click="createModalOpen = false" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-800 cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors cursor-pointer">Save Resource</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- EDIT RESOURCE MODAL (Admin) -->
-    <div role="dialog" aria-modal="true" tabindex="-1" x-show="editModalOpen"
-         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-         x-transition
-         x-cloak>
-        <div @click.away="editModalOpen = false" class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+    <!-- ==========================================
+         8. EDIT RESOURCE MODAL (Admin Only)
+         ========================================== -->
+    <div 
+        role="dialog" 
+        aria-modal="true" 
+        tabindex="-1" 
+        x-show="editModalOpen" 
+        class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
+        style="display: none;"
+    >
+        <div 
+            @click.away="editModalOpen = false" 
+            x-show="editModalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4"
+        >
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="text-xl">✏️</span>
                     <h3 class="text-base font-bold text-slate-900">Edit Marketing Resource</h3>
                 </div>
-                <button type="button" @click="editModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">✕</button>
+                <button type="button" @click="editModalOpen = false" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer">&times;</button>
             </div>
 
-            <form :action="'{{ url('/marketing-resources') }}/' + editingResource.id" method="POST" class="space-y-4">
+            <form :action="'{{ url('/marketing-resources') }}/' + editingResource.id" method="POST" class="space-y-3.5">
                 @csrf
                 @method('PUT')
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Resource Title *</label>
-                    <input type="text" name="title" x-model="editingResource.title" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    <input type="text" name="title" x-model="editingResource.title" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category *</label>
-                        <select name="category" x-model="editingResource.category" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="Leaflets">Leaflets</option>
+                        <select name="category" x-model="editingResource.category" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="Official Documents">Official Documents</option>
                             <option value="Presentations">Presentations</option>
+                            <option value="Leaflets">Leaflets</option>
                             <option value="Policies & Guides">Policies & Guides</option>
                             <option value="Legal & Compliance">Legal & Compliance</option>
-                            <option value="Marketing Media">Marketing Media</option>
                             <option value="Brand Assets">Brand Assets</option>
-                            <option value="Official Documents">Official Documents</option>
                             <option value="Training Materials">Training Materials</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File Type *</label>
-                        <select name="file_type" x-model="editingResource.file_type" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <select name="file_type" x-model="editingResource.file_type" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             <option value="pdf">PDF Document</option>
-                            <option value="image">Image / High-Res</option>
-                            <option value="presentation">Presentation / Slides</option>
-                            <option value="doc">Word / Document</option>
-                            <option value="spreadsheet">Spreadsheet</option>
-                            <option value="video">Video</option>
-                            <option value="zip">Zip / Asset Pack</option>
-                            <option value="link">External Resource</option>
+                            <option value="presentation">Presentation (PPT)</option>
+                            <option value="image">Image (PNG/JPG)</option>
+                            <option value="doc">Word / Text</option>
+                            <option value="zip">ZIP Archive</option>
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File URL or Path *</label>
-                    <input type="text" name="file_url" x-model="editingResource.file_url" required class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File URL *</label>
+                        <input type="text" name="file_url" x-model="editingResource.file_url" required class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File Size</label>
-                        <input type="text" name="file_size" x-model="editingResource.file_size" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Version</label>
-                        <input type="text" name="version" x-model="editingResource.version" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Language</label>
-                        <select name="language" x-model="editingResource.language" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="bilingual">Bilingual</option>
-                            <option value="bangla">Bangla</option>
-                            <option value="english">English</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Verification Status *</label>
-                        <select name="verification_status" x-model="editingResource.verification_status" required class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
-                            <option value="needs_verification">Needs Verification</option>
-                            <option value="official_verified">Official & Verified</option>
-                            <option value="sbl_provided">SBL Provided</option>
-                            <option value="internal_marketing">Internal Marketing Material</option>
-                            <option value="verified_document">Verified Document</option>
-                            <option value="government_document">Govt. Document</option>
-                            <option value="needs_review">Needs Review</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Badge Tag</label>
-                        <input type="text" name="badge" x-model="editingResource.badge" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                        <input type="text" name="file_size" x-model="editingResource.file_size" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description</label>
-                    <textarea name="description" x-model="editingResource.description" rows="2" class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description (1-line)</label>
+                    <textarea name="description" x-model="editingResource.description" rows="2" class="w-full px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
                 </div>
 
-                <!-- Toggles -->
-                <div class="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_official" value="1" :checked="editingResource.is_official" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Official SBL</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_featured" value="1" :checked="editingResource.is_featured" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Featured</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" name="is_counseling_toolkit" value="1" :checked="editingResource.is_counseling_toolkit" class="w-4 h-4 rounded text-orange-600">
-                        <span class="font-bold text-slate-700">Counseling Toolkit</span>
-                    </label>
-                </div>
-
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                    <button type="submit"
-                            name="action"
-                            value="archive"
-                            formnovalidate
-                            onclick="return confirm('Archive this resource? Older versions will be hidden from public view.');"
-                            class="px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors cursor-pointer">
-                        📦 Archive Resource
-                    </button>
-                    <div class="flex items-center gap-2">
-                        <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 cursor-pointer">Cancel</button>
-                        <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl shadow-xs transition-colors cursor-pointer">Update Resource</button>
-                    </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button type="button" @click="editModalOpen = false" class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-800 cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 text-xs sm:text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors cursor-pointer">Update Resource</button>
                 </div>
             </form>
         </div>
     </div>
     @endif
-
-    <!-- TOAST NOTIFICATION -->
-    <div x-show="toastVisible"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 translate-y-4"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 translate-y-4"
-         class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700 text-xs font-bold flex items-center gap-2"
-         x-cloak>
-        <span x-text="toastMessage"></span>
-    </div>
-
 </div>
-
