@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS in production or behind SSL termination proxy
+        if ($this->app->environment('production') || request()->header('x-forwarded-proto') === 'https' || request()->isSecure()) {
+            URL::forceScheme('https');
+        }
         // 1. Super Admin bypass: automatically grant all gates/permissions
         Gate::before(function ($user, $ability) {
             if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {

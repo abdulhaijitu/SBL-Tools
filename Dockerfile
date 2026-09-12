@@ -62,10 +62,10 @@ ENV APP_KEY=base64:jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=
 COPY . .
 
 # Copy installed composer vendors from Stage 2
-COPY --from=composer-builder /app/vendor/ ./vendor/
+COPY --from=composer-builder /app/vendor /var/www/html/vendor
 
 # Copy compiled frontend assets from Stage 1
-COPY --from=frontend-builder /app/public/build/ ./public/build/
+COPY --from=frontend-builder /app/public/build /var/www/html/public/build
 
 # Copy configuration files
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
@@ -79,7 +79,7 @@ RUN sed -i 's/\r$//' /entrypoint.sh && \
 
 # Set directory permissions for Laravel
 RUN mkdir -p storage bootstrap/cache database && \
-    chown -R www-data:www-data storage bootstrap/cache database && \
+    chown -R www-data:www-data storage bootstrap/cache database public && \
     chmod -R 775 storage bootstrap/cache database
 
 # Expose Render default port
