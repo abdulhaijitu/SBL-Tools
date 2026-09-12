@@ -23,10 +23,15 @@ class DashboardController extends Controller
         // Scope queries based on user role & permissions
         $leadScope = Lead::query();
         $taskScope = Task::query();
+        $presentationScope = Presentation::query();
 
-        if ($user && ! $user->hasRole('Super Admin') && ! $user->can('leads.manage') && ! $user->hasRole('Sales Manager')) {
-            $leadScope->where('owner_user_id', $user->id);
+        if ($user && ! $user->isSuperAdmin()) {
+            $leadScope->where(function ($q) use ($user) {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
             $taskScope->where('user_id', $user->id);
+            $presentationScope->where('user_id', $user->id);
         }
 
         // 1. Today's Actions
@@ -45,12 +50,12 @@ class DashboardController extends Controller
             ->orderBy('next_action_at', 'asc')
             ->get();
 
-        $presentationsToday = Presentation::with('lead')
+        $presentationsToday = (clone $presentationScope)->with(['lead'])
             ->whereDate('date_time', $today)
             ->orderBy('date_time', 'asc')
             ->get();
 
-        $presentationsThisMonthCount = Presentation::whereMonth('date_time', $today->month)
+        $presentationsThisMonthCount = (clone $presentationScope)->whereMonth('date_time', $today->month)
             ->whereYear('date_time', $today->year)
             ->count();
 
@@ -155,6 +160,7 @@ class DashboardController extends Controller
         $totalLeads = array_sum($stageCounts);
         $totalActiveLeads = (clone $leadScope)->activePipeline()->count();
         $totalPresentations = Presentation::count();
+        $totalPresentations = (clone $presentationScope)->count();
 
         // 4. Hot Leads (Deduplicated visually by phone)
         $hotLeadsRaw = (clone $leadScope)->with('source')
@@ -197,6 +203,12 @@ class DashboardController extends Controller
             ->orderBy('performed_at', 'desc')
             ->limit(6)
             ->get();
+        $activityScope = Activity::with(['lead', 'user'])
+            ->orderBy('performed_at', 'desc');
+        if ($user && ! $user->isSuperAdmin()) {
+            $activityScope->where('user_id', $user->id);
+        }
+        $recentActivities = $activityScope->limit(6)->get();
 
         // 7. Team Explorer Summary for current user
         $teamRoot = null;

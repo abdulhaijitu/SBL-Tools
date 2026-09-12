@@ -17,10 +17,17 @@ class TaskController extends Controller
 {
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+
         $filter = $request->query('filter', 'pending'); // 'pending', 'today', 'overdue', 'completed', 'all'
         $type = $request->query('type');
 
         $query = Task::with(['lead', 'user']);
+
+        if (! $isSuperAdmin && $user) {
+            $query->where('user_id', $user->id);
+        }
 
         if ($type) {
             $query->where('type', $type);
@@ -47,16 +54,29 @@ class TaskController extends Controller
 
         $tasks = $query->paginate(20)->withQueryString();
 
-        $leads = Lead::select(['id', 'name', 'mobile'])->activePipeline()->orderBy('name')->get();
+        $leadsQuery = Lead::select(['id', 'name', 'mobile'])->activePipeline();
+        if (! $isSuperAdmin && $user) {
+            $leadsQuery->where(function ($q) use ($user) {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
+        }
+        $leads = $leadsQuery->orderBy('name')->get();
+
         $taskTypes = TaskType::cases();
         $priorities = TaskPriority::cases();
         $statuses = TaskStatus::cases();
 
+        $statsQuery = Task::query();
+        if (! $isSuperAdmin && $user) {
+            $statsQuery->where('user_id', $user->id);
+        }
+
         $stats = [
-            'pending' => Task::pending()->count(),
-            'today' => Task::dueToday()->count(),
-            'overdue' => Task::overdue()->count(),
-            'completed' => Task::where('status', TaskStatus::COMPLETED->value)->count(),
+            'pending' => (clone $statsQuery)->pending()->count(),
+            'today' => (clone $statsQuery)->dueToday()->count(),
+            'overdue' => (clone $statsQuery)->overdue()->count(),
+            'completed' => (clone $statsQuery)->where('status', TaskStatus::COMPLETED->value)->count(),
         ];
 
         return view('tasks.index', compact('tasks', 'leads', 'taskTypes', 'priorities', 'statuses', 'filter', 'stats'));
@@ -73,7 +93,12 @@ class TaskController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        if (!empty($validated['related_lead_id'])) Lead::findOrFail($validated['related_lead_id']);
+        if (!empty($validated['related_lead_id'])) {
+            $relatedLead = Lead::findOrFail($validated['related_lead_id']);
+            if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
+                abort(403, 'You can only attach tasks to your own leads.');
+            }
+        }
 
         $task = Task::create([
             'title' => $validated['title'],
@@ -113,6 +138,8 @@ class TaskController extends Controller
      */
     public function update(Request $request, Task $task): RedirectResponse
     {
+        $this->authorizeTaskAccess($task);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'type' => ['required', \Illuminate\Validation\Rule::enum(TaskType::class)],
@@ -122,7 +149,12 @@ class TaskController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        if (!empty($validated['related_lead_id'])) Lead::findOrFail($validated['related_lead_id']);
+        if (!empty($validated['related_lead_id'])) {
+            $relatedLead = Lead::findOrFail($validated['related_lead_id']);
+            if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
+                abort(403, 'You can only attach tasks to your own leads.');
+            }
+        }
 
         $task->update([
             'title' => $validated['title'],
@@ -150,6 +182,8 @@ class TaskController extends Controller
      */
     public function complete(Request $request, Task $task): RedirectResponse
     {
+        $this->authorizeTaskAccess($task);
+
         $validated = $request->validate([
             'outcome' => 'required|string|max:255',
             'next_action' => 'nullable|string|max:255',
@@ -161,24 +195,24 @@ class TaskController extends Controller
             if ($task->status === TaskStatus::COMPLETED) {
                 return back()->with('success', 'This task is already completed.');
             }
-    
+
             $task->status = TaskStatus::COMPLETED;
             $task->completed_at = now();
             $task->outcome = $validated['outcome'];
             $task->next_action = $validated['next_action'] ?? null;
             $task->next_action_at = $validated['next_action_at'] ?? null;
             $task->save();
-    
+
             // If related to a lead, log activity and update lead next action
             if ($task->related_lead_id) {
                 $lead = Lead::find($task->related_lead_id);
                 if ($lead) {
                     $lead->last_contact_at = now();
-    
+
                     if (! empty($validated['next_action_at'])) {
                         $lead->next_action_type = $validated['next_action'] ?? 'Follow-up';
                         $lead->next_action_at = $validated['next_action_at'];
-    
+
                         // Auto-create next task so follow-up chain is unbroken
                         Task::create([
                             'title' => ($validated['next_action'] ?? 'Follow-up') . ' with ' . $lead->name,
@@ -194,10 +228,10 @@ class TaskController extends Controller
                         $lead->next_action_type = null;
                         $lead->next_action_at = null;
                     }
-    
+
                     $lead->calculateScoreAndTemperature();
                     $lead->save();
-    
+
                     Activity::create([
                         'lead_id' => $lead->id,
                         'user_id' => Auth::id() ?? 1,
@@ -208,15 +242,35 @@ class TaskController extends Controller
                     ]);
                 }
             }
-    
+
             return back()->with('success', 'Task marked as completed with outcome recorded!');
         }, 3);
     }
 
     public function destroy(Task $task): RedirectResponse
     {
+        $this->authorizeTaskAccess($task);
+
         $task->delete();
 
         return back()->with('success', 'Task removed successfully.');
+    }
+
+    /**
+     * Authorize user access to task (Super Admin or owner).
+     */
+    protected function authorizeTaskAccess(Task $task): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(401);
+        }
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+        if ((int)$task->user_id === (int)$user->id) {
+            return;
+        }
+        abort(403, 'You do not have permission to access this task.');
     }
 }

@@ -21,10 +21,27 @@ class PresentationController extends Controller
 {
     public function index(Request $request): View
     {
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+
         $query = Presentation::with(['lead', 'user'])->orderBy('date_time', 'desc');
+
+        if (! $isSuperAdmin && $user) {
+            $query->where('user_id', $user->id);
+        }
 
         $presentations = $query->paginate(15);
         $leads = Lead::orderBy('name')->get();
+
+        $leadsQuery = Lead::orderBy('name');
+        if (! $isSuperAdmin && $user) {
+            $leadsQuery->where(function ($q) use ($user) {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
+        }
+        $leads = $leadsQuery->get();
+
         $types = PresentationType::cases();
         $outcomes = PresentationOutcome::cases();
 
@@ -47,6 +64,10 @@ class PresentationController extends Controller
         ]);
 
         Lead::findOrFail($validated['lead_id']);
+        $lead = Lead::findOrFail($validated['lead_id']);
+        if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$lead->owner_user_id !== (int)Auth::id() && (int)$lead->assigned_to !== (int)Auth::id()) {
+            abort(403, 'You can only record presentations for your own leads.');
+        }
 
         $presentation = Presentation::create([
             'lead_id' => $validated['lead_id'],
@@ -109,6 +130,14 @@ class PresentationController extends Controller
 
     public function destroy(Presentation $presentation): RedirectResponse
     {
+        $user = Auth::user();
+        if (! $user) {
+            abort(401);
+        }
+        if (! $user->isSuperAdmin() && (int)$presentation->user_id !== (int)$user->id) {
+            abort(403, 'You do not have permission to delete this presentation.');
+        }
+
         $presentation->delete();
 
         return back()->with('success', 'Presentation session removed.');

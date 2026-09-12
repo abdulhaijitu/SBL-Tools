@@ -34,7 +34,18 @@ class LeadController extends Controller
         }
         $viewMode = $request->query('view', 'table'); // 'table' or 'kanban'
 
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+
         $query = Lead::with(['source', 'owner', 'interests']);
+
+        // Data Isolation: non-superadmin users only see their own leads or directly assigned leads
+        if (! $isSuperAdmin && $user) {
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
+        }
 
         // Search
         if ($search = $request->input('search')) {
@@ -106,7 +117,10 @@ class LeadController extends Controller
         }
         $stages = LeadStage::cases();
         $sblContacts = SblContact::orderBy('sort_order')->orderBy('department')->get();
-        $teamMembers = User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get();
+        $currentUser = Auth::user();
+        $teamMembers = ($currentUser && $currentUser->isSuperAdmin())
+            ? User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get()
+            : User::whereKey($currentUser?->id)->get();
 
         return view('leads.create', compact('sources', 'stages', 'sblContacts', 'teamMembers'));
     }
@@ -156,8 +170,8 @@ class LeadController extends Controller
 
         DB::transaction(function () use ($validated, $request, &$lead) {
             $stage = ! empty($validated['stage']) ? (LeadStage::tryFrom($validated['stage']) ?? LeadStage::NEW) : LeadStage::NEW;
-            $sourceId = ! empty($validated['lead_source_id']) 
-                ? (int)$validated['lead_source_id'] 
+            $sourceId = ! empty($validated['lead_source_id'])
+                ? (int)$validated['lead_source_id']
                 : (LeadSource::where('is_active', true)->orderBy('order')->first()?->id ?? 1);
 
             $lead = new Lead();
@@ -236,14 +250,16 @@ class LeadController extends Controller
      */
     public function show(Lead $lead): View
     {
+        $this->authorizeLeadAccess($lead);
+
         $lead->load([
             'source',
             'owner',
             'interests',
-            'activities' => fn ($q) => $q->orderBy('performed_at', 'desc'),
+            'activities' => fn($q) => $q->orderBy('performed_at', 'desc'),
             'activities.user',
-            'tasks' => fn ($q) => $q->orderBy('due_at', 'desc'),
-            'presentations' => fn ($q) => $q->orderBy('date_time', 'desc'),
+            'tasks' => fn($q) => $q->orderBy('due_at', 'desc'),
+            'presentations' => fn($q) => $q->orderBy('date_time', 'desc'),
         ]);
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
         if ($sources->isEmpty()) {
@@ -259,13 +275,18 @@ class LeadController extends Controller
      */
     public function edit(Lead $lead): View
     {
+        $this->authorizeLeadAccess($lead);
+
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
         if ($sources->isEmpty()) {
             $sources = LeadSource::orderBy('id')->get();
         }
         $stages = LeadStage::cases();
         $sblContacts = SblContact::orderBy('sort_order')->orderBy('department')->get();
-        $teamMembers = User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get();
+        $currentUser = Auth::user();
+        $teamMembers = ($currentUser && $currentUser->isSuperAdmin())
+            ? User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get()
+            : User::whereKey($currentUser?->id)->get();
 
         return view('leads.edit', compact('lead', 'sources', 'stages', 'sblContacts', 'teamMembers'));
     }
@@ -275,6 +296,8 @@ class LeadController extends Controller
      */
     public function update(Request $request, Lead $lead): RedirectResponse
     {
+        $this->authorizeLeadAccess($lead);
+
         // Sanitize facebook_url if given without scheme
         if ($request->filled('facebook_url') && !preg_match('#^https?://#i', $request->input('facebook_url'))) {
             $request->merge(['facebook_url' => 'https://' . ltrim($request->input('facebook_url'), '/')]);
@@ -361,6 +384,8 @@ class LeadController extends Controller
      */
     public function updateStage(Request $request, Lead $lead): JsonResponse|RedirectResponse
     {
+        $this->authorizeLeadAccess($lead);
+
         $validated = $request->validate([
             'stage' => 'required|string',
         ]);
@@ -411,6 +436,8 @@ class LeadController extends Controller
      */
     public function addActivity(Request $request, Lead $lead): JsonResponse|RedirectResponse
     {
+        $this->authorizeLeadAccess($lead);
+
         $validated = $request->validate([
             'type' => 'required|string',
             'title' => 'required|string|max:255',
@@ -469,6 +496,8 @@ class LeadController extends Controller
      */
     public function convert(Lead $lead): RedirectResponse
     {
+        $this->authorizeLeadAccess($lead);
+
         $oldStage = $lead->stage;
         $lead->stage = LeadStage::CONVERTED;
         $lead->converted_at = now();
@@ -495,9 +524,29 @@ class LeadController extends Controller
      */
     public function destroy(Lead $lead): RedirectResponse
     {
+        $this->authorizeLeadAccess($lead);
+
         $lead->delete();
 
         return redirect()->route('leads.index')
             ->with('success', 'Lead removed successfully.');
+    }
+
+    /**
+     * Authorize user access to lead (Super Admin or owner/assigned user).
+     */
+    protected function authorizeLeadAccess(Lead $lead): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(401);
+        }
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+        if ((int)$lead->owner_user_id === (int)$user->id || (int)$lead->assigned_to === (int)$user->id) {
+            return;
+        }
+        abort(403, 'You do not have permission to access this lead.');
     }
 }

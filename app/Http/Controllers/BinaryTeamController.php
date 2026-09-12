@@ -63,6 +63,14 @@ class BinaryTeamController extends Controller
         $autoBalanceSlot = ($weakerLeg === 'LEFT' ? $firstVacantLeft : $firstVacantRight) ?: ($firstVacantLeft ?: $firstVacantRight);
 
         $crmLeads = \App\Models\Lead::orderBy('name')->get(['id', 'name', 'mobile', 'email', 'profession_or_business', 'location']);
+        $crmLeadsQuery = \App\Models\Lead::orderBy('name');
+        if (! $isSuperAdmin && $currentUser) {
+            $crmLeadsQuery->where(function ($q) use ($currentUser) {
+                $q->where('owner_user_id', $currentUser->id)
+                    ->orWhere('assigned_to', $currentUser->id);
+            });
+        }
+        $crmLeads = $crmLeadsQuery->get(['id', 'name', 'mobile', 'email', 'profession_or_business', 'location']);
 
         $packages = [
             ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'National Package (120,000/-) - 100 BV'],

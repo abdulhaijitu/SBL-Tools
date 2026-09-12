@@ -23,10 +23,20 @@
        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium {{ request()->routeIs('leads.*', 'tasks.*', 'presentations.*', 'members.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
         <x-ui-icon name="users" />
         <span>Leads</span>
+        <span data-en="Leads" data-bn="লিডস">Leads</span>
     </a>
     @endcan
 
     <!-- 3. SBL Marketing Tools Section -->
+    <!-- 3. Team Explorer (User's Own Tool) -->
+    <a href="{{ route('team.index') }}" 
+       @if(request()->routeIs('team.*', 'binary.*')) aria-current="page" @endif 
+       class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+        <span class="text-base">👥</span>
+        <span data-en="Team Explorer" data-bn="টিম এক্সপ্লোরার">Team Explorer</span>
+    </a>
+
+    <!-- 4. SBL Marketing Tools Section -->
     <div class="pt-4 pb-1">
         <a href="{{ route('packages.index') }}" class="px-3 py-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase text-orange-400 hover:text-orange-300 transition-colors">
             <span>SBL Marketing Tools</span>
@@ -87,6 +97,12 @@
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
                 <span class="text-sm">👥</span>
                 <span>Team Explorer</span>
+            <!-- SBL Contact (In SBL Marketing Tools group) -->
+            <a href="{{ route('contacts.index') }}" 
+               @if(request()->routeIs('contacts.*')) aria-current="page" @endif
+               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('contacts.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+                <span class="text-sm">📞</span>
+                <span data-en="SBL Contact" data-bn="এসবিএল কন্টাক্ট">SBL Contact</span>
             </a>
 
             <!-- Business Glossary -->

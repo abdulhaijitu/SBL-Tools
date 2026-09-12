@@ -17,11 +17,23 @@ class ReportController extends Controller
 {
     public function index(Request $request): View
     {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $isSuperAdmin = $user && $user->isSuperAdmin();
+
         $period = $request->query('period', 'all'); // 'today', 'week', 'month', 'all'
 
         $leadQuery = Lead::query();
         $activityQuery = Activity::query();
         $taskQuery = Task::query();
+
+        if (! $isSuperAdmin && $user) {
+            $leadQuery->where(function ($q) use ($user) {
+                $q->where('owner_user_id', $user->id)
+                    ->orWhere('assigned_to', $user->id);
+            });
+            $activityQuery->where('user_id', $user->id);
+            $taskQuery->where('user_id', $user->id);
+        }
 
         if ($period === 'today') {
             $leadQuery->whereDate('created_at', Carbon::today());
@@ -64,6 +76,7 @@ class ReportController extends Controller
         $periodLeadIds = (clone $leadQuery)->select('leads.id');
         $sources = LeadSource::withCount([
             'leads' => fn ($q) => $q->whereIn('leads.id', clone $periodLeadIds),
+            'leads' => fn($q) => $q->whereIn('leads.id', clone $periodLeadIds),
             'leads as converted_count' => function ($q) use ($periodLeadIds) {
                 $q->whereIn('leads.id', clone $periodLeadIds)->where('stage', LeadStage::CONVERTED->value);
             },
@@ -86,6 +99,9 @@ class ReportController extends Controller
         })->sortByDesc('total_leads');
 
         $presentationQuery = Presentation::query();
+        if (! $isSuperAdmin && $user) {
+            $presentationQuery->where('user_id', $user->id);
+        }
         if ($period === 'today') $presentationQuery->whereDate('date_time', Carbon::today());
         elseif ($period === 'week') $presentationQuery->whereBetween('date_time', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()]);
         elseif ($period === 'month') $presentationQuery->whereBetween('date_time', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()]);

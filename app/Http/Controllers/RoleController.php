@@ -21,12 +21,8 @@ class RoleController extends Controller
             ->orderBy('id')
             ->get();
 
-        $permissions = Permission::orderBy('module')->orderBy('name')->get();
         $permissions = Permission::with('roles')->orderBy('module')->orderBy('name')->get();
         $allPermissionsCount = $permissions->count();
-
-        return view('roles.index', compact('roles', 'allPermissionsCount', 'permissions'));
-        // Group permissions by module for in-page permissions editor
         $modules = $permissions->groupBy('module');
 
         return view('roles.index', compact('roles', 'allPermissionsCount', 'permissions', 'modules'));
@@ -132,7 +128,6 @@ class RoleController extends Controller
 
         if ($role->users()->count() > 0) {
             return redirect()->route('roles.index')->with('error', "Cannot delete role '{$role->name}' because it is assigned to {$role->users()->count()} member(s). Reassign them first.");
-            return redirect()->route('roles.index')->with('error', "Cannot delete role '{$role->name}' because it is assigned to {$role->users()->count()} user(s). Reassign them first.");
         }
 
         $roleName = $role->name;

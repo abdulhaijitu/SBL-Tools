@@ -63,68 +63,34 @@ class RoleAndPermissionSeeder extends Seeder
             );
         }
 
-        // 2. Define System Roles
+        // 2. Define System Roles (Exactly 3 Roles: Super Admin, Member, Demo)
         $roles = [
-            'member' => [
-                'name' => 'Members',
-                'description' => 'Member access, configured through the permissions editor.',
-                'is_system' => true,
-                'permissions' => [],
-            ],
-            'demo-member' => [
-                'name' => 'Demo Members',
-                'description' => 'Demo member access, configured through the permissions editor.',
-                'is_system' => true,
-                'permissions' => [],
-            ],
             'super-admin' => [
                 'name' => 'Super Admin',
                 'description' => 'Unrestricted access to all tools, settings, users, and data across the system.',
                 'is_system' => true,
                 'permissions' => array_keys($permissionModels), // ALL permissions
             ],
-            'sales-manager' => [
-                'name' => 'Sales Manager',
-                'description' => 'Supervises lead pipelines, assigns leads, delegates tasks, and views analytics.',
+            'member' => [
+                'name' => 'Member',
+                'description' => 'Standard member access to personal leads, tasks, presentations, toolkit, and team management.',
                 'is_system' => true,
                 'permissions' => [
-                    'leads.view', 'leads.create', 'leads.edit', 'leads.delete', 'leads.assign', 'leads.convert',
+                    'leads.view', 'leads.create', 'leads.edit', 'leads.delete', 'leads.convert',
                     'tasks.view', 'tasks.manage', 'tasks.delete',
                     'presentations.view', 'presentations.manage',
                     'marketing.view',
-                    'reports.view', 'reports.export',
-                    'toolkit.view',
-                    'users.view',
-                ],
-            ],
-            'sales-agent' => [
-                'name' => 'Sales Executive',
-                'description' => 'Manages personal lead assignments, follow-ups, presentations, and client conversion.',
-                'is_system' => true,
-                'permissions' => [
-                    'leads.view', 'leads.create', 'leads.edit', 'leads.convert',
-                    'tasks.view', 'tasks.manage',
-                    'presentations.view', 'presentations.manage',
-                    'toolkit.view',
-                ],
-            ],
-            'marketing-officer' => [
-                'name' => 'Marketing Specialist',
-                'description' => 'Coordinates social media campaigns, manages content calendar, and evaluates lead channels.',
-                'is_system' => true,
-                'permissions' => [
-                    'marketing.view', 'marketing.manage',
                     'reports.view',
                     'toolkit.view',
-                    'leads.view',
                 ],
             ],
-            'viewer' => [
-                'name' => 'Viewer / Auditor',
-                'description' => 'Read-only visibility for reporting, monitoring, and compliance reviews.',
+            'demo' => [
+                'name' => 'Demo',
+                'description' => 'Demo account access for prospective members.',
                 'is_system' => true,
                 'permissions' => [
                     'leads.view',
+                    'marketing.view',
                     'reports.view',
                     'toolkit.view',
                 ],
@@ -180,22 +146,22 @@ class RoleAndPermissionSeeder extends Seeder
                 'name' => 'Rahim Chowdhury',
                 'email' => 'manager@sbl.test',
                 'phone' => '01711223344',
-                'designation' => 'Head of Sales',
-                'role' => 'sales-manager',
+                'designation' => 'Team Leader',
+                'role' => 'member',
             ],
             [
                 'name' => 'Karim Hasan',
                 'email' => 'agent@sbl.test',
                 'phone' => '01811223344',
-                'designation' => 'Senior Sales Executive',
-                'role' => 'sales-agent',
+                'designation' => 'Executive Member',
+                'role' => 'member',
             ],
             [
                 'name' => 'Nusrat Jahan',
                 'email' => 'marketing@sbl.test',
                 'phone' => '01911223344',
-                'designation' => 'Growth Marketing Lead',
-                'role' => 'marketing-officer',
+                'designation' => 'Prospective Member',
+                'role' => 'demo',
             ],
         ];
 

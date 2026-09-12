@@ -30,17 +30,27 @@ class BinaryTeamTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Team Explorer');
-        $response->assertSee('Md. Abdul Hai');
-        $response->assertSee('Md. Samim');
-        $response->assertSee('Tahmina Akter');
-        $response->assertSee('Khaled Saifulla');
+        $response->assertSee($this->admin->name);
     }
 
     public function test_visual_tree_preserves_nested_descendants_and_their_ids(): void
     {
+        $root = BinaryNode::whereNull('parent_id')->first();
+        $child = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
+            'user_id' => $this->admin->id,
+            'parent_id' => $root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Child Node',
+            'member_code' => 'CHILD01',
+            'phone' => '01711000001',
+            'is_active' => true,
+        ]);
+
         $tree = app(\App\Services\BinaryTreeService::class)->getVisualTree(null, $this->admin->id, 2);
-        $root = $tree['tree'];
-        $children = array_merge($root['left_slots'], $root['right_slots']);
+        $rootData = $tree['tree'];
+        $children = array_merge($rootData['left_slots'], $rootData['right_slots']);
         $nested = collect($children)->first(fn($node) => empty($node['is_vacant']) && isset($node['left_slots']));
 
         $this->assertNotNull($nested, 'The recursive tree must not be overwritten by flat direct slots.');
@@ -51,15 +61,15 @@ class BinaryTeamTest extends TestCase
 
     public function test_admin_can_place_new_member_in_vacant_slot(): void
     {
-        $khaled = BinaryNode::where('member_code', '@khaledsaifulla')->first();
-        $this->assertNotNull($khaled);
+        $root = BinaryNode::whereNull('parent_id')->first();
+        $this->assertNotNull($root);
 
-        // Right Slot 2 under Khaled is vacant
+        // Right Slot 2 under Root is vacant
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'member_name' => 'Belal Hossain',
             'phone' => '01799887766',
             'email' => 'belal@sbl.test',
-            'parent_id' => $khaled->id,
+            'parent_id' => $root->id,
             'branch' => 'RIGHT',
             'slot_number' => 2,
             'package_name' => 'International 550k',
@@ -69,23 +79,36 @@ class BinaryTeamTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('binary_nodes', [
             'member_name' => 'Belal Hossain',
-            'parent_id' => $khaled->id,
+            'parent_id' => $root->id,
             'branch' => 'RIGHT',
             'slot_number' => 2,
             'point_value' => 500.00,
         ]);
 
         // Verify volume propagated to parent
-        $freshKhaled = $khaled->fresh();
-        $this->assertEquals(1, $freshKhaled->right_count);
-        $this->assertEquals(500.00, (float)$freshKhaled->right_bv);
+        $freshRoot = $root->fresh();
+        $this->assertEquals(1, $freshRoot->right_count);
+        $this->assertEquals(500.00, (float)$freshRoot->right_bv);
     }
 
     public function test_cannot_place_member_in_already_occupied_slot(): void
     {
         $root = BinaryNode::whereNull('parent_id')->first();
 
-        // Left Slot-1 of root is already occupied by Tahmina Akter
+        // Place a member in Left Slot-1
+        BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
+            'user_id' => $this->admin->id,
+            'parent_id' => $root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Existing Member',
+            'member_code' => 'EXIST01',
+            'phone' => '01711000002',
+            'is_active' => true,
+        ]);
+
+        // Attempt duplicate placement in same slot
         $response = $this->actingAs($this->admin)->post(route('binary.store'), [
             'member_name' => 'Duplicate Placement',
             'parent_id' => $root->id,
@@ -100,19 +123,51 @@ class BinaryTeamTest extends TestCase
 
     public function test_viewing_member_tree_makes_them_temporary_root_and_breadcrumbs_work(): void
     {
-        $tahmina = BinaryNode::where('member_code', '@taminaakter')->first();
-        $this->assertNotNull($tahmina);
+        $root = BinaryNode::whereNull('parent_id')->first();
+        $tahmina = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
+            'user_id' => $this->admin->id,
+            'parent_id' => $root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Tahmina Akter',
+            'member_code' => '@taminaakter',
+            'phone' => '01711000003',
+            'is_active' => true,
+        ]);
+        $zobayer = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
+            'user_id' => $this->admin->id,
+            'parent_id' => $tahmina->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Md. Zobayer Abdullah',
+            'member_code' => '@zobayerabdullah',
+            'phone' => '01711000004',
+            'is_active' => true,
+        ]);
 
         $response = $this->actingAs($this->admin)->get(route('team.show', ['memberId' => $tahmina->id]));
         $response->assertOk();
         $response->assertSee('Tahmina Akter');
-        $response->assertSee('Md. Abdul Hai');
+        $response->assertSee($root->member_name);
         $response->assertSee('Md. Zobayer Abdullah');
     }
 
     public function test_binary_search_redirects_to_focused_member(): void
     {
-        $target = BinaryNode::where('member_code', '@zobayerabdullah')->first();
+        $root = BinaryNode::whereNull('parent_id')->first();
+        $target = BinaryNode::create([
+            'tree_owner_id' => $this->admin->id,
+            'user_id' => $this->admin->id,
+            'parent_id' => $root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Md. Zobayer Abdullah',
+            'member_code' => '@zobayerabdullah',
+            'phone' => '01711000005',
+            'is_active' => true,
+        ]);
 
         $response = $this->actingAs($this->admin)->get(route('team.search', ['search' => '@zobayerabdullah']));
 

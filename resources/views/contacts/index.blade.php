@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('page-title', 'Contact & Support')
+@section('page-title', 'SBL Contact')
 @section('page-subtitle', 'Find the right SBL support contact and connect instantly via Phone or WhatsApp.')
 
 @section('content')
@@ -19,6 +20,9 @@
                     data-en="Contact & Support"
                     data-bn="কন্টাক্ট ও সাপোর্ট">
                     Contact & Support
+                    data-en="SBL Contact"
+                    data-bn="এসবিএল কন্টাক্ট">
+                    SBL Contact
                 </h1>
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

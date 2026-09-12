@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\{TaskType, TaskPriority, TaskStatus};
-
 use App\Models\{BinaryNode, Lead, LeadSource, Role, Task, User};
 use App\Services\BinaryTreeService;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -28,9 +27,9 @@ class ApplicationSecurityTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
     }
 
-    public function test_member_cannot_access_administration_or_mutate_crm(): void
+    public function test_demo_cannot_access_administration_or_mutate_crm(): void
     {
-        $user = $this->userWithRole('member');
+        $user = $this->userWithRole('demo');
         $this->actingAs($user)->get('/users')->assertForbidden();
         $this->get('/roles')->assertForbidden();
         $this->post('/leads', [])->assertForbidden();
@@ -39,16 +38,16 @@ class ApplicationSecurityTest extends TestCase
 
     public function test_agent_cannot_read_or_change_another_workspace(): void
     {
-        $owner = $this->userWithRole('sales-agent');
-        $other = $this->userWithRole('sales-agent');
+        $owner = $this->userWithRole('member');
+        $other = $this->userWithRole('member');
         $source = LeadSource::create(['name' => 'Referral', 'is_active' => true]);
         $lead = Lead::create(['name' => 'Private prospect', 'mobile' => '01800000001', 'owner_user_id' => $owner->id, 'lead_source_id' => $source->id, 'stage' => 'new', 'temperature' => 'warm']);
         $root = app(BinaryTreeService::class)->ensureUserRoot($owner);
         $this->actingAs($other)->get('/leads')->assertOk()->assertDontSee('Private prospect');
-        $this->get('/leads/'.$lead->id)->assertNotFound();
-        $this->patch('/leads/'.$lead->id.'/stage', ['stage' => 'converted'])->assertNotFound();
-        $this->get('/team/'.$root->id)->assertNotFound();
-        $this->get('/team/'.$root->id.'/credentials')->assertNotFound();
+        $this->get('/leads/' . $lead->id)->assertNotFound();
+        $this->patch('/leads/' . $lead->id . '/stage', ['stage' => 'converted'])->assertNotFound();
+        $this->get('/team/' . $root->id)->assertNotFound();
+        $this->get('/team/' . $root->id . '/credentials')->assertNotFound();
         $this->post('/tasks', ['title' => 'Private task', 'type' => TaskType::FOLLOW_UP->value, 'priority' => TaskPriority::HIGH->value, 'due_at' => now()->addDay()->toDateTimeString(), 'related_lead_id' => $lead->id])->assertNotFound();
     }
 
@@ -62,7 +61,7 @@ class ApplicationSecurityTest extends TestCase
         $this->assertNotSame('8372', $raw->tpin);
         $this->assertArrayNotHasKey('password_plain', $root->toArray());
         $this->actingAs($user)->get('/team')->assertOk()->assertDontSee('private-test-secret');
-        $this->getJson('/team/'.$root->id.'/credentials')->assertOk()->assertJson(['password_plain' => 'private-test-secret', 'tpin' => '8372'])->assertHeader('Cache-Control', 'no-store, private');
+        $this->getJson('/team/' . $root->id . '/credentials')->assertOk()->assertJson(['password_plain' => 'private-test-secret', 'tpin' => '8372'])->assertHeader('Cache-Control', 'no-store, private');
     }
 
     public function test_inactive_users_cannot_sign_in_or_use_an_existing_session(): void
@@ -75,21 +74,21 @@ class ApplicationSecurityTest extends TestCase
 
     public function test_invalid_task_enums_return_validation_errors(): void
     {
-        $this->actingAs($this->userWithRole('sales-agent'))->postJson('/tasks', ['title' => 'Invalid task', 'type' => 'bogus', 'priority' => 'bogus', 'due_at' => now()->toDateTimeString()])->assertUnprocessable()->assertJsonValidationErrors(['type', 'priority']);
+        $this->actingAs($this->userWithRole('member'))->postJson('/tasks', ['title' => 'Invalid task', 'type' => 'bogus', 'priority' => 'bogus', 'due_at' => now()->toDateTimeString()])->assertUnprocessable()->assertJsonValidationErrors(['type', 'priority']);
         $this->assertDatabaseCount('tasks', 0);
     }
 
     public function test_members_route_keeps_converted_filter_when_searching(): void
     {
-        $user = $this->userWithRole('sales-agent');
+        $user = $this->userWithRole('member');
         $source = LeadSource::create(['name' => 'Referral', 'is_active' => true]);
-        foreach (['new', 'converted'] as $stage) Lead::create(['name' => 'Prospect '.$stage, 'mobile' => '01800000001', 'owner_user_id' => $user->id, 'lead_source_id' => $source->id, 'stage' => $stage, 'temperature' => 'warm']);
+        foreach (['new', 'converted'] as $stage) Lead::create(['name' => 'Prospect ' . $stage, 'mobile' => '01800000001', 'owner_user_id' => $user->id, 'lead_source_id' => $source->id, 'stage' => $stage, 'temperature' => 'warm']);
         $this->actingAs($user)->get('/members?search=Prospect&stage=new&view=kanban')->assertOk()->assertSee('Prospect converted')->assertDontSee('Prospect new');
     }
 
     public function test_delegated_manager_cannot_grant_super_admin(): void
     {
-        $user = $this->userWithRole('sales-manager');
+        $user = $this->userWithRole('member');
         $permission = \App\Models\Permission::where('slug', 'users.manage')->firstOrFail();
         $user->directPermissions()->attach($permission, ['type' => 'grant']);
         $this->actingAs($user)->post('/users', ['name' => 'Escalated', 'email' => 'escalated@example.test', 'password' => 'password123', 'role_id' => Role::where('slug', 'super-admin')->value('id')])->assertForbidden();
@@ -106,13 +105,13 @@ class ApplicationSecurityTest extends TestCase
 
     public function test_repeated_completion_creates_only_one_followup(): void
     {
-        $user = $this->userWithRole('sales-agent');
+        $user = $this->userWithRole('member');
         $source = LeadSource::create(['name' => 'Referral', 'is_active' => true]);
         $lead = Lead::create(['name' => 'Prospect', 'mobile' => '01800000001', 'owner_user_id' => $user->id, 'lead_source_id' => $source->id, 'stage' => 'new', 'temperature' => 'warm']);
         $task = Task::create(['title' => 'Call', 'type' => TaskType::FOLLOW_UP->value, 'priority' => TaskPriority::HIGH->value, 'status' => TaskStatus::PENDING->value, 'due_at' => now(), 'user_id' => $user->id, 'related_lead_id' => $lead->id]);
         $data = ['outcome' => 'Discussed package', 'next_action' => 'Call back', 'next_action_at' => now()->addDay()->toDateTimeString()];
-        $this->actingAs($user)->post('/tasks/'.$task->id.'/complete', $data)->assertRedirect();
-        $this->post('/tasks/'.$task->id.'/complete', $data)->assertRedirect();
+        $this->actingAs($user)->post('/tasks/' . $task->id . '/complete', $data)->assertRedirect();
+        $this->post('/tasks/' . $task->id . '/complete', $data)->assertRedirect();
         $this->assertDatabaseCount('tasks', 2);
     }
 
@@ -121,7 +120,7 @@ class ApplicationSecurityTest extends TestCase
         $admin = User::where('email', 'admin@sbl.test')->firstOrFail();
         $source = LeadSource::create(['name' => 'Referral', 'is_active' => true]);
         foreach ([now(), now()->subMonths(2)] as $created) Lead::forceCreate(['name' => 'Prospect', 'mobile' => '01800000001', 'owner_user_id' => $admin->id, 'lead_source_id' => $source->id, 'stage' => 'converted', 'temperature' => 'warm', 'created_at' => $created]);
-        $this->actingAs($admin)->get('/reports?period=today')->assertOk()->assertViewHas('totalLeads', 1)->assertViewHas('sources', fn ($sources) => $sources->first()['total_leads'] === 1);
+        $this->actingAs($admin)->get('/reports?period=today')->assertOk()->assertViewHas('totalLeads', 1)->assertViewHas('sources', fn($sources) => $sources->first()['total_leads'] === 1);
     }
 
     public function test_custom_role_cannot_claim_the_reserved_admin_slug(): void

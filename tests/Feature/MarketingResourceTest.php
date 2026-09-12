@@ -26,7 +26,7 @@ class MarketingResourceTest extends TestCase
         $this->superAdmin->assignRole('super-admin');
 
         $this->regularUser = User::factory()->create();
-        $this->regularUser->assignRole('sales-agent');
+        $this->regularUser->assignRole('member');
     }
 
     public function test_user_can_view_resources_tab(): void
@@ -185,7 +185,7 @@ class MarketingResourceTest extends TestCase
 
         // 2. Isolation against other user's tree
         $otherUser = User::factory()->create();
-        $otherUser->assignRole('sales-agent');
+        $otherUser->assignRole('member');
 
         $otherRoot = BinaryNode::create([
             'member_name' => 'Other Root',

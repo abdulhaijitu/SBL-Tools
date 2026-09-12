@@ -30,6 +30,7 @@ class SblContactTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Contact & Support');
+        $response->assertSee('SBL Contact');
         $response->assertSee('Customer Care & Support Cell');
         $response->assertSee('01700000000');
         $response->assertSee(':href="\'tel:\' + getCleanPhone(contact)"', false);

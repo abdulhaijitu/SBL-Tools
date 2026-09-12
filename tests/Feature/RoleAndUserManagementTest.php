@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Lead;
 use App\Models\Permission;
 use App\Models\Role;
-use App\Models\Task;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,8 +15,8 @@ class RoleAndUserManagementTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
-    protected Role $managerRole;
-    protected Role $agentRole;
+    protected Role $memberRole;
+    protected Role $demoRole;
 
     protected function setUp(): void
     {
@@ -25,8 +24,8 @@ class RoleAndUserManagementTest extends TestCase
         $this->seed(RoleAndPermissionSeeder::class);
 
         $this->admin = User::where('email', 'admin@sbl.test')->first();
-        $this->managerRole = Role::where('slug', 'sales-manager')->first();
-        $this->agentRole = Role::where('slug', 'sales-agent')->first();
+        $this->memberRole = Role::where('slug', 'member')->first();
+        $this->demoRole = Role::where('slug', 'demo')->first();
     }
 
     public function test_super_admin_can_view_users_list(): void
@@ -47,7 +46,7 @@ class RoleAndUserManagementTest extends TestCase
             'email' => 'tanvir@sbl.test',
             'phone' => '01799887766',
             'designation' => 'Junior Sales Executive',
-            'role_id' => $this->agentRole->id,
+            'role_id' => $this->memberRole->id,
             'password' => 'secret123',
         ]);
 
@@ -55,7 +54,7 @@ class RoleAndUserManagementTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'tanvir@sbl.test']);
 
         $user = User::where('email', 'tanvir@sbl.test')->first();
-        $this->assertTrue($user->hasRole('sales-agent'));
+        $this->assertTrue($user->hasRole('member'));
         $this->assertFalse($user->hasRole('super-admin'));
     }
 
@@ -66,7 +65,7 @@ class RoleAndUserManagementTest extends TestCase
             'email' => 'phoneuser@sbl.test',
             'phone' => '+8801755112233',
             'designation' => 'Sales Intern',
-            'role_id' => $this->agentRole->id,
+            'role_id' => $this->memberRole->id,
             'password' => 'secret123',
         ]);
 
@@ -78,21 +77,21 @@ class RoleAndUserManagementTest extends TestCase
 
     public function test_super_admin_can_update_team_member(): void
     {
-        $user = User::where('email', 'agent@sbl.test')->first();
+        $user = User::where('email', 'agent@sbl.test')->first() ?? User::factory()->create(['email' => 'agent@sbl.test']);
 
         $response = $this->actingAs($this->admin)->put(route('users.update', $user), [
             'name' => 'Karim Hasan Promoted',
             'email' => 'agent@sbl.test',
             'phone' => '01811223344',
             'designation' => 'Assistant Sales Manager',
-            'role_id' => $this->managerRole->id,
+            'role_id' => $this->memberRole->id,
             'status' => 'active',
         ]);
 
         $response->assertRedirect(route('users.index'));
         $user->refresh();
         $this->assertEquals('Karim Hasan Promoted', $user->name);
-        $this->assertTrue($user->hasRole('sales-manager'));
+        $this->assertTrue($user->hasRole('member'));
     }
 
     public function test_admin_cannot_delete_own_account(): void
@@ -105,7 +104,7 @@ class RoleAndUserManagementTest extends TestCase
 
     public function test_user_with_leads_or_tasks_cannot_be_deleted_without_force_delete(): void
     {
-        $user = User::where('email', 'agent@sbl.test')->first();
+        $user = User::where('email', 'agent@sbl.test')->first() ?? User::factory()->create(['email' => 'agent@sbl.test']);
 
         $source = \App\Models\LeadSource::firstOrCreate(
             ['slug' => 'website'],
@@ -143,7 +142,7 @@ class RoleAndUserManagementTest extends TestCase
         $response->assertSee('Roles & Permissions');
         $response->assertSee('Control what each role can view, create, edit and manage.');
 
-        $editResponse = $this->actingAs($this->admin)->get(route('roles.edit', $this->agentRole));
+        $editResponse = $this->actingAs($this->admin)->get(route('roles.edit', $this->memberRole));
         $editResponse->assertOk();
         $editResponse->assertSee('Module Permissions Matrix');
     }
@@ -153,7 +152,7 @@ class RoleAndUserManagementTest extends TestCase
         $response = $this->actingAs($this->admin)->post(route('roles.store'), [
             'name' => 'Field Sales Assistant',
             'description' => 'Assists agents in field operations',
-            'copy_role_id' => $this->agentRole->id,
+            'copy_role_id' => $this->memberRole->id,
         ]);
 
         $response->assertRedirect(route('roles.index'));
@@ -161,15 +160,15 @@ class RoleAndUserManagementTest extends TestCase
 
         $newRole = Role::where('name', 'Field Sales Assistant')->first();
         $this->assertFalse((bool) $newRole->is_system);
-        $this->assertEquals($this->agentRole->permissions()->count(), $newRole->permissions()->count());
+        $this->assertEquals($this->memberRole->permissions()->count(), $newRole->permissions()->count());
         $this->assertTrue($newRole->hasPermission('leads.view'));
     }
 
     public function test_system_role_cannot_be_deleted(): void
     {
-        $response = $this->actingAs($this->admin)->delete(route('roles.destroy', $this->agentRole));
+        $response = $this->actingAs($this->admin)->delete(route('roles.destroy', $this->memberRole));
         $response->assertRedirect(route('roles.index'));
-        $this->assertDatabaseHas('roles', ['id' => $this->agentRole->id]);
+        $this->assertDatabaseHas('roles', ['id' => $this->memberRole->id]);
     }
 
     public function test_custom_role_assigned_to_user_cannot_be_deleted(): void
