@@ -171,9 +171,14 @@ class LeadsCrudTest extends TestCase
         $response = $this->actingAs($this->user)->put(route('leads.update', $lead->id), [
             'name' => 'Shakil Ahmed Updated',
             'mobile' => '01511223344',
+            'whatsapp' => '01511223344',
+            'email' => 'shakil@example.com',
+            'photo' => 'data:image/jpeg;base64,/9j/4AAQSkZJRg...',
             'lead_source_id' => $this->source->id,
             'stage' => LeadStage::INTERESTED->value,
+            'interest_types' => ['Invest'],
             'location' => 'Chattogram',
+            'profession_or_business' => 'Software Engineer',
             'notes' => 'Confirmed interest in affiliate and dropshipping.',
         ]);
 
@@ -181,6 +186,7 @@ class LeadsCrudTest extends TestCase
         $this->assertEquals('Shakil Ahmed Updated', $lead->fresh()->name);
         $this->assertEquals(LeadStage::INTERESTED, $lead->fresh()->stage);
         $this->assertEquals('Chattogram', $lead->fresh()->location);
+        $this->assertEquals('data:image/jpeg;base64,/9j/4AAQSkZJRg...', $lead->fresh()->photo);
     }
 
     public function test_user_can_delete_lead(): void
