@@ -53,6 +53,22 @@ class SblGrowthManagerTest extends TestCase
         $response->assertSee('Total Presentations');
     }
 
+    public function test_member_role_user_can_view_dashboard(): void
+    {
+        $memberUser = User::factory()->create([
+            'email' => 'member@sbl.test',
+            'name' => 'Member User',
+        ]);
+        $memberRole = \App\Models\Role::firstOrCreate(['slug' => 'member'], ['name' => 'Members', 'is_system' => false]);
+        $memberUser->roles()->attach($memberRole);
+
+        $response = $this->actingAs($memberUser)->get('/dashboard');
+
+        $response->assertStatus(200);
+        $response->assertSee('Open Team Explorer');
+        $response->assertSee('Packages & Ranks', false);
+    }
+
     public function test_user_can_create_lead_and_auto_schedule_next_action(): void
     {
         $response = $this->actingAs($this->user)->post('/leads', [

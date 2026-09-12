@@ -612,7 +612,7 @@
             <a href="{{ route('team.index') }}" class="btn-primary">
                 <span data-en="Open Team Explorer" data-bn="টিম এক্সপ্লোরার খুলুন">Open Team Explorer</span>
             </a>
-            <a href="{{ route('packages') }}" class="btn-secondary">
+            <a href="{{ route('packages.index') }}" class="btn-secondary">
                 <span data-en="Packages & Ranks" data-bn="প্যাকেজ ও র্যাংক">Packages & Ranks</span>
             </a>
         </div>
