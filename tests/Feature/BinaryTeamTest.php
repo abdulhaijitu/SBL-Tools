@@ -30,6 +30,7 @@ class BinaryTeamTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Team Explorer');
+        $response->assertSee('Team Tree');
         $response->assertSee($this->admin->name);
     }
 
@@ -191,6 +192,7 @@ class BinaryTeamTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Team Explorer');
+        $response->assertSee('Team Tree');
         $response->assertSee('Mindmap');
         $response->assertSee('Directory');
         $response->assertSee('LEFT TEAM');
@@ -207,5 +209,6 @@ class BinaryTeamTest extends TestCase
         $response->assertOk();
         $response->assertSee('mindmap-board');
         $response->assertSee('Team Explorer');
+        $response->assertSee('Team Tree');
     }
 }

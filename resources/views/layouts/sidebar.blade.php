@@ -22,18 +22,18 @@
        @if(request()->routeIs('leads.*', 'tasks.*', 'presentations.*', 'members.*')) aria-current="page" @endif 
        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium {{ request()->routeIs('leads.*', 'tasks.*', 'presentations.*', 'members.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
         <x-ui-icon name="users" />
-        <span>Leads</span>
         <span data-en="Leads" data-bn="লিডস">Leads</span>
     </a>
     @endcan
 
-    <!-- 3. SBL Marketing Tools Section -->
-    <!-- 3. Team Explorer (User's Own Tool) -->
+    <!-- 3. Team Explorer (User's Own Tool directly under Leads) -->
+    <!-- 3. Team Tree (User's Own Tool directly under Leads) -->
     <a href="{{ route('team.index') }}" 
        @if(request()->routeIs('team.*', 'binary.*')) aria-current="page" @endif 
        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
         <span class="text-base">👥</span>
         <span data-en="Team Explorer" data-bn="টিম এক্সপ্লোরার">Team Explorer</span>
+        <span data-en="Team Tree" data-bn="টিম ট্রি">Team Tree</span>
     </a>
 
     <!-- 4. SBL Marketing Tools Section -->
@@ -91,13 +91,7 @@
                 <span class="ml-auto text-[9px] bg-orange-500/30 text-orange-200 px-1.5 py-0.5 rounded-md font-bold">New</span>
             </a>
 
-            <!-- Team Explorer -->
-            <a href="{{ route('team.index') }}" 
-               @if(request()->routeIs('team.*', 'binary.*')) aria-current="page" @endif
-               class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
-                <span class="text-sm">👥</span>
-                <span>Team Explorer</span>
-            <!-- SBL Contact (In SBL Marketing Tools group) -->
+            <!-- SBL Contact (Inside SBL Marketing Tools group) -->
             <a href="{{ route('contacts.index') }}" 
                @if(request()->routeIs('contacts.*')) aria-current="page" @endif
                class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold {{ request()->routeIs('contacts.*') ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
@@ -113,16 +107,6 @@
                 <span data-en="Business Glossary" data-bn="বিজনেস গ্লসারি">Business Glossary</span>
             </a>
         </div>
-    </div>
-
-    <!-- 4. Helplines & Contacts -->
-    <div class="pt-3 pb-1">
-        <a href="{{ route('contacts.index') }}" 
-           @if(request()->routeIs('contacts.*')) aria-current="page" @endif
-           class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('contacts.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-            <x-ui-icon name="phone" />
-            <span>Contacts & Hotline</span>
-        </a>
     </div>
 
     <!-- 5. Super Admin SaaS Platform Administration -->

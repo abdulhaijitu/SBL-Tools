@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
 
         // 1. Create Admin User
         $admin = User::firstOrCreate(
+        User::firstOrCreate(
             ['email' => 'admin@sbl.test'],
             [
                 'name' => 'SBL Admin',
@@ -67,6 +68,7 @@ class DatabaseSeeder extends Seeder
         $sourceModels = [];
         foreach ($sources as $index => $sourceName) {
             $sourceModels[$sourceName] = LeadSource::firstOrCreate(
+            LeadSource::firstOrCreate(
                 ['name' => $sourceName],
                 ['order' => $index + 1, 'is_active' => true]
             );
@@ -74,6 +76,7 @@ class DatabaseSeeder extends Seeder
 
         // 3. Campaigns
         $campaign = Campaign::firstOrCreate(
+        Campaign::firstOrCreate(
             ['name' => 'Q3 E-commerce & Dropshipping Growth'],
             [
                 'platform' => 'Facebook & Reels',

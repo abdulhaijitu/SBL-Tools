@@ -2,6 +2,8 @@
 
 @section('page-title', 'Team Explorer')
 @section('page-subtitle', 'Explore your member network, branches and placements')
+@section('page-title', 'Team Tree')
+@section('page-subtitle', 'Explore your member network, tree and placements')
 
 @section('content')
 <script>
@@ -365,6 +367,8 @@ function teamExplorerData() {
             <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
                 <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Explorer" data-en="⚡ Team Explorer" data-bn="⚡ টিম এক্সপ্লোরার">
                     <span data-en="⚡ Team Explorer" data-bn="⚡ টিম এক্সপ্লোরার">⚡ Team Explorer</span>
+                <a class="px-3 py-2 rounded-lg {{ $viewMode === 'builder' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'builder', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Visual Binary Team Tree" data-en="⚡ Team Tree" data-bn="⚡ টিম ট্রি">
+                    <span data-en="⚡ Team Tree" data-bn="⚡ টিম ট্রি">⚡ Team Tree</span>
                 </a>
                 <a class="px-3 py-2 rounded-lg {{ $viewMode === 'mindmap' ? 'bg-white text-orange-700 shadow-sm' : 'text-slate-600' }}" href="{{ route('team.index', ['view' => 'mindmap', 'owner_id' => $ownerId, 'node_id' => $treeData['root']->id ?? null]) }}" title="Mindmap Canvas Tree" data-en="🗺️ Mindmap" data-bn="🗺️ মাইন্ডম্যাপ">
                     <span data-en="🗺️ Mindmap" data-bn="🗺️ মাইন্ডম্যাপ">🗺️ Mindmap</span>
