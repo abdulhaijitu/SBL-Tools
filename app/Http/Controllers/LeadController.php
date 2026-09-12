@@ -43,7 +43,8 @@ class LeadController extends Controller
                     ->orWhere('mobile', 'like', "%{$search}%")
                     ->orWhere('whatsapp', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('location', 'like', "%{$search}%");
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('profession_or_business', 'like', "%{$search}%");
             });
         }
 
@@ -129,7 +130,7 @@ class LeadController extends Controller
             'facebook_url' => 'nullable|string|max:255',
             'location' => 'nullable|string|max:255',
             'profession_or_business' => 'nullable|string|max:255',
-            'lead_source_id' => 'required|integer',
+            'lead_source_id' => 'nullable|integer',
             'lead_source_detail' => 'nullable|string|max:255',
             'interest_types' => 'nullable|array',
             'lead_tag' => 'nullable|string|max:20',
@@ -155,9 +156,13 @@ class LeadController extends Controller
 
         DB::transaction(function () use ($validated, $request, &$lead) {
             $stage = ! empty($validated['stage']) ? (LeadStage::tryFrom($validated['stage']) ?? LeadStage::NEW) : LeadStage::NEW;
+            $sourceId = ! empty($validated['lead_source_id']) 
+                ? (int)$validated['lead_source_id'] 
+                : (LeadSource::where('is_active', true)->orderBy('order')->first()?->id ?? 1);
 
             $lead = new Lead();
             $lead->fill($validated);
+            $lead->lead_source_id = $sourceId;
             $lead->stage = $stage;
             $lead->owner_user_id = Auth::id() ?: 1;
             $lead->interest_types = $validated['interest_types'] ?? [];
@@ -231,7 +236,15 @@ class LeadController extends Controller
      */
     public function show(Lead $lead): View
     {
-        $lead->load(['source', 'owner', 'interests', 'activities.user', 'tasks', 'presentations']);
+        $lead->load([
+            'source',
+            'owner',
+            'interests',
+            'activities' => fn ($q) => $q->orderBy('performed_at', 'desc'),
+            'activities.user',
+            'tasks' => fn ($q) => $q->orderBy('due_at', 'desc'),
+            'presentations' => fn ($q) => $q->orderBy('date_time', 'desc'),
+        ]);
         $sources = LeadSource::where('is_active', true)->orderBy('order')->get();
         if ($sources->isEmpty()) {
             $sources = LeadSource::orderBy('id')->get();
