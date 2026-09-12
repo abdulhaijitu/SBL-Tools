@@ -583,164 +583,239 @@ class SblToolkitController extends Controller
     public function getCounselingConfig(): array
     {
         return [
-            'steps' => [
-                ['id' => 'discover', 'num' => 1, 'name' => 'Discover', 'name_bn' => 'আবিষ্কার', 'desc' => 'Ask 5 questions to understand their need', 'desc_bn' => 'প্রয়োজন বুঝতে ৫টি প্রশ্ন করুন'],
-                ['id' => 'identify', 'num' => 2, 'name' => 'Identify', 'name_bn' => 'শনাক্তকরণ', 'desc' => 'Categorize as Investor, Networker, or Hybrid', 'desc_bn' => 'ইনভেস্টর, নেটওয়ার্কার বা হাইব্রিড শনাক্ত করুন'],
-                ['id' => 'explain', 'num' => 3, 'name' => 'Explain', 'name_bn' => 'উপস্থাপন', 'desc' => 'Share only relevant opportunities and safe facts', 'desc_bn' => 'শুধুমাত্র প্রাসঙ্গিক সুযোগ তুলে ধরুন'],
-                ['id' => 'show', 'num' => 4, 'name' => 'Show', 'name_bn' => 'প্রমাণ ও ক্যালকুলেটর', 'desc' => 'Present verified packages, ranks, or calculators', 'desc_bn' => 'যাচাইকৃত প্যাকেজ, র‍্যাংক বা সিমুলেটর দেখান'],
-                ['id' => 'ask', 'num' => 5, 'name' => 'Ask', 'name_bn' => 'সিদ্ধান্ত', 'desc' => 'Gauge interest level & temperature', 'desc_bn' => 'আগ্রহ ও সিদ্ধান্ত গ্রহণের সময় নির্ধারণ করুন'],
-                ['id' => 'followup', 'num' => 6, 'name' => 'Follow Up', 'name_bn' => 'ফলোআপ', 'desc' => 'Save lead & schedule next consultation', 'desc_bn' => 'লিড হিসেবে সংরক্ষণ ও পরবর্তী তারিখ ঠিক করুন'],
-            ],
-            'prospectChips' => [
-                ['id' => 'capital_return', 'label_en' => 'Capital Return', 'label_bn' => 'ক্যাপিটাল রিটার্ন', 'affinity' => 'investor'],
-                ['id' => 'extra_income', 'label_en' => 'Extra Income', 'label_bn' => 'অতিরিক্ত আয়', 'affinity' => 'networker'],
-                ['id' => 'business', 'label_en' => 'Business', 'label_bn' => 'ব্যবসা', 'affinity' => 'hybrid'],
-                ['id' => 'team_building', 'label_en' => 'Team Building', 'label_bn' => 'টিম বিল্ডিং', 'affinity' => 'networker'],
-                ['id' => 'product_sales', 'label_en' => 'Product Sales', 'label_bn' => 'প্রোডাক্ট সেলস', 'affinity' => 'hybrid'],
-                ['id' => 'not_sure', 'label_en' => 'Not Sure', 'label_bn' => 'নিশ্চিত নন', 'affinity' => 'discover'],
-            ],
             'discoveryQuestions' => [
                 [
                     'id' => 'goal',
-                    'q_en' => '1. What is your primary goal?',
-                    'q_bn' => '১. আপনার মূল লক্ষ্য কোনটি?',
+                    'q_en' => 'What is your primary goal?',
+                    'q_bn' => 'আপনার প্রাথমিক বা মূল লক্ষ্য কোনটি?',
                     'options' => [
-                        ['id' => 'investor_goal', 'label_en' => 'Capital Return & Dropshipping', 'label_bn' => 'ক্যাপিটাল রিটার্ন ও ড্রপশিপিং', 'affinity' => 'investor'],
-                        ['id' => 'networker_goal', 'label_en' => 'Active Business & Team Rewards', 'label_bn' => 'সক্রিয় ব্যবসা ও টিম রিওয়ার্ড', 'affinity' => 'networker'],
-                        ['id' => 'hybrid_goal', 'label_en' => 'Both Capital & Affiliate Income', 'label_bn' => 'উভয় সুবিধা (ক্যাপিটাল ও অ্যাফিলিয়েট)', 'affinity' => 'hybrid'],
+                        ['id' => 'capital_return', 'label_en' => 'Capital / Business Return', 'label_bn' => 'মূলধন / প্রজেক্টের রিটার্ন', 'affinity' => 'investor'],
+                        ['id' => 'extra_income', 'label_en' => 'Extra Income / Affiliate', 'label_bn' => 'অতিরিক্ত আয় / অ্যাফিলিয়েট', 'affinity' => 'networker'],
+                        ['id' => 'both', 'label_en' => 'Both (Return & Affiliate)', 'label_bn' => 'উভয় সুবিধা (রিটার্ন ও অ্যাফিলিয়েট)', 'affinity' => 'hybrid'],
                     ]
                 ],
                 [
                     'id' => 'budget',
-                    'q_en' => '2. What is your comfortable starting budget?',
-                    'q_bn' => '২. প্রাথমিকভাবে কত বাজেট দিয়ে শুরু করতে চান?',
+                    'q_en' => 'What is your comfortable starting budget?',
+                    'q_bn' => 'প্রাথমিকভাবে কোন বাজেটটি আপনার জন্য স্বাচ্ছন্দ্যদায়ক?',
                     'options' => [
-                        ['id' => 'starter_budget', 'label_en' => '৳10,000 (Starter Membership)', 'label_bn' => '১০,০০০ টাকা (স্টার্টার মেম্বারশিপ)', 'affinity' => 'networker'],
-                        ['id' => 'national_budget', 'label_en' => '৳1,20,000 (National Project)', 'label_bn' => '১,২০,০০০ টাকা (ন্যাশনাল প্রজেক্ট)', 'affinity' => 'hybrid'],
-                        ['id' => 'international_budget', 'label_en' => '৳5,50,000+ (International Store)', 'label_bn' => '৫,৫০,০০০+ টাকা (আন্তর্জাতিক প্রজেক্ট)', 'affinity' => 'investor'],
+                        ['id' => 'b_10k', 'label_en' => '৳10,000', 'label_bn' => '১০,০০০ টাকা', 'affinity' => 'networker'],
+                        ['id' => 'b_120k', 'label_en' => '৳1,20,000', 'label_bn' => '১,২০,০০০ টাকা', 'affinity' => 'hybrid'],
+                        ['id' => 'b_550k', 'label_en' => '৳5,50,000+', 'label_bn' => '৫,৫০,০০০+ টাকা', 'affinity' => 'investor'],
                     ]
                 ],
                 [
-                    'id' => 'approach',
-                    'q_en' => '3. Do you prefer an active or passive approach?',
-                    'q_bn' => '৩. আপনি নিজে Active কাজ করতে চান, নাকি তুলনামূলক Passive চান?',
+                    'id' => 'involvement',
+                    'q_en' => 'What type of involvement do you prefer?',
+                    'q_bn' => 'কাজের ক্ষেত্রে আপনি কেমন অংশগ্রহণ পছন্দ করেন?',
                     'options' => [
-                        ['id' => 'passive_app', 'label_en' => 'Automated Operations (Passive)', 'label_bn' => 'অটোমেটেড ড্রপশিপিং (প্যাসিভ)', 'affinity' => 'investor'],
-                        ['id' => 'active_app', 'label_en' => 'Active Networking & Referrals', 'label_bn' => 'সক্রিয় টিম গঠন ও রেফারেল (অ্যাক্টিভ)', 'affinity' => 'networker'],
-                        ['id' => 'hybrid_app', 'label_en' => 'Hands-on Business & Referral', 'label_bn' => 'ব্যবসায়িক অংশগ্রহণ ও রেফারেল', 'affinity' => 'hybrid'],
+                        ['id' => 'managed', 'label_en' => 'Mostly managed / low involvement', 'label_bn' => 'ম্যানেজড / স্বল্প সম্পৃক্ততা', 'affinity' => 'investor'],
+                        ['id' => 'active_net', 'label_en' => 'Active networking', 'label_bn' => 'সক্রিয় নেটওয়ার্কিং ও টিম বিল্ড', 'affinity' => 'networker'],
+                        ['id' => 'biz_net', 'label_en' => 'Business + networking', 'label_bn' => 'ব্যবসা ও নেটওয়ার্কিং উভয়ই', 'affinity' => 'hybrid'],
                     ]
                 ],
                 [
                     'id' => 'network',
-                    'q_en' => '4. Do you have an existing network or audience?',
-                    'q_bn' => '৪. আপনার কি পরিচিত নেটওয়ার্ক বা কাস্টমার বেস আছে?',
+                    'q_en' => 'Do you already have a network or audience?',
+                    'q_bn' => 'আপনার কি ইতোমধ্যে পরিচিত টিম বা অডিয়েন্স আছে?',
                     'options' => [
-                        ['id' => 'yes_net', 'label_en' => 'Yes, active network & associates', 'label_bn' => 'হ্যাঁ, পরিচিত টিম ও সার্কেল রয়েছে', 'affinity' => 'networker'],
-                        ['id' => 'mod_net', 'label_en' => 'Moderate business / social contacts', 'label_bn' => 'মাঝারি সামাজিক ও ব্যবসায়িক যোগাযোগ', 'affinity' => 'hybrid'],
-                        ['id' => 'no_net', 'label_en' => 'No, prefer automated sales', 'label_bn' => 'না, অটোমেটেড সেলস প্রেফার করি', 'affinity' => 'investor'],
+                        ['id' => 'net_yes', 'label_en' => 'Yes', 'label_bn' => 'হ্যাঁ, রেডি টিম/পরিচিতি আছে', 'affinity' => 'networker'],
+                        ['id' => 'net_some', 'label_en' => 'Some contacts', 'label_bn' => 'কিছু পরিচিত যোগাযোগ আছে', 'affinity' => 'hybrid'],
+                        ['id' => 'net_no', 'label_en' => 'Not really', 'label_bn' => 'না, তেমন পরিচিতি নেই', 'affinity' => 'investor'],
                     ]
                 ],
                 [
                     'id' => 'priority',
-                    'q_en' => '5. What is your highest financial priority?',
-                    'q_bn' => '৫. আপনার প্রধান priority কোনটি?',
+                    'q_en' => 'What is your main priority?',
+                    'q_bn' => 'আপনার প্রধান আর্থিক অগ্রাধিকার কোনটি?',
                     'options' => [
-                        ['id' => 'cap_prot', 'label_en' => 'Capital Recovery & Safety', 'label_bn' => 'মূলধন পুনরুদ্ধার ও নিরাপত্তা', 'affinity' => 'investor'],
-                        ['id' => 'cashflow_pri', 'label_en' => 'Active Cash Flow & Performance Rewards', 'label_bn' => 'দ্রুত ক্যাশ ফ্লো ও পারফরম্যান্স রিওয়ার্ড', 'affinity' => 'networker'],
-                        ['id' => 'growth_pri', 'label_en' => 'Balanced Growth & Long-term Equity', 'label_bn' => 'ভারসাম্যপূর্ণ প্রবৃদ্ধি ও দীর্ঘমেয়াদি বিজনেস', 'affinity' => 'hybrid'],
+                        ['id' => 'pri_safety', 'label_en' => 'Capital recovery / safety', 'label_bn' => 'মূলধন পুনরুদ্ধার ও নিরাপত্তা', 'affinity' => 'investor'],
+                        ['id' => 'pri_cashflow', 'label_en' => 'Active cash flow', 'label_bn' => 'দ্রুত ক্যাশ ফ্লো ও কমিশন', 'affinity' => 'networker'],
+                        ['id' => 'pri_growth', 'label_en' => 'Long-term business growth', 'label_bn' => 'দীর্ঘমেয়াদি ব্যবসায়িক প্রবৃদ্ধি', 'affinity' => 'hybrid'],
                     ]
+                ],
+            ],
+            'results' => [
+                'investor' => [
+                    'key' => 'investor',
+                    'name_en' => 'INVESTOR MINDSET',
+                    'name_bn' => 'ইনভেস্টর মাইন্ডসেট',
+                    'accent' => 'amber',
+                    'badge_en' => 'Capital Focused',
+                    'badge_bn' => 'মূলধন কেন্দ্রীক',
+                    'description_en' => 'Best suited for prospects mainly interested in capital-based project participation and managed e-commerce operations.',
+                    'description_bn' => 'যাঁরা মূলত মূলধনভিত্তিক প্রজেক্ট পার্টিসিপেশন ও ম্যানেজড ই-কমার্স ড্রপশিপিংয়ে বেশি আগ্রহী।',
+                    'best_suited' => [
+                        ['en' => 'Capital-based project participation', 'bn' => 'মূলধনভিত্তিক বাণিজ্যিক প্রজেক্টে অংশগ্রহণ'],
+                        ['en' => 'Clear plan structure (100 weeks)', 'bn' => 'সুস্পষ্ট ও স্বচ্ছ প্ল্যান কাঠামো (১০০ সপ্তাহ)'],
+                        ['en' => 'Predictable recovery timeline (~57 weeks)', 'bn' => 'মূলধন রিকভারি সময়সীমা (~৫৭ সপ্তাহ)'],
+                        ['en' => 'Managed business operations', 'bn' => 'ম্যানেজড ই-কমার্স বিজনেস পরিচালনা'],
+                    ],
+                    'actions' => [
+                        ['label_en' => 'View Talking Points', 'label_bn' => 'টকিং পয়েন্ট দেখুন', 'action' => 'points'],
+                        ['label_en' => 'Show Packages', 'label_bn' => 'প্যাকেজ দেখুন', 'route' => 'packages.index'],
+                    ]
+                ],
+                'networker' => [
+                    'key' => 'networker',
+                    'name_en' => 'NETWORKER MINDSET',
+                    'name_bn' => 'নেটওয়ার্কার মাইন্ডসেট',
+                    'accent' => 'indigo',
+                    'badge_en' => 'Affiliate & Team',
+                    'badge_bn' => 'অ্যাফিলিয়েট ও টিম',
+                    'description_en' => 'Best suited for prospects interested in sales commissions, dual-team building, and leadership career ranks.',
+                    'description_bn' => 'যাঁরা সেলস কমিশন, লেফট-রাইট টিম গঠন এবং ক্যারিয়ার পদবী অর্জনে বেশি আগ্রহী।',
+                    'best_suited' => [
+                        ['en' => 'Active affiliate team building', 'bn' => 'সক্রিয় অ্যাফিলিয়েট ও টিম সম্প্রসারণ'],
+                        ['en' => '10% Direct spot commissions', 'bn' => '১০% তাৎক্ষণিক ডিরেক্ট স্পট কমিশন'],
+                        ['en' => '৳500 Binary pair matching rewards', 'bn' => 'প্রতি পেয়ার ম্যাচিংয়ে ৫০০ টাকা রিওয়ার্ড'],
+                        ['en' => '6 Career rank cash milestones', 'bn' => '৬টি ক্যারিয়ার পদবীর বড় প্রাইজমানি'],
+                    ],
+                    'actions' => [
+                        ['label_en' => 'View Talking Points', 'label_bn' => 'টকিং পয়েন্ট দেখুন', 'action' => 'points'],
+                        ['label_en' => 'View Ranks', 'label_bn' => 'র‍্যাংক রোডম্যাপ', 'route' => 'ranks.index'],
+                        ['label_en' => 'View Commission Plan', 'label_bn' => 'মার্কেটিং প্ল্যান', 'route' => 'commission.index'],
+                    ]
+                ],
+                'hybrid' => [
+                    'key' => 'hybrid',
+                    'name_en' => 'HYBRID BUSINESS BUILDER',
+                    'name_bn' => 'হাইব্রিড বিজনেস বিল্ডার',
+                    'accent' => 'emerald',
+                    'badge_en' => 'Balanced Growth',
+                    'badge_bn' => 'ভারসাম্যপূর্ণ প্রবৃদ্ধি',
+                    'description_en' => 'Best suited for prospects who want dual benefits: e-commerce weekly returns combined with active team networking.',
+                    'description_bn' => 'যাঁরা ড্রপশিপিং থেকে সাপ্তাহিক আয়ের পাশাপাশি টিম তৈরি করে বড় কমিশন নিশ্চিত করতে চান।',
+                    'best_suited' => [
+                        ['en' => 'Package / business participation', 'bn' => 'বাণিজ্যিক ড্রপশিপিং প্যাকেজে অংশগ্রহণ'],
+                        ['en' => 'Dual income (Weekly return + Affiliate)', 'bn' => 'দ্বৈত আয়ের সুযোগ (সাপ্তাহিক রিটার্ন + অ্যাফিলিয়েট)'],
+                        ['en' => 'Capital recovery first strategy', 'bn' => 'আগে মূলধন নিরাপদ ও রিকভার করার কৌশল'],
+                        ['en' => 'Controlled, stable team growth', 'bn' => 'নিয়ন্ত্রিত ও টেকসই টিম সম্প্রসারণ'],
+                    ],
+                    'actions' => [
+                        ['label_en' => 'View Talking Points', 'label_bn' => 'টকিং পয়েন্ট দেখুন', 'action' => 'points'],
+                        ['label_en' => 'View Packages', 'label_bn' => 'প্যাকেজ দেখুন', 'route' => 'packages.index'],
+                        ['label_en' => 'View Ranks', 'label_bn' => 'র‍্যাংক দেখুন', 'route' => 'ranks.index'],
+                    ]
+                ]
+            ],
+            'talkingPoints' => [
+                'investor' => [
+                    ['step' => 1, 'text' => 'Explain the package cost clearly (National ৳1,20,000 / International ৳5,50,000).', 'text_bn' => 'প্যাকেজের সঠিক খরচ স্পষ্ট করুন (ন্যাশনাল ১,২০,০০০ টাকা / ইন্টারন্যাশনাল ৫,৫০,০০০ টাকা)।'],
+                    ['step' => 2, 'text' => 'Explain capital and setup fee separately (e.g. National: ৳1,00,000 core capital + ৳20,000 setup fee).', 'text_bn' => 'মূলধন ও সেটআপ ফি আলাদা করে বুঝিয়ে বলুন (যেমন ন্যাশনাল: ১ লাখ মূলধন + ২০ হাজার ফি)।'],
+                    ['step' => 3, 'text' => 'Explain the current plan duration (100 weeks project term).', 'text_bn' => 'বর্তমান প্ল্যানের নির্দিষ্ট মেয়াদ বুঝিয়ে বলুন (১০০ সপ্তাহের বাণিজ্যিক প্রজেক্ট)।'],
+                    ['step' => 4, 'text' => 'Explain plan-based return structure (1.75% / ৳1,750 weekly for National; 2.0% / ৳10,000 for International).', 'text_bn' => 'প্ল্যানভিত্তিক রিটার্ন কাঠামো পরিষ্কার করুন (ন্যাশনালে ১.৭৫% বা ১,৭৫০ টাকা/সপ্তাহ; ইন্টারন্যাশনালে ২.০% বা ১০,০০০ টাকা)।'],
+                    ['step' => 5, 'text' => 'Explain withdrawal / realization process (weekly credits to verified wallet, bank/MFS transfer).', 'text_bn' => 'টাকা উত্তোলনের প্রক্রিয়া ব্যাখ্যা করুন (সাপ্তাহিক ওয়ালেট জমা ও ব্যাংক/বিকাশ উইথড্র)।'],
+                    ['step' => 6, 'text' => 'Explain business and market risk (commercial e-commerce operation, not fixed guaranteed bank interest).', 'text_bn' => 'ব্যবসায়িক বাস্তবতা স্পষ্ট করুন (বাস্তব ড্রপশিপিং ব্যবসা, কোনো ফিক্সড ব্যাংক সুদ নয়)।'],
+                ],
+                'networker' => [
+                    ['step' => 1, 'text' => 'Explain direct / spot commission (10% instant cash commission on any sponsored package).', 'text_bn' => 'ডিরেক্ট স্পট কমিশন বুঝিয়ে বলুন (যেকোনো প্যাকেজ স্পনসরে তাৎক্ষণিক ১০% ক্যাশ কমিশন)।'],
+                    ['step' => 2, 'text' => 'Explain Left and Right team concept (dual-team binary tree placement and balance).', 'text_bn' => 'লেফট ও রাইট টিমের ধারণা দিন (বাইনারি ট্রি প্লেসমেন্ট ও ভারসাম্য রক্ষা)।'],
+                    ['step' => 3, 'text' => 'Explain pair matching reward (৳500 per binary pair with 100 pairs daily cap).', 'text_bn' => 'পেয়ার ম্যাচিং রিওয়ার্ড ব্যাখ্যা করুন (প্রতি পেয়ার ৫০০ টাকা, দৈনিক সর্বোচ্চ ৫০,০০০ টাকা ক্যাপিং)।'],
+                    ['step' => 4, 'text' => 'Explain generation / UDR concept (multi-tier overrides up to 10 generations).', 'text_bn' => '১০ প্রজন্মের UDR কমিশন কাঠামো সংক্ষেপে বলুন (১ম প্রজন্মে ১০%, ২য় প্রজন্মে ২% ইত্যাদি)।'],
+                    ['step' => 5, 'text' => 'Explain rank journey (6 progressive ranks from FME ৳5,000 up to ETD ৳20,00,000).', 'text_bn' => 'র‍্যাংক জার্নি ও প্রাইজমানি দেখান (FME ৫,০০০ টাকা থেকে শুরু করে ETD ২০,০০,০০০ টাকা)।'],
+                    ['step' => 6, 'text' => 'Explain that team income requires active performance (balanced legs and real team guidance).', 'text_bn' => 'পরিষ্কার করুন যে টিম ইনকাম সক্রিয় দল পরিচালনা ও কাজের ওপর নির্ভরশীল।'],
+                ],
+                'hybrid' => [
+                    ['step' => 1, 'text' => 'Explain package / business participation (National ৳1.2L foundation for dropshipping + top binary position).', 'text_bn' => 'প্যাকেজ ও বিজনেসে অংশগ্রহণ তুলে ধরুন (ন্যাশনাল ১.২ লাখের ড্রপশিপিং ও বাইনারি পজিশন)।'],
+                    ['step' => 2, 'text' => 'Explain affiliate opportunity (earn 10% spot commissions on any prospect referrals).', 'text_bn' => 'অ্যাফিলিয়েট সুযোগ ব্যাখ্যা করুন (রেফারেল থেকে তাৎক্ষণিক ১০% কমিশন অর্জন)।'],
+                    ['step' => 3, 'text' => 'Explain team building (dual-leg binary expansion while collecting weekly store returns).', 'text_bn' => 'টিম বিল্ডিংয়ের সুবিধা বলুন (সাপ্তাহিক রিটার্নের পাশাপাশি টিম থেকে অতিরিক্ত আয়)।'],
+                    ['step' => 4, 'text' => 'Explain rank progression (sponsor 10 directs to unlock FME and first milestone bonus).', 'text_bn' => 'র‍্যাংক প্রগ্রেশন বুঝিয়ে দিন (১০ জন ডিরেক্ট স্পনসর করে FME পদবী ও ৫,০০০ টাকা বোনাস)।'],
+                    ['step' => 5, 'text' => 'Explain capital recovery first (prioritize securing core capital within ~57 weeks).', 'text_bn' => 'প্রথমে মূলধন নিরাপদ করার পরামর্শ দিন (প্রথম ৫৭ সপ্তাহে মূলধন রিকভারি অগ্রাধিকার)।'],
+                    ['step' => 6, 'text' => 'Explain controlled business growth (expand teams steadily with reinvested commission profits).', 'text_bn' => 'নিয়ন্ত্রিত ব্যবসায়িক প্রবৃদ্ধি (অর্জিত কমিশন দিয়ে টেকসই টিম বৃদ্ধি)।'],
+                ],
+            ],
+            'safeWording' => [
+                [
+                    'avoid' => 'Guaranteed Profit',
+                    'avoid_bn' => 'নিশ্চিত লাভ',
+                    'use' => 'Plan-based potential return',
+                    'use_bn' => 'প্ল্যান অনুযায়ী সম্ভাব্য রিটার্ন'
+                ],
+                [
+                    'avoid' => 'Risk-free investment',
+                    'avoid_bn' => 'ঝুঁকিহীন ইনভেস্টমেন্ট',
+                    'use' => 'Commercial business / project participation',
+                    'use_bn' => 'বাণিজ্যিক প্রজেক্টে ব্যবসায়িক অংশগ্রহণ'
+                ],
+                [
+                    'avoid' => 'Fixed daily income',
+                    'avoid_bn' => 'ফিক্সড দৈনিক আয়',
+                    'use' => 'Performance-based commission',
+                    'use_bn' => 'পারফরম্যান্স ও টিমভিত্তিক কমিশন'
+                ],
+                [
+                    'avoid' => 'Guaranteed rank reward',
+                    'avoid_bn' => 'নিশ্চিত পদবী ও পুরস্কার',
+                    'use' => 'Milestone reward subject to qualification',
+                    'use_bn' => 'শর্ত ও যোগ্যতা পূরণ সাপেক্ষে মাইলস্টোন রিওয়ার্ড'
                 ],
             ],
             'objections' => [
                 [
                     'q_en' => 'Is my capital guaranteed?',
                     'q_bn' => 'আমার মূলধন কি গ্যারান্টেড বা ঝুঁকিমুক্ত?',
-                    'a_en' => 'No commercial business can legitimately guarantee capital without risk. SBL operates a real e-commerce dropshipping operation with physical supply, stores, and advertising campaigns. Returns are plan-based weekly distributions across 100 weeks subject to actual business cycles.',
-                    'a_bn' => 'বাণিজ্যিক ব্যবসায় কোনো অলৌকিক ঝুঁকিহীন গ্যারান্টি দেওয়া সম্ভব নয়। SBL একটি প্রকৃত পণ্য ও ড্রপশিপিং প্ল্যাটফর্ম। ১০০ সপ্তাহব্যাপী সাপ্তাহিক রিটার্ন ব্যবসায়িক পারফরম্যান্স ও প্ল্যান অনুযায়ী বণ্টিত হয়।'
+                    'a_en' => 'No commercial business can guarantee capital without risk. SBL operates real e-commerce dropshipping with physical inventory and advertising. Weekly returns are plan-based across 100 weeks reflecting authentic business operations.',
+                    'a_bn' => 'বাণিজ্যিক ব্যবসায় কোনো ঝুঁকিহীন অলৌকিক গ্যারান্টি হয় না। SBL বাস্তব ই-কমার্স ড্রপশিপিং পরিচালনা করে। ১০০ সপ্তাহব্যাপী সাপ্তাহিক রিটার্ন ব্যবসায়িক পারফরম্যান্স ও প্ল্যান অনুযায়ী বণ্টন করা হয়।'
                 ],
                 [
-                    'q_en' => 'How does the weekly return work?',
-                    'q_bn' => 'সাপ্তাহিক রিটার্ন কীভাবে কাজ করে?',
-                    'a_en' => 'Depending on your package, weekly returns are calculated on your core capital (1.75% / ৳1,750 for National ৳1.2L; 2.0% / ৳10,000 for International ৳5.5L). Distributions occur weekly for up to 100 weeks.',
-                    'a_bn' => 'প্যাকেজ অনুযায়ী মূলধনের ওপর সাপ্তাহিক রিটার্ন প্রযোজ্য (যেমন ন্যাশনাল ১.২ লাখের জন্য ১.৭৫% বা ১,৭৫০ টাকা; ইন্টারন্যাশনাল ৫.৫ লাখের জন্য ২.০% বা ১০,০০০ টাকা)। ১০০ সপ্তাহ ধরে এটি সরাসরি ওয়ালেটে জমা হয়।'
+                    'q_en' => 'How does the weekly plan work?',
+                    'q_bn' => 'সাপ্তাহিক প্ল্যান কীভাবে কাজ করে?',
+                    'a_en' => 'Weekly returns are calculated on core project capital (1.75% / ৳1,750 for National; 2.0% / ৳10,000 for International). Payouts are credited weekly to your verified wallet for up to 100 weeks.',
+                    'a_bn' => 'মূলধনের ওপর সাপ্তাহিক রিটার্ন হিসেব করা হয় (ন্যাশনালে ১.৭৫% বা ১,৭৫০ টাকা; ইন্টারন্যাশনালে ২.০% বা ১০,০০০ টাকা)। এটি ১০০ সপ্তাহ পর্যন্ত নিয়মিত ওয়ালেটে জমা হয়।'
                 ],
                 [
-                    'q_en' => 'How do I withdraw my earnings?',
-                    'q_bn' => 'আমি কীভাবে আমার উপার্জিত অর্থ উত্তোলন করব?',
-                    'a_en' => 'Weekly dropshipping returns and affiliate commissions are credited to your SBL verified wallet. You can request withdrawals directly to your verified bank account or MFS (bKash/Nagad) during standard processing windows.',
-                    'a_bn' => 'সাপ্তাহিক রিটার্ন ও রেফারেল কমিশন আপনার ভেরিফায়েড ওয়ালেটে জমা হয় এবং সাপ্তাহিক শিডিউল অনুযায়ী ব্যাংক ট্রান্সফার বা এমএফএস (বিকাশ/নগদ)-এর মাধ্যমে উত্তোলনযোগ্য।'
+                    'q_en' => 'How do withdrawals work?',
+                    'q_bn' => 'উত্তোলন বা উইথড্র কীভাবে কাজ করে?',
+                    'a_en' => 'Returns and commissions credit to your SBL verified wallet. You can submit withdrawal requests to your verified Bank Account or MFS (bKash/Nagad) on designated schedule windows.',
+                    'a_bn' => 'উপার্জিত অর্থ ওয়ালেটে জমা হলে নির্ধারিত শিডিউল অনুযায়ী আপনার ভেরিফায়েড ব্যাংক অ্যাকাউন্ট অথবা বিকাশ/নগদে সরাসরি উইথড্র করা যায়।'
                 ],
                 [
-                    'q_en' => 'Do I need to refer people to earn dropshipping returns?',
-                    'q_bn' => 'ড্রপশিপিং রিটার্ন পেতে কি মেম্বার রেফার করা বাধ্যতামূলক?',
-                    'a_en' => 'No. If you choose a National or International project, your weekly returns are generated from underlying store sales and commercial operations. Sponsoring new members is completely optional.',
-                    'a_bn' => 'না। ন্যাশনাল বা ইন্টারন্যাশনাল প্রজেক্টে সাপ্তাহিক রিটার্ন ই-কমার্স ড্রপশিপিং সেলস থেকে অর্জিত হয়। মেম্বার রেফার করা একটি সম্পূর্ণ ঐচ্ছিক অ্যাফিলিয়েট সুযোগ।'
-                ],
-                [
-                    'q_en' => 'What happens if I do not build a sales team?',
-                    'q_bn' => 'আমি কোনো টিম গঠন না করলে কী হবে?',
-                    'a_en' => 'You continue to receive your package-based weekly return for the defined 100-week project term. Team commissions (Pair Matching, UDR, and Rank Rewards) only apply if you actively develop sales teams.',
-                    'a_bn' => 'আপনার প্রজেক্টের ১০০ সপ্তাহ মেয়াদের সাপ্তাহিক রিটার্ন স্বাভাবিকভাবেই সচল থাকবে। পেয়ার ম্যাচিং বা র‍্যাংক রিওয়ার্ড শুধুমাত্র তখনই সক্রিয় হয় যখন আপনি সক্রিয় টিম গড়ে তোলেন।'
-                ],
-                [
-                    'q_en' => 'What is Pair Matching Reward?',
-                    'q_bn' => 'পেয়ার ম্যাচিং রিওয়ার্ড কী এবং কীভাবে কাজ করে?',
-                    'a_en' => 'When volume on your Left and Right teams balance in a 1:1 ratio, you receive ৳500 per binary pair. To ensure system longevity, SBL enforces a daily limit of 100 pairs (maximum ৳50,000 BDT daily).',
-                    'a_bn' => 'আপনার লেফট ও রাইট টিমে ১:১ অনুপাতে পয়েন্ট ম্যাচ হলে প্রতি পেয়ারে ৫০০ টাকা বোনাস পাওয়া যায়। সিস্টেমের স্থায়িত্ব রক্ষায় দৈনিক সর্বোচ্চ ১০০ পেয়ার বা ৫০,০০০ টাকা ক্যাপিং রয়েছে।'
-                ],
-                [
-                    'q_en' => 'What is UDR (Unity Development Commission)?',
-                    'q_bn' => 'ইউনিটি ডেভেলপমেন্ট কমিশন (UDR) কী?',
-                    'a_en' => 'UDR is a tiered override commission distributed across up to 10 generations of your sales network (10% on Gen 1, 2% on Gen 2, 1% on Gen 3-4, 0.5% on Gen 5, and 0.1% on Gen 6-10).',
-                    'a_bn' => 'UDR হলো আপনার রেফারেল নেটওয়ার্কের ১০ প্রজন্ম পর্যন্ত স্তরভিত্তিক কমিশন (১ম প্রজন্মে ১০%, ২য়-তে ২%, ৩য়-৪র্থ-তে ১%, ৫ম-তে ০.৫%, এবং ৬ষ্ঠ-১০ম-তে ০.১%)।'
+                    'q_en' => 'Do I need to refer people?',
+                    'q_bn' => 'আমাকে কি মানুষ রেফার করতে হবে?',
+                    'a_en' => 'No. If you participate in a National or International dropshipping project, weekly returns come from e-commerce store operations. Team building and sponsoring are completely optional.',
+                    'a_bn' => 'না। ন্যাশনাল বা ইন্টারন্যাশনাল প্রজেক্টে সাপ্তাহিক রিটার্ন ড্রপশিপিং সেলস থেকে আসে। কোনো মেম্বার রেফার করা বাধ্যতামূলক নয়, এটি সম্পূর্ণ ঐচ্ছিক।'
                 ],
                 [
                     'q_en' => 'Can I start with ৳10,000?',
                     'q_bn' => 'আমি কি ১০,০০০ টাকা দিয়ে শুরু করতে পারি?',
-                    'a_en' => 'Yes. The Starter Membership (৳10,000) provides entry-level placement in the binary tree, free Facebook page and affiliate setup, and qualifies you for 10% direct spot commission.',
-                    'a_bn' => 'হ্যাঁ। স্টার্টার মেম্বারশিপ (১০,০০০ টাকা) দিয়ে বাইনারি পজিশন নিশ্চিত করা যায় এবং ফ্রি পেজ সেটআপ, অ্যাফিলিয়েট অ্যাকাউন্ট ও ১০% ডিরেক্ট স্পট কমিশন পাওয়া যায়।'
+                    'a_en' => 'Yes. The Starter Membership (৳10,000) secures your position in the binary tree, includes affiliate account and Facebook page setup, and qualifies you for 10% direct spot commission.',
+                    'a_bn' => 'হ্যাঁ। ১০,০০০ টাকার স্টার্টার মেম্বারশিপ নিয়ে বাইনারি পজিশন নিশ্চিত করা যায় এবং ফ্রি পেজ সেটআপ সহ ১০% ডিরেক্ট স্পট কমিশন উপার্জন শুরু করা যায়।'
                 ],
                 [
-                    'q_en' => 'Can I upgrade my package later?',
-                    'q_bn' => 'আমি কি পরবর্তীতে প্যাকেজ আপগ্রেড করতে পারব?',
-                    'a_en' => 'Yes. You can activate higher dropshipping projects (such as National or International) as your budget, business experience, and customer base grow.',
-                    'a_bn' => 'হ্যাঁ। অভিজ্ঞতা ও বাজেট বাড়ার সাথে সাথে পরবর্তীতে ন্যাশনাল বা আন্তর্জাতিক ড্রপশিপিং প্রজেক্টে আপগ্রেড বা নতুন প্রজেক্ট যুক্ত করা সম্ভব।'
+                    'q_en' => 'What are the main risks?',
+                    'q_bn' => 'প্রধান ব্যবসায়িক ঝুঁকিগুলো কী কী?',
+                    'a_en' => 'As a live e-commerce enterprise, returns depend on digital marketing performance, product demand, and delivery logistics. While professionally managed, returns reflect real commercial sales, not fixed bank deposits.',
+                    'a_bn' => 'লাইভ ই-কমার্স ব্যবসা হিসেবে রিটার্ন ডিজিটাল মার্কেটিং, পণ্যের চাহিদা ও ডেলিভারি পারফরম্যান্সের ওপর নির্ভরশীল। এটি একটি খাঁটি ব্যবসা, কোনো ফিক্সড ব্যাংক ডিপোজিট নয়।'
+                ],
+            ],
+            'nextSteps' => [
+                [
+                    'title' => 'Packages',
+                    'title_bn' => 'প্যাকেজসমূহ',
+                    'desc' => 'For package cost, duration and benefits',
+                    'desc_bn' => 'প্যাকেজের খরচ, মেয়াদ ও বিস্তারিত সুবিধাসমূহ',
+                    'route' => 'packages.index',
+                    'icon' => '📦',
+                    'badge' => 'Dropshipping'
                 ],
                 [
-                    'q_en' => 'What are the main risks involved?',
-                    'q_bn' => 'ব্যবসায়িক ঝুঁকিগুলো কী কী?',
-                    'a_en' => 'As an e-commerce commercial enterprise, returns depend on advertising effectiveness, market demand, currency fluctuations, and logistics delivery performance. SBL manages operations with professional oversight, but earnings reflect authentic business performance.',
-                    'a_bn' => 'ই-কমার্স ব্যবসার প্রতিটি ধাপে ডিজিটাল মার্কেটিং, কাস্টমার রিটার্ন রেট ও আন্তর্জাতিক সাপ্লাই চেইনের প্রভাব থাকে। SBL দক্ষ ম্যানেজমেন্ট দিয়ে এটি পরিচালনা করলেও এটি একটি প্রকৃত ব্যবসা, কোনো ব্যাংক আমানত নয়।'
+                    'title' => 'Ranks',
+                    'title_bn' => 'ক্যারিয়ার র‍্যাংক',
+                    'desc' => 'For career progression and team requirements',
+                    'desc_bn' => 'ক্যারিয়ার পদবীর শর্ত ও মাইলস্টোন প্রাইজমানি',
+                    'route' => 'ranks.index',
+                    'icon' => '🏆',
+                    'badge' => 'Leadership'
                 ],
-            ],
-            'claimsToAvoid' => [
-                ['avoid' => 'Guaranteed 100% Profit', 'avoid_bn' => 'নিশ্চিত ১০০% লাভ', 'use' => 'Plan-based potential return over 100 weeks', 'use_bn' => '১০০ সপ্তাহ মেয়াদে প্ল্যান-ভিত্তিক সম্ভাব্য রিটার্ন'],
-                ['avoid' => 'Risk-free investment deposit', 'avoid_bn' => 'ঝুঁকিহীন ইনভেস্টমেন্ট স্কিম', 'use' => 'Commercial dropshipping project participation', 'use_bn' => 'বাণিজ্যিক ড্রপশিপিং ই-কমার্স প্রজেক্ট পার্টনারশিপ'],
-                ['avoid' => 'Earn ৳50,000 daily fixed', 'avoid_bn' => 'প্রতিদিন ৫০,০০০ টাকা নিশ্চিত আয়', 'use' => 'Up to 100 pairs daily cap on active dual-team performance', 'use_bn' => 'সক্রিয় টিম পারফরম্যান্সে দৈনিক সর্বোচ্চ ১০০ পেয়ার পর্যন্ত ক্যাপিং'],
-                ['avoid' => 'Passive guaranteed rank rewards', 'avoid_bn' => 'বসে থেকে র‍্যাংক ও নগদ অর্থ প্রাপ্তি', 'use' => 'Milestone cash rewards based on verified team qualification', 'use_bn' => 'যথাযথ টিম ব্যালেন্স ও যোগ্যতা অর্জনের পর এককালীন প্রাইজমানি'],
-                ['avoid' => 'Digital store asset appreciates forever', 'avoid_bn' => 'ডিজিটাল অ্যাসেটের দাম আজীবন বৃদ্ধি পাবে', 'use' => 'Active commercial e-commerce store with operational support', 'use_bn' => 'সার্বক্ষণিক পরিচালনাসহ লাইভ বাণিজ্যিক অনলাইন শপ'],
-            ],
-            'talkingPoints' => [
-                'investor' => [
-                    ['step' => 1, 'text' => 'Start with their financial expectation and preferred investment horizon.', 'text_bn' => 'তাদের প্রত্যাশিত রিটার্ন ও সময়সীমা সম্পর্কে জানতে চান।'],
-                    ['step' => 2, 'text' => 'Explain the package capital structure clearly (National ৳1.2L with ৳1L core capital, International ৳5.5L with ৳5L core).', 'text_bn' => 'প্যাকেজের মূলধন ও সেটাপ ফি আলাদা করে স্পষ্ট করুন (ন্যাশনাল ১.২ লাখের মূলধন ১ লাখ, ফি ২০ হাজার)।'],
-                    ['step' => 3, 'text' => 'Demonstrate verified weekly returns (1.75% or 2.0%) over 100 weeks derived from dropshipping.', 'text_bn' => 'ড্রপশিপিং সেলস থেকে অর্জিত সাপ্তাহিক ১.৭৫% বা ২.০% রিটার্ন কাঠামো দেখান।'],
-                    ['step' => 4, 'text' => 'Clarify withdrawal windows and highlight transparent commercial business backing.', 'text_bn' => 'সাপ্তাহিক উত্তোলন প্রক্রিয়া এবং এটি যে একটি বাস্তব বাণিজ্যিক ব্যবসা তা পরিষ্কার করুন।'],
-                    ['step' => 5, 'text' => 'Show the ROI Calculator and calculate projected capital recovery (~57 weeks).', 'text_bn' => 'ROI ক্যালকুলেটর ওপেন করে মূলধন রিকভারি সময়সীমা (~৫৭ সপ্তাহ) হিসেব করে দেখান।'],
-                ],
-                'networker' => [
-                    ['step' => 1, 'text' => 'Assess their existing network, sales experience, and team-building readiness.', 'text_bn' => 'তাদের পূর্ববর্তী নেটওয়ার্কিং অভিজ্ঞতা ও বর্তমান কন্টাক্ট লিস্ট সম্পর্কে জানুন।'],
-                    ['step' => 2, 'text' => 'Highlight immediate 10% Spot Commission on every referred project or membership.', 'text_bn' => 'যেকোনো প্যাকেজ সরাসরি রেফার করলেই তাৎক্ষণিক ১০% স্পট কমিশনের সুবিধা তুলে ধরুন।'],
-                    ['step' => 3, 'text' => 'Explain the dual-team binary tree and ৳500 Pair Matching Reward (100 pairs daily cap).', 'text_bn' => 'লেফট-রাইট বাইনারি টিম গঠন এবং প্রতি পেয়ারে ৫০০ টাকা ম্যাচিং বোনাস (দৈনিক ৫০ হাজার পর্যন্ত) ব্যাখ্যা করুন।'],
-                    ['step' => 4, 'text' => 'Outline the 6 Career Ranks (FME 10 directs -> ৳5k; SME 300 pairs -> ৳50k up to ৳20 Lac ETD).', 'text_bn' => 'ক্যারিয়ার র‍্যাংকের রোডম্যাপ (FME থেকে ETD পর্যন্ত মোট ৩৬.৫৫ লাখ+ টাকার প্রাইজমানি) উপস্থাপন করুন।'],
-                    ['step' => 5, 'text' => 'Direct them to the Ranks Roadmap and Generation Simulator to set initial targets.', 'text_bn' => 'র‍্যাংক রোডম্যাপ বা কমিশন ক্যালকুলেটরে তাদের প্রাথমিক মাসিক লক্ষ্য নির্ধারণ করিয়ে দিন।'],
-                ],
-                'hybrid' => [
-                    ['step' => 1, 'text' => 'Acknowledge their dual capability: capital participation coupled with active team expansion.', 'text_bn' => 'তাদের ড্রপশিপিং ইনভেস্টমেন্ট ও সক্রিয় টিম লিডারশিপের যৌথ সম্ভাবনার প্রশংসা করুন।'],
-                    ['step' => 2, 'text' => 'Recommend National (৳1,20,000) as the balanced foundation: earning weekly dropshipping while securing binary placement.', 'text_bn' => 'ন্যাশনাল প্যাকেজ (১.২ লাখ) সুপারিশ করুন: যাতে সাপ্তাহিক রিটার্নও পাওয়া যায় এবং বাইনারি পজিশনও পোক্ত হয়।'],
-                    ['step' => 3, 'text' => 'Explain combining weekly 1.75% returns with 10% direct spot commission on referrals.', 'text_bn' => 'সাপ্তাহিক ১.৭৫% আয়ের সাথে সাথে ডিরেক্ট স্পট কমিশন (১০%) যুক্ত হয়ে ক্যাশ ফ্লো কীভাবে বাড়ে তা দেখান।'],
-                    ['step' => 4, 'text' => 'Advise prioritizing core capital recovery (~57 weeks) before expanding aggressively.', 'text_bn' => 'অতিরিক্ত ঝুঁকি না নিয়ে প্রথমে ৫৭ সপ্তাহে মূলধন পুনরুদ্ধার করার বাস্তবমুখী কৌশল দিন।'],
-                    ['step' => 5, 'text' => 'Open the Lead Capture form to schedule an executive strategy session.', 'text_bn' => 'লিড হিসেবে সেভ করে সিনিয়র লিডারের সাথে ফলোআপ সেশন শিডিউল করুন।'],
+                [
+                    'title' => 'Commission Plan',
+                    'title_bn' => 'মার্কেটিং প্ল্যান',
+                    'desc' => 'For affiliate and team income structure',
+                    'desc_bn' => 'স্পট কমিশন, পেয়ার ম্যাচিং ও UDR কাঠামো',
+                    'route' => 'commission.index',
+                    'icon' => '📈',
+                    'badge' => 'Affiliate'
                 ],
             ]
         ];
