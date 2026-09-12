@@ -56,6 +56,8 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
 
 WORKDIR /var/www/html
 
+ENV APP_KEY=base64:jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY=
+
 # Copy application source code
 COPY . .
 

@@ -16,6 +16,12 @@ mkdir -p /var/www/html/storage/framework/cache/data \
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
+# Ensure APP_KEY is set and valid
+if [ -z "$APP_KEY" ]; then
+    echo "APP_KEY not provided. Setting application key..."
+    export APP_KEY="base64:jbGgydtFYDKPLRpynPVv4O4XgYQNxvMTVDzoSBWrbMY="
+fi
+
 # Database initialization
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
     DB_PATH=${DB_DATABASE:-/var/www/html/database/database.sqlite}
