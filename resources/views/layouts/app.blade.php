@@ -69,7 +69,6 @@
             @if($errors->any())
                 <div class="app-notice app-notice-error" role="alert"><strong>Please check the following:</strong><ul class="mt-2 list-disc pl-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
             @endif
-            @if(request()->routeIs('leads.*', 'tasks.*', 'presentations.*') && request('stage') !== 'converted')@include('layouts.leads-tabs')@endif
             {{ $slot ?? '' }}
             @yield('content')
         </main>
