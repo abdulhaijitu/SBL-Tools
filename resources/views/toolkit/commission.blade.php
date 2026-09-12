@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
-@section('meta-title', 'Commission Calculator & Multi-tier Simulator | SBL Marketing')
-@section('page-title', 'Commission Calculator')
-@section('page-subtitle', 'Real-time Weekly ROI, Direct Spot Commission, Pair Reward & 10-Generation Affiliate Simulator')
-@section('meta-description', 'Calculate SBL plan returns, spot referral commissions, binary pair rewards, and 10-tier UDR generation simulations with transparent formulas.')
+@section('meta-title', 'SBL Commission Plan | Understand & Calculate Opportunities')
+@section('page-title', 'SBL Commission Plan')
+@section('page-subtitle', 'Understand and calculate SBL earning opportunities.')
+@section('meta-description', 'Understand and calculate SBL earning opportunities: 10% Spot Commission, 0.25% Referral Weekly Share, ৳500 Pair Reward, and Generation / UDR Commission.')
 
 @section('content')
     @include('toolkit.partials.commission-system')
