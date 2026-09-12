@@ -1,0 +1,39 @@
+# Render Blueprint Specification for SBL Marketing
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # ==========================================
+  # Laravel Web Service (Docker Runtime)
+  # ==========================================
+  - type: web
+    name: sbl-marketing
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /up
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: "SBL Marketing"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/www/html/database/database.sqlite
+      - key: SESSION_DRIVER
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: CACHE_STORE
+        value: database

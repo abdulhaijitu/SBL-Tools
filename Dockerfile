@@ -1,46 +1,86 @@
-FROM php:8.2-cli-alpine
+# ==========================================
+# Stage 1: Build Frontend Assets (Vite)
+# ==========================================
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
 
-# Install system dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY vite.config.js postcss.config.js tailwind.config.js ./
+COPY resources/ ./resources/
+COPY public/ ./public/
+
+RUN npm run build
+
+# ==========================================
+# Stage 2: Install PHP Composer Dependencies
+# ==========================================
+FROM composer:2 AS composer-builder
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+# ==========================================
+# Stage 3: Production Runtime (Nginx + PHP-FPM)
+# ==========================================
+FROM php:8.2-fpm-alpine
+
+# Install system dependencies & PHP build dependencies
 RUN apk add --no-cache \
-    git \
+    nginx \
+    supervisor \
     curl \
     libpng-dev \
-    libxml2-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
     zip \
     unzip \
     sqlite-dev \
-    nodejs \
-    npm
+    postgresql-dev \
+    oniguruma-dev
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_sqlite pdo_mysql bcmath
+# Configure and install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install \
+    pdo \
+    pdo_sqlite \
+    pdo_pgsql \
+    pdo_mysql \
+    bcmath \
+    gd \
+    zip \
+    opcache
 
-# Get Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+WORKDIR /var/www/html
 
-WORKDIR /app
-
-# Copy application files
+# Copy application source code
 COPY . .
 
-# Set environment variables for production build
-ENV APP_ENV=production
-ENV APP_DEBUG=false
+# Copy installed composer vendors from Stage 2
+COPY --from=composer-builder /app/vendor/ ./vendor/
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Copy compiled frontend assets from Stage 1
+COPY --from=frontend-builder /app/public/build/ ./public/build/
 
-# Install frontend dependencies and build assets
-RUN npm ci && npm run build && rm -rf node_modules
+# Copy configuration files
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
+COPY docker/php.ini $PHP_INI_DIR/conf.d/custom.ini
+COPY docker/entrypoint.sh /entrypoint.sh
 
-# Setup storage directory permissions
-RUN chmod -R 775 storage bootstrap/cache
+# Fix line endings & permissions for the entrypoint script
+RUN sed -i 's/\r$//' /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
-# Expose server port
+# Set directory permissions for Laravel
+RUN mkdir -p storage bootstrap/cache database && \
+    chown -R www-data:www-data storage bootstrap/cache database && \
+    chmod -R 775 storage bootstrap/cache database
+
+# Expose Render default port
 EXPOSE 8000
 
-# Start script: ensure database exists, run migrations, and serve
-CMD php -r "file_exists('database/database.sqlite') || touch('database/database.sqlite');" && \
-    php artisan migrate --force && \
-    php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
-
+ENTRYPOINT ["/entrypoint.sh"]
