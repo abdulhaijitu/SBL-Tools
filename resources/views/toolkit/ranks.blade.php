@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
-@section('meta-title', 'Ranks | SBL Marketing')
-@section('page-title', 'Ranks')
-@section('page-subtitle', 'SBL Career Ranks, Criteria, Maintenance BV & Direct Line Requirements')
-@section('meta-description', 'SBL Marketing career rank designations, binary criteria, maintenance BV, direct line requirements and rewards.')
+@section('meta-title', 'SBL Career Ranks | Leadership Journey')
+@section('page-title', 'SBL Career Ranks')
+@section('page-subtitle', 'Understand the SBL leadership journey from FME to ETD.')
+@section('meta-description', 'Understand the SBL leadership journey from FME to ETD. Official rank requirements, milestone rewards, and career roadmap.')
 
 @section('content')
     @include('toolkit.partials.rank-system')
