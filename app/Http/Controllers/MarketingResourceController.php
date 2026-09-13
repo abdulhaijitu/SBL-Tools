@@ -20,8 +20,10 @@ class MarketingResourceController extends Controller
             (method_exists($user, 'hasRole') && $user->hasRole(['super-admin', 'sales-manager'])) ||
             (method_exists($user, 'hasPermission') && $user->hasPermission('marketing.manage'))
         );
+        $canManage = $user && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin();
 
         abort_unless($canManage, 403, 'Unauthorized access: You do not have permission to manage official resources.');
+        abort_unless($canManage, 403, 'Unauthorized access: Only Super Admin can manage official resources.');
     }
 
     /**

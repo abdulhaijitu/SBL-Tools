@@ -43,6 +43,8 @@ class EcosystemController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        abort_unless(Auth::user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage ecosystem links.');
+
         $validated = $request->validate([
             'title' => 'required|string|max:150',
             'url' => 'required|url|max:255',
@@ -77,6 +79,7 @@ class EcosystemController extends Controller
         }
 
         $validated['icon'] = $validated['icon'] ?: '🌐';
+        $validated['icon'] = !empty($validated['icon']) ? $validated['icon'] : '🌐';
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = true;
         $validated['type'] = $validated['type'] ?? 'external';
@@ -106,6 +109,8 @@ class EcosystemController extends Controller
      */
     public function update(Request $request, EcosystemLink $ecosystemLink): RedirectResponse
     {
+        abort_unless(Auth::user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage ecosystem links.');
+
         $validated = $request->validate([
             'title' => 'required|string|max:150',
             'url' => 'required|url|max:255',
@@ -144,6 +149,7 @@ class EcosystemController extends Controller
 
         $validated['icon'] = $validated['icon'] ?: '🌐';
         $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : true;
+        $validated['icon'] = !empty($validated['icon']) ? $validated['icon'] : '🌐';
         $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
         $validated['is_official'] = $request->boolean('is_official');
         $validated['is_featured'] = $request->boolean('is_featured');
@@ -171,6 +177,8 @@ class EcosystemController extends Controller
      */
     public function destroy(EcosystemLink $ecosystemLink): RedirectResponse
     {
+        abort_unless(Auth::user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage ecosystem links.');
+
         $title = $ecosystemLink->title;
         $ecosystemLink->delete();
 

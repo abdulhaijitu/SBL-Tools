@@ -26,6 +26,7 @@ class DashboardController extends Controller
         $presentationScope = Presentation::query();
 
         if ($user && ! $user->isSuperAdmin()) {
+        if ($user) {
             $leadScope->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('assigned_to', $user->id);
@@ -206,6 +207,7 @@ class DashboardController extends Controller
         $activityScope = Activity::with(['lead', 'user'])
             ->orderBy('performed_at', 'desc');
         if ($user && ! $user->isSuperAdmin()) {
+        if ($user) {
             $activityScope->where('user_id', $user->id);
         }
         $recentActivities = $activityScope->limit(6)->get();

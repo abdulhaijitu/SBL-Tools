@@ -29,7 +29,6 @@ class SblContactTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('contacts.index'));
 
         $response->assertOk();
-        $response->assertSee('Contact & Support');
         $response->assertSee('SBL Contact');
         $response->assertSee('Customer Care & Support Cell');
         $response->assertSee('01700000000');

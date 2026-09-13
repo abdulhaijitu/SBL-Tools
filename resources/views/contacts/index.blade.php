@@ -10,6 +10,7 @@
      x-data="contactsManager"
      data-contacts="{{ json_encode($contacts) }}"
      data-can-manage="{{ (Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin()) ? '1' : '0' }}">
+     data-can-manage="{{ Auth::user()?->isSuperAdmin() ? '1' : '0' }}">
 
     <!-- ==================== 1. PAGE HEADER ==================== -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
@@ -40,6 +41,7 @@
         </div>
 
         @if(Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin())
+        @if(Auth::user()?->isSuperAdmin())
         <div class="flex items-center gap-2 flex-shrink-0">
             <button type="button" 
                     @click="createModalOpen = true" 

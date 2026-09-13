@@ -27,18 +27,21 @@ class AbbreviationController extends Controller
     }
     public function store(Request $request)
     {
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage abbreviations.');
         $term = \App\Models\Abbreviation::create($this->validated($request));
         return response()->json($term, 201);
     }
 
     public function update(Request $request, \App\Models\Abbreviation $abbreviation)
     {
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage abbreviations.');
         $abbreviation->update($this->validated($request, $abbreviation->id));
         return response()->json($abbreviation);
     }
 
     public function destroy(\App\Models\Abbreviation $abbreviation)
     {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage abbreviations.');
         $abbreviation->delete();
         return response()->noContent();
     }

@@ -120,29 +120,99 @@ class UserDataIsolationTest extends TestCase
     }
 
     public function test_super_admin_can_access_all_leads(): void
+    public function test_super_admin_does_not_see_or_access_other_members_leads(): void
     {
         $superAdmin = User::where('email', 'admin@sbl.test')->first() ?? User::factory()->create();
+        $superAdmin = User::factory()->create();
         $adminRole = Role::where('slug', 'super-admin')->first();
         if (! $superAdmin->roles->contains($adminRole->id)) {
             $superAdmin->roles()->attach($adminRole);
         }
+        $superAdmin->roles()->attach($adminRole);
 
         $memberRole = Role::where('slug', 'member')->first();
         $userA = User::factory()->create();
         $userA->roles()->attach($memberRole);
+        $member = User::factory()->create(['name' => 'Md. Abdul Hai Jitu']);
+        $member->roles()->attach($memberRole);
 
         $lead = Lead::create([
             'name' => 'Member Lead Visible To Admin',
+            'name' => 'Md. Abdul Hai Jitu Private Lead',
             'mobile' => '01744444444',
             'stage' => LeadStage::NEW,
             'temperature' => LeadTemperature::WARM,
             'lead_source_id' => $this->source->id,
             'interest_types' => ['Business'],
             'owner_user_id' => $userA->id,
+            'owner_user_id' => $member->id,
         ]);
 
         $this->actingAs($superAdmin)->get(route('leads.index'))->assertOk()->assertSee('Member Lead Visible To Admin');
         $this->actingAs($superAdmin)->get(route('leads.show', $lead))->assertOk();
+        // Super Admin visits leads index -> must NOT see member's lead
+        $this->actingAs($superAdmin)->get(route('leads.index'))
+            ->assertOk()
+            ->assertDontSee('Md. Abdul Hai Jitu Private Lead');
+
+        // Super Admin visits dashboard -> pipeline/recent leads must NOT contain member's lead
+        $this->actingAs($superAdmin)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Md. Abdul Hai Jitu Private Lead');
+
+        // Super Admin visits member's lead detail -> 403 or 404
+        $resShow = $this->actingAs($superAdmin)->get(route('leads.show', $lead));
+        $this->assertTrue(in_array($resShow->status(), [403, 404]));
+    }
+
+    public function test_sbl_marketing_tools_are_crud_restricted_to_super_admin(): void
+    {
+        $superAdmin = User::factory()->create();
+        $adminRole = Role::where('slug', 'super-admin')->first();
+        $superAdmin->roles()->attach($adminRole);
+
+        $memberRole = Role::where('slug', 'member')->first();
+        $member = User::factory()->create();
+        $member->roles()->attach($memberRole);
+
+        // 1. Ecosystem Links: Member gets 403, Super Admin gets 302
+        $linkPayload = [
+            'title' => 'Test Portal',
+            'url' => 'https://test-portal.sbl.test',
+            'category' => 'Official Channels',
+        ];
+        $this->actingAs($member)->post(route('ecosystem.store'), $linkPayload)->assertStatus(403);
+        $this->actingAs($superAdmin)->post(route('ecosystem.store'), $linkPayload)->assertRedirect();
+
+        // 2. Marketing Resources: Member gets 403, Super Admin gets 302
+        $resourcePayload = [
+            'title' => 'Test Leaflet',
+            'category' => 'leaflets',
+            'file_type' => 'pdf',
+            'file_url' => 'https://example.com/test.pdf',
+        ];
+        $this->actingAs($member)->post(route('marketing-resources.store'), $resourcePayload)->assertStatus(403);
+        $this->actingAs($superAdmin)->post(route('marketing-resources.store'), $resourcePayload)->assertRedirect();
+
+        // 3. SBL Contacts: Member gets 403, Super Admin gets 302
+        $contactPayload = [
+            'department_en' => 'Support Desk',
+            'department_bn' => 'সাপোর্ট ডেস্ক',
+            'phone' => '01700000000',
+        ];
+        $this->actingAs($member)->post(route('contacts.store'), $contactPayload)->assertStatus(403);
+        $this->actingAs($superAdmin)->post(route('contacts.store'), $contactPayload)->assertRedirect();
+
+        // 4. Abbreviations: Member gets 403, Super Admin gets 201
+        $abbrPayload = [
+            'code' => 'TST',
+            'name' => 'Test Term',
+            'category_slug' => 'ecommerce',
+            'meaning_bn' => 'টেস্ট টার্মের অর্থ',
+            'description_bn' => 'টেস্ট টার্মের বিস্তারিত বিবরণ',
+        ];
+        $this->actingAs($member)->post(route('abbreviations.store'), $abbrPayload)->assertStatus(403);
+        $this->actingAs($superAdmin)->post(route('abbreviations.store'), $abbrPayload)->assertStatus(201);
     }
 
     public function test_tasks_are_isolated_between_users(): void

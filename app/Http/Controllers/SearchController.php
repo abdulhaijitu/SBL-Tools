@@ -48,6 +48,7 @@ class SearchController extends Controller
             ['title' => 'Official Links', 'subtitle' => 'SBL Web Directory, Portals & Stores', 'url' => route('links.index'), 'icon' => '🔗', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'websites ecosystem portal shop login store link'],
             ['title' => 'Marketing Resources', 'subtitle' => 'Official Leaflets, Slides, PDF & Brochures', 'url' => route('resources.index'), 'icon' => '📁', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'leaflet brochure catalog pdf documents download official marketing'],
             ['title' => 'Team Explorer', 'subtitle' => '10-Slot Placement Engine, Mindmap & Directory', 'url' => route('team.index'), 'icon' => '👥', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'network binary tree mindmap genealogy placement member downline'],
+            ['title' => 'Team Tree', 'subtitle' => '10-Slot Placement Engine, Mindmap & Directory', 'url' => route('team.index'), 'icon' => '👥', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'network binary tree mindmap genealogy placement member downline'],
             ['title' => 'Abbreviation & Glossary', 'subtitle' => 'SBL Terminology & Short Forms Directory', 'url' => route('abbreviations.index'), 'icon' => '📖', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'glossary terms dictionary abbreviation meanings definitions'],
             ['title' => 'Official Contacts', 'subtitle' => 'Support Hotlines & WhatsApp Directory', 'url' => route('contacts.index'), 'icon' => '📞', 'category' => 'Tools', 'badge' => 'Marketing', 'keywords' => 'helpline whatsapp phone support hotline desk customer care'],
         ];
@@ -68,8 +69,10 @@ class SearchController extends Controller
         }
 
         // 2. Leads (Scope to user if not super admin)
+        // 2. Leads (Scope strictly to current user)
         $leadsQuery = Lead::query();
         if (!$isSuperAdmin && $user) {
+        if ($user) {
             $leadsQuery->where(function ($b) use ($user) {
                 $b->where('assigned_to', $user->id)
                   ->orWhere('owner_user_id', $user->id);
@@ -100,8 +103,10 @@ class SearchController extends Controller
         }
 
         // 3. Team Members (Binary Nodes)
+        // 3. Team Members (Binary Nodes - scoped to tree owner)
         $teamQuery = BinaryNode::query();
         if (!$isSuperAdmin && $user) {
+        if ($user) {
             $teamQuery->where('tree_owner_id', $user->id);
         }
         $nodes = $teamQuery->where(function ($b) use ($q, $cleanQ) {

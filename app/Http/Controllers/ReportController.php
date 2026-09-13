@@ -27,6 +27,7 @@ class ReportController extends Controller
         $taskQuery = Task::query();
 
         if (! $isSuperAdmin && $user) {
+        if ($user) {
             $leadQuery->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('assigned_to', $user->id);
@@ -100,6 +101,7 @@ class ReportController extends Controller
 
         $presentationQuery = Presentation::query();
         if (! $isSuperAdmin && $user) {
+        if ($user) {
             $presentationQuery->where('user_id', $user->id);
         }
         if ($period === 'today') $presentationQuery->whereDate('date_time', Carbon::today());

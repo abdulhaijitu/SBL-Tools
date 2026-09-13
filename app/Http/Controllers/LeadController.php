@@ -41,6 +41,8 @@ class LeadController extends Controller
 
         // Data Isolation: non-superadmin users only see their own leads or directly assigned leads
         if (! $isSuperAdmin && $user) {
+        // Data Isolation: every account strictly sees only its own leads or directly assigned leads
+        if ($user) {
             $query->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('assigned_to', $user->id);
@@ -121,6 +123,7 @@ class LeadController extends Controller
         $teamMembers = ($currentUser && $currentUser->isSuperAdmin())
             ? User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get()
             : User::whereKey($currentUser?->id)->get();
+        $teamMembers = User::whereKey($currentUser?->id)->get();
 
         return view('leads.create', compact('sources', 'stages', 'sblContacts', 'teamMembers'));
     }
@@ -287,6 +290,7 @@ class LeadController extends Controller
         $teamMembers = ($currentUser && $currentUser->isSuperAdmin())
             ? User::whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get()
             : User::whereKey($currentUser?->id)->get();
+        $teamMembers = User::whereKey($currentUser?->id)->get();
 
         return view('leads.edit', compact('lead', 'sources', 'stages', 'sblContacts', 'teamMembers'));
     }

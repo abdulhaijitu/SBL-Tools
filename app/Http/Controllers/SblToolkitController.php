@@ -221,6 +221,7 @@ class SblToolkitController extends Controller
             (method_exists(Auth::user(), 'hasRole') && Auth::user()->hasRole(['super-admin', 'sales-manager'])) ||
             (method_exists(Auth::user(), 'hasPermission') && Auth::user()->hasPermission('marketing.manage'))
         );
+        $canManage = Auth::check() && method_exists(Auth::user(), 'isSuperAdmin') && Auth::user()->isSuperAdmin();
 
         return view('toolkit.links', compact(
             'links',
@@ -337,6 +338,7 @@ class SblToolkitController extends Controller
             (method_exists(Auth::user(), 'hasRole') && Auth::user()->hasRole(['super-admin', 'sales-manager'])) ||
             (method_exists(Auth::user(), 'hasPermission') && Auth::user()->hasPermission('marketing.manage'))
         );
+        $canManage = Auth::check() && method_exists(Auth::user(), 'isSuperAdmin') && Auth::user()->isSuperAdmin();
 
         return view('toolkit.resources', compact(
             'resources',

@@ -64,6 +64,8 @@ class SblContactController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage contacts.');
+
         $validated = $request->validate([
             'department' => 'nullable|string|max:150',
             'department_en' => 'nullable|string|max:150',
@@ -129,6 +131,8 @@ class SblContactController extends Controller
      */
     public function update(Request $request, SblContact $contact): RedirectResponse
     {
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage contacts.');
+
         $validated = $request->validate([
             'department' => 'nullable|string|max:150',
             'department_en' => 'nullable|string|max:150',
@@ -182,11 +186,15 @@ class SblContactController extends Controller
         $validated['is_official'] = $request->boolean('is_official');
         $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
         $validated['is_public'] = $request->has('is_public') ? $request->boolean('is_public') : true;
+        $validated['is_active'] = $request->boolean('is_active');
+        $validated['is_public'] = $request->boolean('is_public');
         $validated['is_24_hours'] = $request->boolean('is_24_hours');
+        $validated['is_primary'] = $request->boolean('is_primary');
 
         $contact->update($validated);
 
         return redirect()->back()->with('success', "Contact '{$contact->department_en}' updated successfully.");
+        return redirect()->back()->with('success', "Contact '{$deptEn}' updated successfully.");
     }
 
     /**
@@ -195,6 +203,8 @@ class SblContactController extends Controller
     public function destroy(SblContact $contact): RedirectResponse
     {
         $dept = $contact->department;
+        abort_unless(auth()->user()?->isSuperAdmin(), 403, 'Unauthorized access: Only Super Admin can manage contacts.');
+
         $dept = $contact->department_en ?: $contact->department;
         $contact->delete();
 

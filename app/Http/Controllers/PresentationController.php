@@ -27,6 +27,7 @@ class PresentationController extends Controller
         $query = Presentation::with(['lead', 'user'])->orderBy('date_time', 'desc');
 
         if (! $isSuperAdmin && $user) {
+        if ($user) {
             $query->where('user_id', $user->id);
         }
 
@@ -35,6 +36,7 @@ class PresentationController extends Controller
 
         $leadsQuery = Lead::orderBy('name');
         if (! $isSuperAdmin && $user) {
+        if ($user) {
             $leadsQuery->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
                     ->orWhere('assigned_to', $user->id);
@@ -66,6 +68,7 @@ class PresentationController extends Controller
         Lead::findOrFail($validated['lead_id']);
         $lead = Lead::findOrFail($validated['lead_id']);
         if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$lead->owner_user_id !== (int)Auth::id() && (int)$lead->assigned_to !== (int)Auth::id()) {
+        if (Auth::user() && (int)$lead->owner_user_id !== (int)Auth::id() && (int)$lead->assigned_to !== (int)Auth::id()) {
             abort(403, 'You can only record presentations for your own leads.');
         }
 
@@ -135,6 +138,7 @@ class PresentationController extends Controller
             abort(401);
         }
         if (! $user->isSuperAdmin() && (int)$presentation->user_id !== (int)$user->id) {
+        if ((int)$presentation->user_id !== (int)$user->id) {
             abort(403, 'You do not have permission to delete this presentation.');
         }
 
