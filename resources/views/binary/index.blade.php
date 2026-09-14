@@ -56,12 +56,83 @@ function teamExplorerData() {
     placementNotes: '',
     selectedLeadId: '',
     selectedPackage: 'National 120k',
+    selectedPackage: 'National Package (120K)',
+    packageSelections: {
+        starter: { selected: false, qty: 1, name: 'Starter Package (10K)', price: 10000, bv: 10 },
+        national: { selected: true, qty: 1, name: 'National Package (120K)', price: 120000, bv: 100 },
+        international: { selected: false, qty: 1, name: 'International Package (550K)', price: 550000, bv: 500 },
+        others: { selected: false, qty: 1, name: 'Custom Package', custom_name: '', price: 0, bv: 0 }
+    },
+    togglePackage(key) {
+        if (!this.packageSelections[key]) return;
+        this.packageSelections[key].selected = !this.packageSelections[key].selected;
+        if (this.packageSelections[key].selected && !this.packageSelections[key].qty) {
+            this.packageSelections[key].qty = 1;
+        }
+    },
+    incrementPkgQty(key) {
+        if (!this.packageSelections[key]) return;
+        this.packageSelections[key].selected = true;
+        this.packageSelections[key].qty = (parseInt(this.packageSelections[key].qty) || 0) + 1;
+    },
+    decrementPkgQty(key) {
+        if (!this.packageSelections[key]) return;
+        const current = parseInt(this.packageSelections[key].qty) || 1;
+        if (current > 1) {
+            this.packageSelections[key].qty = current - 1;
+        } else {
+            this.packageSelections[key].selected = false;
+        }
+    },
+    getSelectedPackagesList() {
+        const list = [];
+        for (const [k, pkg] of Object.entries(this.packageSelections)) {
+            if (pkg.selected) {
+                const qty = Math.max(1, parseInt(pkg.qty) || 1);
+                let name = pkg.name;
+                let price = parseFloat(pkg.price) || 0;
+                let bv = parseFloat(pkg.bv) || 0;
+                if (k === 'others') {
+                    name = (pkg.custom_name && pkg.custom_name.trim()) ? pkg.custom_name.trim() : 'Custom Package';
+                }
+                list.push({
+                    key: k,
+                    name: name,
+                    price: price,
+                    bv: bv,
+                    qty: qty,
+                    total_price: price * qty,
+                    total_bv: bv * qty
+                });
+            }
+        }
+        return list;
+    },
+    totalPackagePrice() {
+        return this.getSelectedPackagesList().reduce((sum, p) => sum + p.total_price, 0);
+    },
+    totalPackageBv() {
+        return this.getSelectedPackagesList().reduce((sum, p) => sum + p.total_bv, 0);
+    },
+    packageSummaryText() {
+        const list = this.getSelectedPackagesList();
+        if (list.length === 0) return 'National Package (120K)';
+        return list.map(p => `${p.name} x ${p.qty}`).join(', ');
+    },
+    selectedPackagesJson() {
+        return JSON.stringify(this.getSelectedPackagesList());
+    },
     placementStep: 'form',
     goToPlacementConfirm() {
         if (!this.placementMemberName || !this.placementMemberName.trim()) {
             window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Please enter member name', type: 'error' } }));
             return;
         }
+        if (this.getSelectedPackagesList().length === 0) {
+            window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'অনুগ্রহ করে অন্তত একটি প্যাকেজ নির্বাচন করুন (Please select at least one package)', type: 'error' } }));
+            return;
+        }
+        this.selectedPackage = this.packageSummaryText();
         this.placementStep = 'confirm';
     },
     crmLeads: @json($crmLeads ?? []),
@@ -102,6 +173,12 @@ function teamExplorerData() {
         this.placementPhone = '';
         this.placementEmail = '';
         this.placementNotes = '';
+        this.packageSelections = {
+            starter: { selected: false, qty: 1, name: 'Starter Package (10K)', price: 10000, bv: 10 },
+            national: { selected: true, qty: 1, name: 'National Package (120K)', price: 120000, bv: 100 },
+            international: { selected: false, qty: 1, name: 'International Package (550K)', price: 550000, bv: 500 },
+            others: { selected: false, qty: 1, name: 'Custom Package', custom_name: '', price: 0, bv: 0 }
+        };
         this.placementStep = 'form';
         this.placementModalOpen = true;
     },
@@ -1091,8 +1168,36 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <!-- Sponsor (Referrer) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <span>🤝</span>
                             <span>Sponsor (Referrer)</span>
                             <span class="text-[10px] text-slate-400 font-normal">Referrer</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-normal">Direct Sponsor</span>
+                    </label>
+                    <input type="text" 
+                           name="sponsor_name" 
+                           x-model="sponsorName" 
+                           list="sponsors_datalist" 
+                           placeholder="Sponsor Name or Code" 
+                           class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                    <datalist id="sponsors_datalist">
+                        @foreach($allNodes as $sNode)
+                            <option value="{{ $sNode->member_name }}">{{ $sNode->member_code }}</option>
+                            <option value="{{ $sNode->member_code }}">{{ $sNode->member_name }}</option>
+                        @endforeach
+                    </datalist>
+                </div>
+
+                <!-- ==================== SELECT PACKAGE (MULTIPLE & QUANTITY) ==================== -->
+                <div class="p-3.5 bg-gradient-to-br from-slate-50 to-orange-50/40 rounded-2xl border border-orange-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-black text-slate-900 flex items-center gap-1.5">
+                            <span>📦</span>
+                            <span>Select Package (প্যাকেজ ও কোয়ান্টিটি)</span>
                         </label>
                         <input type="text" 
                                name="sponsor_name" 
@@ -1106,6 +1211,7 @@ function teamExplorerData() {
                                 <option value="{{ $sNode->member_code }}">{{ $sNode->member_name }}</option>
                             @endforeach
                         </datalist>
+                        <span class="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">একাধিক নির্বাচনযোগ্য</span>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Select Package</label>
@@ -1114,6 +1220,152 @@ function teamExplorerData() {
                             <option value="{{ $pkg['name'] }}">{{ $pkg['label'] }}</option>
                             @endforeach
                         </select>
+
+                    <!-- Hidden form inputs for backend submission -->
+                    <input type="hidden" name="package_name" :value="packageSummaryText()">
+                    <input type="hidden" name="point_value" :value="totalPackageBv()">
+                    <input type="hidden" name="total_price" :value="totalPackagePrice()">
+                    <input type="hidden" name="selected_packages" :value="selectedPackagesJson()">
+
+                    <div class="space-y-2">
+                        <!-- 1. Starter Package (10K) -->
+                        <div class="p-2.5 rounded-xl border transition-all"
+                             :class="packageSelections.starter.selected ? 'bg-white border-orange-500 shadow-xs ring-1 ring-orange-500/20' : 'bg-white/60 border-slate-200 hover:border-slate-300'">
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="flex items-center gap-2 cursor-pointer grow select-none">
+                                    <input type="checkbox" 
+                                           x-model="packageSelections.starter.selected" 
+                                           class="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">1. Starter Package (10K)</div>
+                                        <div class="text-[10px] text-slate-500 font-medium">৳10,000 • 10 BV</div>
+                                    </div>
+                                </label>
+                                <div x-show="packageSelections.starter.selected" x-transition class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 font-medium px-1">Qty:</span>
+                                    <button type="button" @click="decrementPkgQty('starter')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">-</button>
+                                    <input type="number" min="1" x-model.number="packageSelections.starter.qty" class="w-10 text-center text-xs font-bold bg-transparent border-0 p-0 focus:ring-0">
+                                    <button type="button" @click="incrementPkgQty('starter')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. National Package (120K) -->
+                        <div class="p-2.5 rounded-xl border transition-all"
+                             :class="packageSelections.national.selected ? 'bg-white border-orange-500 shadow-xs ring-1 ring-orange-500/20' : 'bg-white/60 border-slate-200 hover:border-slate-300'">
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="flex items-center gap-2 cursor-pointer grow select-none">
+                                    <input type="checkbox" 
+                                           x-model="packageSelections.national.selected" 
+                                           class="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                            <span>2. National Package (120K)</span>
+                                            <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">জনপ্রিয়</span>
+                                        </div>
+                                        <div class="text-[10px] text-slate-500 font-medium">৳120,000 • 100 BV</div>
+                                    </div>
+                                </label>
+                                <div x-show="packageSelections.national.selected" x-transition class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 font-medium px-1">Qty:</span>
+                                    <button type="button" @click="decrementPkgQty('national')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">-</button>
+                                    <input type="number" min="1" x-model.number="packageSelections.national.qty" class="w-10 text-center text-xs font-bold bg-transparent border-0 p-0 focus:ring-0">
+                                    <button type="button" @click="incrementPkgQty('national')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. International Package (550K) -->
+                        <div class="p-2.5 rounded-xl border transition-all"
+                             :class="packageSelections.international.selected ? 'bg-white border-orange-500 shadow-xs ring-1 ring-orange-500/20' : 'bg-white/60 border-slate-200 hover:border-slate-300'">
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="flex items-center gap-2 cursor-pointer grow select-none">
+                                    <input type="checkbox" 
+                                           x-model="packageSelections.international.selected" 
+                                           class="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">3. International Package (550K)</div>
+                                        <div class="text-[10px] text-slate-500 font-medium">৳550,000 • 500 BV</div>
+                                    </div>
+                                </label>
+                                <div x-show="packageSelections.international.selected" x-transition class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 font-medium px-1">Qty:</span>
+                                    <button type="button" @click="decrementPkgQty('international')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">-</button>
+                                    <input type="number" min="1" x-model.number="packageSelections.international.qty" class="w-10 text-center text-xs font-bold bg-transparent border-0 p-0 focus:ring-0">
+                                    <button type="button" @click="incrementPkgQty('international')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Others (Custom Package) -->
+                        <div class="p-2.5 rounded-xl border transition-all"
+                             :class="packageSelections.others.selected ? 'bg-white border-orange-500 shadow-xs ring-1 ring-orange-500/20' : 'bg-white/60 border-slate-200 hover:border-slate-300'">
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="flex items-center gap-2 cursor-pointer grow select-none">
+                                    <input type="checkbox" 
+                                           x-model="packageSelections.others.selected" 
+                                           class="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500">
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-800">4. Others (অন্যান্য / কাস্টম)</div>
+                                        <div class="text-[10px] text-slate-500 font-medium">কাস্টম নাম, মূল্য ও BV</div>
+                                    </div>
+                                </label>
+                                <div x-show="packageSelections.others.selected" x-transition class="flex items-center gap-1 bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                    <span class="text-[10px] text-slate-500 font-medium px-1">Qty:</span>
+                                    <button type="button" @click="decrementPkgQty('others')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">-</button>
+                                    <input type="number" min="1" x-model.number="packageSelections.others.qty" class="w-10 text-center text-xs font-bold bg-transparent border-0 p-0 focus:ring-0">
+                                    <button type="button" @click="incrementPkgQty('others')" class="w-6 h-6 flex items-center justify-center bg-white hover:bg-slate-200 text-slate-700 font-bold rounded text-xs shadow-2xs cursor-pointer">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Custom fields for Others -->
+                            <div x-show="packageSelections.others.selected" x-transition class="mt-2.5 pt-2.5 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-700 mb-0.5">Package Name</label>
+                                    <input type="text" 
+                                           x-model="packageSelections.others.custom_name" 
+                                           placeholder="e.g. Special Pack" 
+                                           class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:bg-white focus:ring-1 focus:ring-orange-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-700 mb-0.5">Price / Unit (৳)</label>
+                                    <input type="number" 
+                                           min="0"
+                                           step="100"
+                                           x-model.number="packageSelections.others.price" 
+                                           placeholder="0" 
+                                           class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:bg-white focus:ring-1 focus:ring-orange-500 font-mono">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-700 mb-0.5">BV / Unit</label>
+                                    <input type="number" 
+                                           min="0"
+                                           step="1"
+                                           x-model.number="packageSelections.others.bv" 
+                                           placeholder="0" 
+                                           class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:bg-white focus:ring-1 focus:ring-orange-500 font-mono">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Total Summary Bar -->
+                    <div class="p-2.5 bg-orange-100/70 rounded-xl border border-orange-200 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-orange-950">নির্বাচিত প্যাকেজ:</span>
+                            <span class="bg-white px-2 py-0.5 rounded-md text-[11px] font-black text-orange-800 border border-orange-200"
+                                  x-text="getSelectedPackagesList().length + ' টি (' + getSelectedPackagesList().reduce((sum, p) => sum + p.qty, 0) + ' পিস)'"></span>
+                        </div>
+                        <div class="flex items-center gap-3 text-right">
+                            <div>
+                                <span class="text-[10px] text-slate-500 block leading-tight">মোট মূল্য</span>
+                                <span class="font-black text-slate-900" x-text="'৳' + totalPackagePrice().toLocaleString()"></span>
+                            </div>
+                            <div class="border-l border-orange-300 pl-3">
+                                <span class="text-[10px] text-slate-500 block leading-tight">মোট BV</span>
+                                <span class="font-black text-orange-700" x-text="totalPackageBv() + ' BV'"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1211,6 +1463,33 @@ function teamExplorerData() {
                     <div class="flex items-center justify-between">
                         <span class="text-slate-500 font-semibold" data-en="Package:" data-bn="প্যাকেজ:">Package:</span>
                         <span class="font-bold text-orange-600" x-text="selectedPackage"></span>
+                    <div class="pt-2 border-t border-slate-200 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500 font-semibold" data-en="Selected Packages:" data-bn="নির্বাচিত প্যাকেজসমূহ:">Selected Packages:</span>
+                            <span class="font-bold text-orange-600" x-text="getSelectedPackagesList().reduce((sum, p) => sum + p.qty, 0) + ' items'"></span>
+                        </div>
+                        <div class="space-y-1.5">
+                            <template x-for="item in getSelectedPackagesList()" :key="item.key">
+                                <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
+                                    <div>
+                                        <span class="font-bold text-slate-800" x-text="item.name"></span>
+                                        <span class="text-orange-600 font-black ml-1" x-text="'× ' + item.qty"></span>
+                                        <span class="text-slate-400 block text-[10px]" x-text="'(৳' + item.price.toLocaleString() + ' • ' + item.bv + ' BV each)'"></span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-slate-900" x-text="'৳' + item.total_price.toLocaleString()"></div>
+                                        <div class="text-orange-700 font-bold text-[10px]" x-text="item.total_bv + ' BV'"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-orange-50 rounded-xl border border-orange-200 text-xs font-black">
+                            <span class="text-orange-950">Total Package Value:</span>
+                            <div class="text-right">
+                                <span class="text-slate-900" x-text="'৳' + totalPackagePrice().toLocaleString()"></span>
+                                <span class="text-orange-700 ml-2" x-text="'(' + totalPackageBv() + ' BV)'"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

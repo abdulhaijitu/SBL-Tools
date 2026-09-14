@@ -385,4 +385,99 @@ class BinaryTeamCrudTest extends TestCase
         $this->assertEquals($user2->id, $user2Root->tree_owner_id);
         $this->assertNotEquals($this->root->id, $user2Root->id);
     }
+
+    public function test_admin_can_place_member_with_multiple_packages_and_quantities(): void
+    {
+        $selectedPackages = [
+            [
+                'key' => 'starter',
+                'name' => 'Starter Package (10K)',
+                'price' => 10000,
+                'bv' => 10,
+                'qty' => 2,
+            ],
+            [
+                'key' => 'national',
+                'name' => 'National Package (120K)',
+                'price' => 120000,
+                'bv' => 100,
+                'qty' => 1,
+            ],
+        ];
+
+        $response = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'parent_id' => $this->root->id,
+            'branch' => 'LEFT',
+            'slot_number' => 1,
+            'member_name' => 'Multi Pack Member',
+            'phone' => '01711223344',
+            'email' => 'multipack@sbl.test',
+            'selected_packages' => json_encode($selectedPackages),
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+
+        $node = BinaryNode::where('member_name', 'Multi Pack Member')->first();
+        $this->assertNotNull($node);
+        $this->assertEquals(120.00, (float)$node->point_value);
+        $this->assertStringContainsString('Starter Package (10K) x 2', $node->package_name);
+        $this->assertStringContainsString('National Package (120K) x 1', $node->package_name);
+
+        // Verify Investment records
+        $investments = \App\Models\Investment::where('binary_node_id', $node->id)->get();
+        $this->assertCount(2, $investments);
+
+        $starterInv = $investments->firstWhere('plan_name', 'Starter Package (10K)');
+        $this->assertNotNull($starterInv);
+        $this->assertEquals(20000.00, (float)$starterInv->amount);
+        $this->assertEquals(20.00, (float)$starterInv->point_value);
+
+        $nationalInv = $investments->firstWhere('plan_name', 'National Package (120K)');
+        $this->assertNotNull($nationalInv);
+        $this->assertEquals(120000.00, (float)$nationalInv->amount);
+        $this->assertEquals(100.00, (float)$nationalInv->point_value);
+
+        // Verify upline left BV sync
+        $this->root->refresh();
+        $this->assertEquals(120.00, (float)$this->root->left_bv);
+    }
+
+    public function test_admin_can_place_member_with_others_custom_package(): void
+    {
+        $selectedPackages = [
+            [
+                'key' => 'others',
+                'name' => 'Special Franchise Pack',
+                'price' => 45000,
+                'bv' => 35,
+                'qty' => 2,
+            ],
+        ];
+
+        $response = $this->actingAs($this->admin)->post(route('binary.store'), [
+            'parent_id' => $this->root->id,
+            'branch' => 'RIGHT',
+            'slot_number' => 1,
+            'member_name' => 'Custom Pack Member',
+            'phone' => '01888990011',
+            'email' => 'custompack@sbl.test',
+            'selected_packages' => json_encode($selectedPackages),
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $node = BinaryNode::where('member_name', 'Custom Pack Member')->first();
+        $this->assertNotNull($node);
+        $this->assertEquals(70.00, (float)$node->point_value);
+        $this->assertEquals('Special Franchise Pack x 2', $node->package_name);
+
+        $investments = \App\Models\Investment::where('binary_node_id', $node->id)->get();
+        $this->assertCount(1, $investments);
+        $this->assertEquals(90000.00, (float)$investments->first()->amount);
+        $this->assertEquals(70.00, (float)$investments->first()->point_value);
+
+        $this->root->refresh();
+        $this->assertEquals(70.00, (float)$this->root->right_bv);
+    }
 }

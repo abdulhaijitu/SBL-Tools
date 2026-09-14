@@ -548,10 +548,21 @@ class BinaryTreeService
             $packageName = $data['package_name'] ?? 'National 120k';
             if (isset($data['package_name'])) {
                 if (str_contains(strtolower($packageName), '550')) {
+            $packageName = $data['package_name'] ?? 'National Package (120K)';
+            if (isset($data['point_value']) && is_numeric($data['point_value'])) {
+                $pointValue = (float)$data['point_value'];
+            } else {
+                $pointValue = 100.00;
+                $pkgLower = strtolower($packageName);
+                if (str_contains($pkgLower, '550')) {
                     $pointValue = 500.00;
                 } elseif (str_contains(strtolower($packageName), '120')) {
+                } elseif (str_contains($pkgLower, '120')) {
                     $pointValue = 100.00;
                 } elseif (str_contains(strtolower($packageName), '25')) {
+                } elseif (str_contains($pkgLower, '10k') || str_contains($pkgLower, 'starter') || str_contains($pkgLower, '10000') || str_contains($pkgLower, '10,000')) {
+                    $pointValue = 10.00;
+                } elseif (str_contains($pkgLower, '25')) {
                     $pointValue = 25.00;
                 }
             }
@@ -589,6 +600,7 @@ class BinaryTreeService
 
             // Create initial Investment record if not target
             if (! $isTarget && ($pointValue > 0 || !empty($data['contributions']))) {
+            if (! $isTarget && ($pointValue > 0 || !empty($data['contributions']) || !empty($data['total_price']))) {
                 $contribs = $data['contributions'] ?? [];
                 if (!empty($contribs) && is_array($contribs)) {
                     foreach ($contribs as $c) {
@@ -597,16 +609,29 @@ class BinaryTreeService
                             'plan_name' => $c['note'] ?? $packageName,
                             'amount' => (float)($c['amount'] ?? $pointValue),
                             'point_value' => (float)($c['amount'] ?? $pointValue),
+                            'plan_name' => $c['plan_name'] ?? ($c['note'] ?? $packageName),
+                            'amount' => (float)($c['amount'] ?? ($c['point_value'] ?? $pointValue)),
+                            'point_value' => (float)($c['point_value'] ?? ($c['amount'] ?? $pointValue)),
                             'status' => 'active',
                             'investment_date' => $c['date'] ?? now()->toDateString(),
                             'note' => $c['note'] ?? 'Initial Package Investment',
                         ]);
                     }
                 } else {
+                    $defaultAmt = 120000.0;
+                    if (str_contains(strtolower($packageName), '550')) $defaultAmt = 550000.0;
+                    elseif (str_contains(strtolower($packageName), '10k') || str_contains(strtolower($packageName), 'starter')) $defaultAmt = 10000.0;
+                    elseif (str_contains(strtolower($packageName), '120')) $defaultAmt = 120000.0;
+
+                    $initialAmount = isset($data['total_price']) && (float)$data['total_price'] > 0
+                        ? (float)$data['total_price']
+                        : ((float)($data['amount'] ?? 0) > 0 ? (float)$data['amount'] : $defaultAmt);
+
                     Investment::create([
                         'binary_node_id' => $node->id,
                         'plan_name' => $packageName,
                         'amount' => $pointValue,
+                        'amount' => $initialAmount,
                         'point_value' => $pointValue,
                         'status' => 'active',
                         'investment_date' => now()->toDateString(),

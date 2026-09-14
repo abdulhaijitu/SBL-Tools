@@ -81,6 +81,38 @@ class BinaryTeamController extends Controller
             ['name' => 'National 120k', 'price' => 120000, 'bv' => 100, 'label' => 'National Package (120,000/-) - 100 BV'],
             ['name' => 'International 550k', 'price' => 550000, 'bv' => 500, 'label' => 'International Package (550,000/-) - 500 BV'],
             ['name' => 'Executive Starter', 'price' => 25000, 'bv' => 25, 'label' => 'Starter Pack (25,000/-) - 25 BV'],
+            [
+                'id' => 'starter',
+                'name' => 'Starter Package (10K)',
+                'price' => 10000,
+                'bv' => 10,
+                'label' => '1. Starter Package (10K)',
+                'subtext' => '৳10,000 • 10 BV',
+            ],
+            [
+                'id' => 'national',
+                'name' => 'National Package (120K)',
+                'price' => 120000,
+                'bv' => 100,
+                'label' => '2. National Package (120K)',
+                'subtext' => '৳120,000 • 100 BV',
+            ],
+            [
+                'id' => 'international',
+                'name' => 'International Package (550K)',
+                'price' => 550000,
+                'bv' => 500,
+                'label' => '3. International Package (550K)',
+                'subtext' => '৳550,000 • 500 BV',
+            ],
+            [
+                'id' => 'others',
+                'name' => 'Others',
+                'price' => 0,
+                'bv' => 0,
+                'label' => '4. Others',
+                'subtext' => 'Custom Package & Amount',
+            ],
         ];
 
         $nodesQuery = BinaryNode::orderBy('member_name');
@@ -207,6 +239,10 @@ class BinaryTeamController extends Controller
             'branch' => 'required|in:LEFT,RIGHT',
             'slot_number' => 'required|integer|between:1,5',
             'package_name' => 'required|string|max:100',
+            'package_name' => 'nullable|string|max:255',
+            'selected_packages' => 'nullable',
+            'point_value' => 'nullable|numeric|min:0',
+            'total_price' => 'nullable|numeric|min:0',
             'user_id' => 'nullable|exists:users,id',
             'rank_name' => 'nullable|string|max:50',
             'is_target' => 'nullable|boolean',
@@ -214,6 +250,49 @@ class BinaryTeamController extends Controller
             'target_notes' => 'nullable|string|max:500',
             'notes' => 'nullable|string|max:2000',
         ]);
+
+        // Parse multi-package selection if provided
+        $selectedPackages = $request->input('selected_packages');
+        if (is_string($selectedPackages)) {
+            $selectedPackages = json_decode($selectedPackages, true);
+        }
+
+        if (is_array($selectedPackages) && count($selectedPackages) > 0) {
+            $summaryParts = [];
+            $totalBv = 0.0;
+            $totalPrice = 0.0;
+            $contributions = [];
+
+            foreach ($selectedPackages as $pkg) {
+                $pName = trim($pkg['name'] ?? 'Package');
+                $pQty = max(1, (int)($pkg['qty'] ?? 1));
+                $pPrice = (float)($pkg['price'] ?? 0);
+                $pBv = (float)($pkg['bv'] ?? 0);
+
+                $summaryParts[] = "{$pName} x {$pQty}";
+                $linePrice = $pPrice * $pQty;
+                $lineBv = $pBv * $pQty;
+                $totalPrice += $linePrice;
+                $totalBv += $lineBv;
+
+                $contributions[] = [
+                    'plan_name' => $pName,
+                    'amount' => $linePrice,
+                    'point_value' => $lineBv,
+                    'note' => "{$pName} (Qty: {$pQty})",
+                    'date' => now()->toDateString(),
+                ];
+            }
+
+            $validated['package_name'] = implode(', ', $summaryParts);
+            $validated['point_value'] = $totalBv;
+            $validated['total_price'] = $totalPrice;
+            $validated['contributions'] = $contributions;
+        } else {
+            if (empty($validated['package_name'])) {
+                $validated['package_name'] = 'National Package (120K)';
+            }
+        }
 
         $parentNode = BinaryNode::findOrFail($validated['parent_id']);
         if (!auth()->user()->isSuperAdmin()) {
