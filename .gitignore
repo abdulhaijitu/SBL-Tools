@@ -26,3 +26,4 @@ Thumbs.db
 /storage/*.png
 /.playwright-cli
 /output
+/dist
