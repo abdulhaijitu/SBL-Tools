@@ -26,7 +26,7 @@ services:
       - key: APP_URL
         sync: false
       - key: LOG_CHANNEL
-        value: stderr
+        value: errorlog
       - key: DB_CONNECTION
         sync: false
       - key: DB_DATABASE

@@ -25,8 +25,15 @@ trait ScopesWorkspaceRecords
                 return;
             }
 
-            $column = $model instanceof \App\Models\Lead ? 'owner_user_id' : 'user_id';
-            $query->where($model->qualifyColumn($column), $user->id);
+            if ($model instanceof \App\Models\Lead) {
+                $query->where(function (Builder $q) use ($model, $user) {
+                    $q->where($model->qualifyColumn('owner_user_id'), $user->id)
+                        ->orWhere($model->qualifyColumn('assigned_to'), $user->id);
+                });
+                return;
+            }
+
+            $query->where($model->qualifyColumn('user_id'), $user->id);
         });
     }
 }

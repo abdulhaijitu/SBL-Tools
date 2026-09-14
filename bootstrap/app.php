@@ -21,4 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
             return redirect()->route('login')->with('status', 'আপনার সেশনের মেয়াদ শেষ হয়েছিল। অনুগ্রহ করে আবার চেষ্টা করুন।');
         });
+        $exceptions->report(function (\Throwable $e) {
+            error_log('[PRODUCTION SERVER ERROR] ' . get_class($e) . ': ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        });
     })->create();

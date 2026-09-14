@@ -91,4 +91,23 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $response->assertSessionHasErrors('login');
     }
+
+    public function test_user_with_assigned_leads_can_access_dashboard(): void
+    {
+        $user = User::factory()->create(['phone' => '01833876434', 'status' => 'active']);
+        $source = \App\Models\LeadSource::create(['name' => 'Online Ad', 'is_active' => true]);
+
+        \App\Models\Lead::create([
+            'name' => 'Assigned Test Lead',
+            'mobile' => '01999999999',
+            'lead_source_id' => $source->id,
+            'owner_user_id' => $user->id,
+            'assigned_to' => $user->id,
+            'stage' => \App\Enums\LeadStage::NEW,
+            'temperature' => \App\Enums\LeadTemperature::WARM,
+        ]);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+        $response->assertStatus(200);
+    }
 }

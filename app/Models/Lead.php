@@ -36,6 +36,7 @@ class Lead extends Model
         'budget_range',
         'decision_timeline',
         'owner_user_id',
+        'assigned_to',
         'next_action_type',
         'next_action_at',
         'last_contact_at',
@@ -58,6 +59,11 @@ class Lead extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
     public function source(): BelongsTo
