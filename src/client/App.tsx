@@ -36,9 +36,18 @@ import {
   Sparkles,
   ArrowRight,
   HelpCircle,
+  Edit3,
+  Trash2,
+  Calendar,
+  DollarSign,
+  MapPin,
+  Briefcase,
+  Mail,
+  Check,
+  Activity as ActivityIcon,
 } from 'lucide-react';
 
-// Currency & Language Types
+// Types
 type Currency = 'BDT' | 'USD';
 type Language = 'en' | 'bn';
 
@@ -67,7 +76,7 @@ export function App() {
 
   // Leads Sub-view: table or kanban
   const [leadsView, setLeadsView] = useState<'table' | 'kanban'>('table');
-  // Tree Sub-view: ten-slot or mindmap
+  // Tree Sub-view: slots or mindmap
   const [treeView, setTreeView] = useState<'slots' | 'mindmap'>('slots');
 
   // Auth states
@@ -79,9 +88,18 @@ export function App() {
   // Data states
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
+  const [leadSources, setLeadSources] = useState<any[]>([]);
   const [leadFilter, setLeadFilter] = useState({ stage: '', temperature: '', search: '' });
+
+  // Leads CRUD Modals State
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
-  const [newLead, setNewLead] = useState({
+  const [showEditLeadModal, setShowEditLeadModal] = useState(false);
+  const [showDetailLeadModal, setShowDetailLeadModal] = useState(false);
+  const [deleteConfirmLead, setDeleteConfirmLead] = useState<any | null>(null);
+  const [activeLeadDetail, setActiveLeadDetail] = useState<any | null>(null);
+
+  // Form State for Add / Edit Lead
+  const initialLeadForm = {
     name: '',
     mobile: '',
     whatsapp: '',
@@ -92,8 +110,16 @@ export function App() {
     temperature: 'warm',
     budgetRange: '50000',
     decisionTimeline: 'Within 15 Days',
+    leadSourceId: '',
     notes: '',
-  });
+  };
+  const [leadFormData, setLeadFormData] = useState<any>(initialLeadForm);
+  const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
+
+  // Activity Log State (Inside Lead Details Modal)
+  const [activityNote, setActivityNote] = useState('');
+  const [activityType, setActivityType] = useState('note');
+  const [isLoggingActivity, setIsLoggingActivity] = useState(false);
 
   // Toolkit & Tree states
   const [links, setLinks] = useState<any[]>([]);
@@ -153,7 +179,8 @@ export function App() {
     if (activeTab === 'dashboard') {
       api.getDashboardSummary().then(setDashboardData).catch(console.error);
     } else if (activeTab === 'leads') {
-      api.getLeads(leadFilter).then(setLeads).catch(console.error);
+      loadLeads();
+      api.getLeadSources().then(setLeadSources).catch(console.error);
     } else if (activeTab === 'tree') {
       api.getTreeNodes().then(setTreeNodes).catch(console.error);
     } else if (activeTab === 'links' || activeTab === 'contacts' || activeTab === 'glossary') {
@@ -166,6 +193,10 @@ export function App() {
         .catch(console.error);
     }
   }, [token, activeTab, leadFilter]);
+
+  const loadLeads = () => {
+    api.getLeads(leadFilter).then(setLeads).catch(console.error);
+  };
 
   // Handle Login
   const handleLogin = async (e: React.FormEvent) => {
@@ -191,33 +222,129 @@ export function App() {
     setUser(null);
   };
 
-  // Handle Create Lead
+  // ==========================================
+  // LEADS CRUD HANDLERS
+  // ==========================================
+
+  // Open Create Lead Modal
+  const handleOpenAddLead = () => {
+    setLeadFormData(initialLeadForm);
+    setShowAddLeadModal(true);
+  };
+
+  // Submit Create Lead
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.createLead(newLead);
+      await api.createLead(leadFormData);
       setShowAddLeadModal(false);
-      setNewLead({
-        name: '',
-        mobile: '',
-        whatsapp: '',
-        email: '',
-        location: '',
-        professionOrBusiness: '',
-        stage: 'new',
-        temperature: 'warm',
-        budgetRange: '50000',
-        decisionTimeline: 'Within 15 Days',
-        notes: '',
-      });
       showToast(lang === 'bn' ? 'লিড সফলভাবে তৈরি হয়েছে!' : 'Lead created successfully!');
-      api.getLeads(leadFilter).then(setLeads);
+      loadLeads();
     } catch (err: any) {
       alert(err.message || 'Failed to create lead');
     }
   };
 
-  // Handle Create Tree Node
+  // Open Edit Lead Modal
+  const handleOpenEditLead = (lead: any) => {
+    setEditingLeadId(lead.id);
+    setLeadFormData({
+      name: lead.name || '',
+      mobile: lead.mobile || '',
+      whatsapp: lead.whatsapp || '',
+      email: lead.email || '',
+      location: lead.location || '',
+      professionOrBusiness: lead.professionOrBusiness || '',
+      stage: lead.stage || 'new',
+      temperature: lead.temperature || 'warm',
+      budgetRange: lead.budgetRange || '50000',
+      decisionTimeline: lead.decisionTimeline || 'Within 15 Days',
+      leadSourceId: lead.leadSourceId || '',
+      notes: lead.notes || '',
+    });
+    setShowEditLeadModal(true);
+  };
+
+  // Submit Edit Lead
+  const handleUpdateLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLeadId) return;
+    try {
+      await api.updateLead(editingLeadId, leadFormData);
+      setShowEditLeadModal(false);
+      setEditingLeadId(null);
+      showToast(lang === 'bn' ? 'লিড তথ্য সফলভাবে আপডেট হয়েছে!' : 'Lead updated successfully!');
+      loadLeads();
+      if (activeLeadDetail && activeLeadDetail.id === editingLeadId) {
+        openLeadDetails(editingLeadId);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update lead');
+    }
+  };
+
+  // Quick Stage Update (e.g. from Kanban or Table)
+  const handleQuickStageChange = async (leadId: number, newStage: string) => {
+    try {
+      await api.updateLead(leadId, { stage: newStage });
+      showToast(lang === 'bn' ? `স্টেজ পরিবর্তিত হয়েছে: ${newStage}` : `Stage updated to ${newStage}`);
+      loadLeads();
+      if (activeLeadDetail && activeLeadDetail.id === leadId) {
+        setActiveLeadDetail({ ...activeLeadDetail, stage: newStage });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update stage');
+    }
+  };
+
+  // Open Lead Details Modal
+  const openLeadDetails = async (leadId: number) => {
+    try {
+      const details = await api.getLead(leadId);
+      setActiveLeadDetail(details);
+      setShowDetailLeadModal(true);
+    } catch (err: any) {
+      alert(err.message || 'Failed to fetch lead details');
+    }
+  };
+
+  // Submit New Activity / Note to Lead
+  const handleAddActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeLeadDetail || !activityNote.trim()) return;
+    setIsLoggingActivity(true);
+    try {
+      await api.addActivity(activeLeadDetail.id, {
+        type: activityType,
+        details: activityNote,
+      });
+      setActivityNote('');
+      showToast(lang === 'bn' ? 'কার্যক্রম নোট সংরক্ষণ করা হয়েছে!' : 'Activity note saved!');
+      openLeadDetails(activeLeadDetail.id);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save activity note');
+    } finally {
+      setIsLoggingActivity(false);
+    }
+  };
+
+  // Confirm Delete Lead
+  const handleDeleteLead = async () => {
+    if (!deleteConfirmLead) return;
+    try {
+      await api.deleteLead(deleteConfirmLead.id);
+      setDeleteConfirmLead(null);
+      setShowDetailLeadModal(false);
+      showToast(lang === 'bn' ? 'লিড সফলভাবে মুছে ফেলা হয়েছে!' : 'Lead deleted successfully!');
+      loadLeads();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete lead');
+    }
+  };
+
+  // ==========================================
+  // TREE NODE HANDLER
+  // ==========================================
   const handleCreateNode = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -233,7 +360,7 @@ export function App() {
     }
   };
 
-  // Official SBL Packages
+  // Official SBL Packages (Matching sbl-tools.onrender.com)
   const officialPackages = useMemo(
     () => [
       {
@@ -342,7 +469,6 @@ export function App() {
       bvReq: '100 BV Left / 100 BV Right',
       matchBonus: '8%',
       reward: lang === 'bn' ? 'স্বাগতম কিট' : 'Welcome Starter Kit',
-      color: 'from-slate-700 to-slate-800',
     },
     {
       title: 'Executive',
@@ -350,7 +476,6 @@ export function App() {
       bvReq: '1,000 BV Left / 1,000 BV Right',
       matchBonus: '10%',
       reward: lang === 'bn' ? 'স্মার্টওয়াচ / ৳৫,০০০' : 'Smartwatch / ৳5,000',
-      color: 'from-emerald-700 to-emerald-900',
     },
     {
       title: 'Senior Manager',
@@ -358,7 +483,6 @@ export function App() {
       bvReq: '5,000 BV Left / 5,000 BV Right',
       matchBonus: '12%',
       reward: lang === 'bn' ? 'ট্যাবলেট পিসি / ৳১৫,০০০' : 'Tablet PC / ৳15,000',
-      color: 'from-blue-700 to-blue-900',
     },
     {
       title: 'Director',
@@ -366,7 +490,6 @@ export function App() {
       bvReq: '25,000 BV Left / 25,000 BV Right',
       matchBonus: '14%',
       reward: lang === 'bn' ? 'ল্যাপটপ ও ব্যাংকক ট্যুর' : 'Laptop & Bangkok Tour',
-      color: 'from-amber-600 to-amber-800',
     },
     {
       title: 'Crown Diamond',
@@ -374,7 +497,6 @@ export function App() {
       bvReq: '100,000 BV Left / 100,000 BV Right',
       matchBonus: '16%',
       reward: lang === 'bn' ? 'লাক্সারি কার ফান্ড (৳২০ লাখ)' : 'Luxury Car Fund (৳2,000,000)',
-      color: 'from-purple-600 to-purple-900',
     },
   ];
 
@@ -440,41 +562,13 @@ export function App() {
   const [glossarySearch, setGlossarySearch] = useState('');
   const filteredGlossary = useMemo(() => {
     const defaultGlossary = [
-      {
-        abbr: 'BV',
-        term: 'Business Volume',
-        desc: 'কমিশন গণনার একক পয়েন্ট (১ BV = কমিশনযোগ্য পয়েন্ট)',
-      },
-      {
-        abbr: 'PV',
-        term: 'Point Volume',
-        desc: 'প্যাকেজ এবং মার্চেন্ডাইজ ক্রয়ের বিপরীতে অর্জিত পয়েন্ট',
-      },
-      {
-        abbr: 'TPIN',
-        term: 'Transaction PIN',
-        desc: 'ব্যালেন্স উইথড্রয়াল ও মেম্বার ট্রান্সফারের ৪ সংখ্যার পিন কোড',
-      },
-      {
-        abbr: 'BDT',
-        term: 'Bangladeshi Taka',
-        desc: 'বাংলাদেশের জাতীয় মুদ্রা (স্ট্যান্ডার্ড রেট: ১ USD = ১২০ BDT)',
-      },
-      {
-        abbr: 'KYC',
-        term: 'Know Your Customer',
-        desc: 'জাতীয় পরিচয়পত্র বা পাসপোর্ট ভেরিফিকেশন প্রক্রিয়া',
-      },
-      {
-        abbr: 'Spillover',
-        term: 'Leg Placement Spill',
-        desc: 'আপলাইনের টিম সম্প্রসারণের মাধ্যমে নিচের লিঙ্কে পাওয়া সদস্য প্লেসমেন্ট',
-      },
-      {
-        abbr: 'Daily Cap',
-        term: 'Daily Earnings Limit',
-        desc: 'প্যাকেজ অনুযায়ী প্রতিদিন সর্বোচ্চ বাইনারি কমিশন উত্তোলনের সীমা',
-      },
+      { abbr: 'BV', term: 'Business Volume', desc: 'কমিশন গণনার একক পয়েন্ট (১ BV = কমিশনযোগ্য পয়েন্ট)' },
+      { abbr: 'PV', term: 'Point Volume', desc: 'প্যাকেজ এবং মার্চেন্ডাইজ ক্রয়ের বিপরীতে অর্জিত পয়েন্ট' },
+      { abbr: 'TPIN', term: 'Transaction PIN', desc: 'ব্যালেন্স উইথড্রয়াল ও মেম্বার ট্রান্সফারের ৪ সংখ্যার পিন কোড' },
+      { abbr: 'BDT', term: 'Bangladeshi Taka', desc: 'বাংলাদেশের জাতীয় মুদ্রা (স্ট্যান্ডার্ড রেট: ১ USD = ১২০ BDT)' },
+      { abbr: 'KYC', term: 'Know Your Customer', desc: 'জাতীয় পরিচয়পত্র বা পাসপোর্ট ভেরিফিকেশন প্রক্রিয়া' },
+      { abbr: 'Spillover', term: 'Leg Placement Spill', desc: 'আপলাইনের টিম সম্প্রসারণের মাধ্যমে নিচের লিঙ্কে পাওয়া সদস্য প্লেসমেন্ট' },
+      { abbr: 'Daily Cap', term: 'Daily Earnings Limit', desc: 'প্যাকেজ অনুযায়ী প্রতিদিন সর্বোচ্চ বাইনারি কমিশন উত্তোলনের সীমা' },
     ];
 
     const source = abbreviations.length > 0 ? abbreviations : defaultGlossary;
@@ -487,12 +581,11 @@ export function App() {
     );
   }, [abbreviations, glossarySearch]);
 
-  // IF NOT LOGGED IN - RENDER AUTH FORM
+  // IF NOT LOGGED IN
   if (!token) {
     return (
       <div className="min-h-screen bg-[#070b14] flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
-          {/* Top Brand Ribbon */}
           <div className="sbl-ribbon absolute top-0 left-0 right-0" />
 
           <div className="text-center mb-6 pt-2">
@@ -569,10 +662,9 @@ export function App() {
     );
   }
 
-  // LOGGED IN DASHBOARD SHELL
+  // LOGGED IN APP SHELL
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col antialiased">
-      {/* Top SBL Gradient Ribbon */}
       <div className="sbl-ribbon" />
 
       {/* Top Navbar */}
@@ -602,9 +694,8 @@ export function App() {
             </a>
           </div>
 
-          {/* Center/Right Nav Controls */}
+          {/* Controls */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Currency Selector */}
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value as Currency)}
@@ -615,7 +706,6 @@ export function App() {
               <option value="USD">USD ($)</option>
             </select>
 
-            {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 transition-colors"
@@ -626,16 +716,14 @@ export function App() {
               <span className={lang === 'bn' ? 'text-orange-500 font-extrabold' : 'text-slate-400'}>বাং</span>
             </button>
 
-            {/* New Lead Quick Action Button */}
             <button
-              onClick={() => setShowAddLeadModal(true)}
+              onClick={handleOpenAddLead}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-orange-600/30"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? 'নতুন লিড' : 'New Lead'}</span>
             </button>
 
-            {/* User Profile Avatar */}
             <div className="flex items-center gap-2 pl-1 border-l border-slate-800">
               <div
                 className="w-8 h-8 rounded-xl bg-orange-600 text-white font-extrabold flex items-center justify-center text-xs shadow-xs"
@@ -871,7 +959,7 @@ export function App() {
           </div>
         </aside>
 
-        {/* MAIN CONTENT AREA */}
+        {/* MAIN WORKSPACE */}
         <main className="flex-1 min-w-0">
           {/* TAB 1: DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -889,7 +977,7 @@ export function App() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setShowAddLeadModal(true)}
+                    onClick={handleOpenAddLead}
                     className="px-3.5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
                   >
                     <Plus className="w-4 h-4" />
@@ -908,7 +996,7 @@ export function App() {
                     <Users className="w-4 h-4 text-orange-400" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-white">
-                    {leads.length || 24}
+                    {leads.length}
                   </div>
                   <div className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" />
@@ -924,7 +1012,7 @@ export function App() {
                     <Sparkles className="w-4 h-4 text-rose-400" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-rose-400">
-                    {leads.filter((l) => l.temperature === 'hot').length || 8}
+                    {leads.filter((l) => l.temperature === 'hot').length}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1">
                     {lang === 'bn' ? 'তাৎক্ষণিক ফলোআপ প্রয়োজন' : 'Immediate follow-up required'}
@@ -939,7 +1027,9 @@ export function App() {
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-emerald-400">
-                    28.5%
+                    {leads.length > 0
+                      ? `${Math.round((leads.filter((l) => l.stage === 'won').length / leads.length) * 100)}%`
+                      : '0%'}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1">
                     {lang === 'bn' ? 'ক্লোজিং সাকসেস রেশিও' : 'Closing success ratio'}
@@ -954,7 +1044,7 @@ export function App() {
                     <Network className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="text-2xl sm:text-3xl font-black text-blue-400">
-                    {treeNodes.length > 0 ? treeNodes.length : 10}
+                    {treeNodes.length}
                   </div>
                   <div className="text-[11px] text-slate-400 mt-1">
                     {lang === 'bn' ? '১০-স্লট সক্রিয় সহযোগী' : '10-Slot active members'}
@@ -971,34 +1061,47 @@ export function App() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center text-xs">
                   {[
-                    { key: 'new', label: 'New Lead', labelBn: 'নতুন লিড', count: 6, color: 'bg-blue-500/20 text-blue-300' },
-                    { key: 'contacted', label: 'Contacted', labelBn: 'যোগাযোগ', count: 5, color: 'bg-amber-500/20 text-amber-300' },
-                    { key: 'follow_up', label: 'Follow Up', labelBn: 'ফলোআপ', count: 4, color: 'bg-purple-500/20 text-purple-300' },
-                    { key: 'presentation', label: 'Presentation', labelBn: 'প্রেজেন্টেশন', count: 4, color: 'bg-indigo-500/20 text-indigo-300' },
-                    { key: 'negotiation', label: 'Negotiation', labelBn: 'আলোচনা', count: 3, color: 'bg-rose-500/20 text-rose-300' },
-                    { key: 'won', label: 'Converted', labelBn: 'সফল ক্লোজিং', count: 2, color: 'bg-emerald-500/20 text-emerald-300' },
-                  ].map((stage) => (
-                    <div key={stage.key} className={`p-3 rounded-xl border border-slate-800 ${stage.color}`}>
-                      <div className="text-lg font-black">{stage.count}</div>
-                      <div className="text-[11px] font-semibold mt-0.5">
-                        {lang === 'bn' ? stage.labelBn : stage.label}
+                    { key: 'new', label: 'New Lead', labelBn: 'নতুন লিড', color: 'bg-blue-500/20 text-blue-300' },
+                    { key: 'contacted', label: 'Contacted', labelBn: 'যোগাযোগ', color: 'bg-amber-500/20 text-amber-300' },
+                    { key: 'follow_up', label: 'Follow Up', labelBn: 'ফলোআপ', color: 'bg-purple-500/20 text-purple-300' },
+                    { key: 'presentation', label: 'Presentation', labelBn: 'প্রেজেন্টেশন', color: 'bg-indigo-500/20 text-indigo-300' },
+                    { key: 'negotiation', label: 'Negotiation', labelBn: 'আলোচনা', color: 'bg-rose-500/20 text-rose-300' },
+                    { key: 'won', label: 'Converted', labelBn: 'সফল ক্লোজিং', color: 'bg-emerald-500/20 text-emerald-300' },
+                  ].map((stage) => {
+                    const count = leads.filter((l) => l.stage === stage.key).length;
+                    return (
+                      <div
+                        key={stage.key}
+                        onClick={() => {
+                          setLeadFilter({ ...leadFilter, stage: stage.key });
+                          setActiveTab('leads');
+                        }}
+                        className={`p-3 rounded-xl border border-slate-800 ${stage.color} cursor-pointer hover:scale-102 transition-transform`}
+                      >
+                        <div className="text-lg font-black">{count}</div>
+                        <div className="text-[11px] font-semibold mt-0.5">
+                          {lang === 'bn' ? stage.labelBn : stage.label}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Quick Action Tables (Follow-ups & Hot Prospects) */}
+              {/* Priority Prospects & Action Board */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {/* Hot Leads */}
+                {/* Hot Prospects */}
                 <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <span className="text-rose-400">🔥</span>
-                      <span>{lang === 'bn' ? 'জরুরি প্রসপেক্টস' : 'Priority Prospects'}</span>
+                      <span>{lang === 'bn' ? 'জরুরি প্রসপেক্টস (হট)' : 'Priority Hot Prospects'}</span>
                     </h3>
                     <button
-                      onClick={() => setActiveTab('leads')}
+                      onClick={() => {
+                        setLeadFilter({ stage: '', temperature: 'hot', search: '' });
+                        setActiveTab('leads');
+                      }}
                       className="text-xs text-orange-400 hover:underline"
                     >
                       {lang === 'bn' ? 'সবগুলো দেখুন →' : 'View all →'}
@@ -1006,39 +1109,58 @@ export function App() {
                   </div>
 
                   <div className="space-y-2.5">
-                    {(leads.length > 0 ? leads.slice(0, 4) : [
-                      { id: 1, name: 'Tanvir Hossain', mobile: '+8801711223344', temperature: 'hot', budgetRange: '75000' },
-                      { id: 2, name: 'Farhana Akter', mobile: '+8801822334455', temperature: 'hot', budgetRange: '35000' },
-                      { id: 3, name: 'Kamal Uddin', mobile: '+8801933445566', temperature: 'warm', budgetRange: '15000' },
-                    ]).map((lead: any) => (
-                      <div
-                        key={lead.id}
-                        className="p-3 rounded-xl bg-slate-800/50 border border-slate-750 flex items-center justify-between gap-2"
-                      >
-                        <div>
-                          <div className="text-xs font-bold text-white">{lead.name}</div>
-                          <div className="text-[11px] text-slate-400">{lead.mobile}</div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <a
-                            href={`https://wa.me/${(lead.whatsapp || lead.mobile || '').replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
-                            title="WhatsApp Chat"
+                    {leads.filter((l) => l.temperature === 'hot').slice(0, 4).length > 0 ? (
+                      leads
+                        .filter((l) => l.temperature === 'hot')
+                        .slice(0, 4)
+                        .map((lead: any) => (
+                          <div
+                            key={lead.id}
+                            className="p-3 rounded-xl bg-slate-800/50 border border-slate-750 flex items-center justify-between gap-2"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                          </a>
-                          <a
-                            href={`tel:${lead.mobile}`}
-                            className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
-                            title="Direct Call"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                            <div
+                              onClick={() => openLeadDetails(lead.id)}
+                              className="cursor-pointer"
+                            >
+                              <div className="text-xs font-bold text-white hover:text-orange-400 transition-colors">
+                                {lead.name}
+                              </div>
+                              <div className="text-[11px] text-slate-400">
+                                {lead.mobile} • {formatMoney(Number(lead.budgetRange || 50000))}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`https://wa.me/${(lead.whatsapp || lead.mobile || '').replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                                title="WhatsApp Chat"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </a>
+                              <a
+                                href={`tel:${lead.mobile}`}
+                                className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                                title="Direct Call"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+                              <button
+                                onClick={() => openLeadDetails(lead.id)}
+                                className="p-1.5 rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600"
+                                title="View Details"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <div className="text-center py-6 text-slate-500 text-xs">
+                        {lang === 'bn' ? 'কোনো হট প্রসপেক্ট নেই।' : 'No hot prospects currently.'}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -1069,13 +1191,13 @@ export function App() {
                           setActiveTab('tree');
                           setShowAddNodeModal(true);
                         }}
-                        className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all"
+                        className="px-3.5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30"
                       >
                         {lang === 'bn' ? '+ মেম্বার প্লেসমেন্ট' : '+ Place Member'}
                       </button>
                       <button
                         onClick={() => setActiveTab('commission')}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all"
+                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all"
                       >
                         {lang === 'bn' ? 'কমিশন হিসাব করুন' : 'Calc Commission'}
                       </button>
@@ -1086,7 +1208,7 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 2: LEADS & PIPELINE */}
+          {/* TAB 2: LEADS & PIPELINE (FULL CRUD SYSTEM) */}
           {activeTab === 'leads' && (
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
@@ -1096,8 +1218,8 @@ export function App() {
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                     {lang === 'bn'
-                      ? 'প্রসপেক্ট ট্র্যাকিং, হোয়াটসঅ্যাপ সংযোগ ও ফানেল ব্যবস্থাপনা'
-                      : 'Track prospects, engage via WhatsApp and accelerate conversions'}
+                      ? 'প্রসপেক্ট ট্র্যাকিং, স্টেজ অগ্রগতি, বিস্তারিত নোট ও সম্পূর্ণ CRUD ম্যানেজমেন্ট'
+                      : 'Track prospects, advance stages, log follow-ups and complete lead CRUD lifecycle'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1121,8 +1243,8 @@ export function App() {
                   </div>
 
                   <button
-                    onClick={() => setShowAddLeadModal(true)}
-                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                    onClick={handleOpenAddLead}
+                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-orange-600/30"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{lang === 'bn' ? 'নতুন লিড' : 'New Lead'}</span>
@@ -1130,161 +1252,292 @@ export function App() {
                 </div>
               </div>
 
-              {/* Leads Table View */}
+              {/* Filters Header */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-wrap gap-2.5 items-center justify-between">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder={lang === 'bn' ? 'নাম, মোবাইল বা লোকেশন খুঁজুন...' : 'Search name, phone or location...'}
+                    value={leadFilter.search}
+                    onChange={(e) => setLeadFilter({ ...leadFilter, search: e.target.value })}
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={leadFilter.stage}
+                    onChange={(e) => setLeadFilter({ ...leadFilter, stage: e.target.value })}
+                    className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none"
+                  >
+                    <option value="">{lang === 'bn' ? 'সকল পর্যায় (Stages)' : 'All Stages'}</option>
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="follow_up">Follow Up</option>
+                    <option value="presentation">Presentation</option>
+                    <option value="negotiation">Negotiation</option>
+                    <option value="won">Won / Converted</option>
+                    <option value="lost">Lost</option>
+                  </select>
+
+                  <select
+                    value={leadFilter.temperature}
+                    onChange={(e) => setLeadFilter({ ...leadFilter, temperature: e.target.value })}
+                    className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none"
+                  >
+                    <option value="">{lang === 'bn' ? 'সকল তাপমাত্রা' : 'All Temperatures'}</option>
+                    <option value="hot">🔥 Hot</option>
+                    <option value="warm">☀️ Warm</option>
+                    <option value="cold">❄️ Cold</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* TABLE VIEW */}
               {leadsView === 'table' ? (
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-3 sm:p-4 border-b border-slate-800 flex flex-wrap gap-2 items-center justify-between">
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder={lang === 'bn' ? 'নাম বা নম্বর খুঁজুন...' : 'Search name or phone...'}
-                        value={leadFilter.search}
-                        onChange={(e) => setLeadFilter({ ...leadFilter, search: e.target.value })}
-                        className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={leadFilter.stage}
-                        onChange={(e) => setLeadFilter({ ...leadFilter, stage: e.target.value })}
-                        className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none"
-                      >
-                        <option value="">{lang === 'bn' ? 'সকল পর্যায়' : 'All Stages'}</option>
-                        <option value="new">New</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="follow_up">Follow Up</option>
-                        <option value="presentation">Presentation</option>
-                        <option value="won">Won / Closed</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-800/60 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                      <thead className="bg-slate-800/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
                         <tr>
                           <th className="py-3 px-4">{lang === 'bn' ? 'নাম ও যোগাযোগ' : 'Contact'}</th>
                           <th className="py-3 px-4">{lang === 'bn' ? 'পর্যায়' : 'Stage'}</th>
                           <th className="py-3 px-4">{lang === 'bn' ? 'তাপমাত্রা' : 'Temp'}</th>
                           <th className="py-3 px-4">{lang === 'bn' ? 'বাজেট' : 'Budget'}</th>
+                          <th className="py-3 px-4">{lang === 'bn' ? 'উৎস' : 'Source'}</th>
                           <th className="py-3 px-4 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 text-slate-300">
-                        {(leads.length > 0
-                          ? leads
-                          : [
-                              { id: 1, name: 'Tanvir Hossain', mobile: '+8801711223344', stage: 'presentation', temperature: 'hot', budgetRange: '75000' },
-                              { id: 2, name: 'Farhana Akter', mobile: '+8801822334455', stage: 'follow_up', temperature: 'warm', budgetRange: '35000' },
-                              { id: 3, name: 'Kamal Uddin', mobile: '+8801933445566', stage: 'new', temperature: 'cold', budgetRange: '15000' },
-                            ]
-                        ).map((lead: any) => (
-                          <tr key={lead.id} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3 px-4">
-                              <div className="font-bold text-white">{lead.name}</div>
-                              <div className="text-slate-400 text-[11px]">{lead.mobile}</div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-200 border border-slate-700 uppercase">
-                                {lead.stage || 'new'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                  lead.temperature === 'hot'
-                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                    : lead.temperature === 'warm'
-                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                }`}
-                              >
-                                {lead.temperature || 'warm'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 font-mono font-bold text-slate-200">
-                              {formatMoney(Number(lead.budgetRange || 35000))}
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="inline-flex items-center gap-1.5">
-                                <a
-                                  href={`https://wa.me/${(lead.whatsapp || lead.mobile || '').replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
-                                  title="WhatsApp"
+                        {leads.length > 0 ? (
+                          leads.map((lead: any) => (
+                            <tr key={lead.id} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 px-4">
+                                <div
+                                  onClick={() => openLeadDetails(lead.id)}
+                                  className="font-bold text-white hover:text-orange-400 cursor-pointer flex items-center gap-1.5"
                                 >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                </a>
-                                <a
-                                  href={`tel:${lead.mobile}`}
-                                  className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
-                                  title="Call"
+                                  <span>{lead.name}</span>
+                                  {lead.score && (
+                                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-600/30 text-orange-300">
+                                      {lead.score} pts
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-slate-400 text-[11px] flex items-center gap-2 mt-0.5">
+                                  <span>{lead.mobile}</span>
+                                  {lead.location && <span>• {lead.location}</span>}
+                                </div>
+                              </td>
+
+                              <td className="py-3 px-4">
+                                <select
+                                  value={lead.stage || 'new'}
+                                  onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
+                                  className="bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-bold rounded-lg px-2 py-1 uppercase"
                                 >
-                                  <Phone className="w-3.5 h-3.5" />
-                                </a>
-                              </div>
+                                  <option value="new">NEW</option>
+                                  <option value="contacted">CONTACTED</option>
+                                  <option value="follow_up">FOLLOW UP</option>
+                                  <option value="presentation">PRESENTATION</option>
+                                  <option value="negotiation">NEGOTIATION</option>
+                                  <option value="won">WON</option>
+                                  <option value="lost">LOST</option>
+                                </select>
+                              </td>
+
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    lead.temperature === 'hot'
+                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                      : lead.temperature === 'warm'
+                                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  }`}
+                                >
+                                  {lead.temperature === 'hot' ? '🔥 Hot' : lead.temperature === 'warm' ? '☀️ Warm' : '❄️ Cold'}
+                                </span>
+                              </td>
+
+                              <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                                {formatMoney(Number(lead.budgetRange || 50000))}
+                              </td>
+
+                              <td className="py-3 px-4 text-[11px] text-slate-400">
+                                {lead.sourceName || 'Direct'}
+                              </td>
+
+                              <td className="py-3 px-4 text-right">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <a
+                                    href={`https://wa.me/${(lead.whatsapp || lead.mobile || '').replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+                                    title="WhatsApp Chat"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                  </a>
+                                  <a
+                                    href={`tel:${lead.mobile}`}
+                                    className="p-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                                    title="Call"
+                                  >
+                                    <Phone className="w-3.5 h-3.5" />
+                                  </a>
+                                  <button
+                                    onClick={() => openLeadDetails(lead.id)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                                    title="View Details"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenEditLead(lead)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 transition-colors"
+                                    title="Edit Lead"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmLead(lead)}
+                                    className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                    title="Delete Lead"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={6} className="text-center py-8 text-slate-500">
+                              {lang === 'bn' ? 'কোনো লিড পাওয়া যায়নি।' : 'No leads found matching your criteria.'}
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
                 </div>
               ) : (
-                /* Kanban Pipeline View */
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {['new', 'follow_up', 'presentation', 'won'].map((columnStage) => (
-                    <div
-                      key={columnStage}
-                      className="bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-3"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">
-                          {columnStage.replace('_', ' ')}
-                        </span>
-                        <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
-                          {leads.filter((l) => l.stage === columnStage).length}
-                        </span>
-                      </div>
+                /* KANBAN VIEW */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                  {[
+                    { key: 'new', label: 'New Lead', labelBn: 'নতুন লিড' },
+                    { key: 'follow_up', label: 'Follow Up', labelBn: 'ফলোআপ' },
+                    { key: 'presentation', label: 'Presentation', labelBn: 'প্রেজেন্টেশন' },
+                    { key: 'won', label: 'Won / Converted', labelBn: 'সফল ক্লোজিং' },
+                  ].map((column) => {
+                    const columnLeads = leads.filter((l) => l.stage === column.key);
+                    return (
+                      <div
+                        key={column.key}
+                        className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3 min-h-[350px]"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                          <span className="text-xs font-bold text-white uppercase tracking-wider">
+                            {lang === 'bn' ? column.labelBn : column.label}
+                          </span>
+                          <span className="text-[10px] font-bold bg-slate-800 text-orange-400 px-2 py-0.5 rounded-full border border-slate-700 font-mono">
+                            {columnLeads.length}
+                          </span>
+                        </div>
 
-                      <div className="space-y-2">
-                        {(leads.filter((l) => l.stage === columnStage).length > 0
-                          ? leads.filter((l) => l.stage === columnStage)
-                          : [
-                              { id: 99, name: 'Sample Prospect', mobile: '+8801700000000', budgetRange: 35000, temperature: 'warm' },
-                            ]
-                        ).map((lead: any) => (
-                          <div
-                            key={lead.id}
-                            className="p-3 bg-slate-800/80 rounded-xl border border-slate-700 space-y-2 hover:border-orange-500/40 transition-colors"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-white text-xs">{lead.name}</span>
-                              <span className="text-[10px] text-rose-400 font-bold">{lead.temperature}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-400">{lead.mobile}</div>
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-700/60">
-                              <span className="text-[10px] font-bold text-orange-400">
-                                {formatMoney(Number(lead.budgetRange || 35000))}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <a
-                                  href={`https://wa.me/${(lead.mobile || '').replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-emerald-400 hover:text-emerald-300"
+                        <div className="space-y-2.5">
+                          {columnLeads.map((lead: any) => (
+                            <div
+                              key={lead.id}
+                              className="p-3 bg-slate-800/80 rounded-xl border border-slate-700 space-y-2 hover:border-orange-500/50 transition-colors shadow-sm"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span
+                                  onClick={() => openLeadDetails(lead.id)}
+                                  className="font-bold text-white text-xs hover:text-orange-400 cursor-pointer"
                                 >
-                                  <MessageSquare className="w-3 h-3" />
-                                </a>
+                                  {lead.name}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                                    lead.temperature === 'hot'
+                                      ? 'bg-rose-500/20 text-rose-300'
+                                      : lead.temperature === 'warm'
+                                        ? 'bg-amber-500/20 text-amber-300'
+                                        : 'bg-blue-500/20 text-blue-300'
+                                  }`}
+                                >
+                                  {lead.temperature}
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-400">{lead.mobile}</div>
+
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-[10px]">
+                                <span className="font-bold text-orange-400 font-mono">
+                                  {formatMoney(Number(lead.budgetRange || 50000))}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <a
+                                    href={`https://wa.me/${(lead.mobile || '').replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-emerald-400 hover:text-emerald-300"
+                                    title="WhatsApp"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                  </a>
+                                  <button
+                                    onClick={() => handleOpenEditLead(lead)}
+                                    className="text-slate-400 hover:text-orange-400"
+                                    title="Edit"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => openLeadDetails(lead.id)}
+                                    className="text-slate-400 hover:text-white"
+                                    title="View"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Kanban Column Quick-Shift */}
+                              <div className="pt-1 flex justify-between gap-1">
+                                {column.key !== 'new' && (
+                                  <button
+                                    onClick={() => handleQuickStageChange(lead.id, 'new')}
+                                    className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-300 hover:bg-slate-700"
+                                  >
+                                    ← New
+                                  </button>
+                                )}
+                                {column.key !== 'follow_up' && (
+                                  <button
+                                    onClick={() => handleQuickStageChange(lead.id, 'follow_up')}
+                                    className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-300 hover:bg-slate-700"
+                                  >
+                                    Follow Up
+                                  </button>
+                                )}
+                                {column.key !== 'won' && (
+                                  <button
+                                    onClick={() => handleQuickStageChange(lead.id, 'won')}
+                                    className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-700/40 text-emerald-300 hover:bg-emerald-700/60"
+                                  >
+                                    Won ✓
+                                  </button>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1326,7 +1579,7 @@ export function App() {
 
                   <button
                     onClick={() => setShowAddNodeModal(true)}
-                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-orange-600/30"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>{lang === 'bn' ? 'মেম্বার প্লেস করুন' : 'Place Member'}</span>
@@ -1352,7 +1605,7 @@ export function App() {
 
                   {/* Left & Right Legs Split */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* LEFT LEG (Slots 1 to 5) */}
+                    {/* LEFT LEG */}
                     <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                         <span className="text-xs font-extrabold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -1411,7 +1664,7 @@ export function App() {
                       </div>
                     </div>
 
-                    {/* RIGHT LEG (Slots 6 to 10) */}
+                    {/* RIGHT LEG */}
                     <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                         <span className="text-xs font-extrabold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -1556,7 +1809,7 @@ export function App() {
 
                       <div>
                         <h3 className="text-base font-black text-white">{pkg.name}</h3>
-                        <div className="text-2xl font-black text-orange-500 mt-1">
+                        <div className="text-2xl font-black text-orange-500 mt-1 font-mono">
                           {formatMoney(pkg.priceBdt)}
                         </div>
                         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -1734,7 +1987,6 @@ export function App() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Inputs */}
                 <div className="lg:col-span-1 p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     {lang === 'bn' ? 'পয়েন্ট ইনপুট' : 'Volume Inputs'}
@@ -1777,7 +2029,6 @@ export function App() {
                   </div>
                 </div>
 
-                {/* Calculation Output Cards */}
                 <div className="lg:col-span-2 p-5 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                     {lang === 'bn' ? 'আনুমানিক কমিশন ফলাফল' : 'Projected Payout Results'}
@@ -1809,7 +2060,6 @@ export function App() {
                     </div>
                   </div>
 
-                  {/* Total Projected Earnings */}
                   <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-600/20 to-amber-600/20 border border-orange-500/40 text-center space-y-1">
                     <span className="text-xs font-bold uppercase tracking-wider text-orange-300">
                       {lang === 'bn' ? 'মোট আনুমানিক কমিশন' : 'Total Projected Commission'}
@@ -2085,7 +2335,9 @@ export function App() {
         </main>
       </div>
 
-      {/* MODAL: ADD LEAD */}
+      {/* ======================================================== */}
+      {/* MODAL 1: ADD / CREATE LEAD */}
+      {/* ======================================================== */}
       {showAddLeadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -2096,29 +2348,34 @@ export function App() {
               <X className="w-5 h-5" />
             </button>
 
-            <h2 className="text-lg font-black text-white mb-4">
-              {lang === 'bn' ? 'নতুন লিড যোগ করুন' : 'Add New Prospect'}
+            <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+              <span className="text-orange-400">➕</span>
+              <span>{lang === 'bn' ? 'নতুন লিড যুক্ত করুন' : 'Add New Prospect'}</span>
             </h2>
 
-            <form onSubmit={handleCreateLead} className="space-y-4">
+            <form onSubmit={handleCreateLead} className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Name *</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'নাম *' : 'Name *'}
+                  </label>
                   <input
                     type="text"
                     required
-                    value={newLead.name}
-                    onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
+                    value={leadFormData.name}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, name: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Mobile *</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'মোবাইল নম্বর *' : 'Mobile *'}
+                  </label>
                   <input
                     type="text"
                     required
-                    value={newLead.mobile}
-                    onChange={(e) => setNewLead({ ...newLead, mobile: e.target.value })}
+                    value={leadFormData.mobile}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, mobile: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
@@ -2129,16 +2386,65 @@ export function App() {
                   <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp</label>
                   <input
                     type="text"
-                    value={newLead.whatsapp}
-                    onChange={(e) => setNewLead({ ...newLead, whatsapp: e.target.value })}
+                    value={leadFormData.whatsapp}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, whatsapp: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={leadFormData.email}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Location / District</label>
+                  <input
+                    type="text"
+                    value={leadFormData.location}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, location: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Profession / Business</label>
+                  <input
+                    type="text"
+                    value={leadFormData.professionOrBusiness}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, professionOrBusiness: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Stage</label>
+                  <select
+                    value={leadFormData.stage}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, stage: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  >
+                    <option value="new">New Lead</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="follow_up">Follow Up</option>
+                    <option value="presentation">Presentation</option>
+                    <option value="negotiation">Negotiation</option>
+                    <option value="won">Won / Converted</option>
+                    <option value="lost">Lost</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Temperature</label>
                   <select
-                    value={newLead.temperature}
-                    onChange={(e) => setNewLead({ ...newLead, temperature: e.target.value })}
+                    value={leadFormData.temperature}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, temperature: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
                   >
                     <option value="hot">🔥 Hot</option>
@@ -2150,51 +2456,50 @@ export function App() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Stage</label>
-                  <select
-                    value={newLead.stage}
-                    onChange={(e) => setNewLead({ ...newLead, stage: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
-                  >
-                    <option value="new">New Lead</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="follow_up">Follow Up</option>
-                    <option value="presentation">Presentation</option>
-                    <option value="won">Won / Closed</option>
-                  </select>
-                </div>
-                <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">Target Budget (BDT)</label>
                   <input
                     type="number"
-                    value={newLead.budgetRange}
-                    onChange={(e) => setNewLead({ ...newLead, budgetRange: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                    value={leadFormData.budgetRange}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, budgetRange: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Decision Timeline</label>
+                  <select
+                    value={leadFormData.decisionTimeline}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, decisionTimeline: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  >
+                    <option value="Immediate">Immediate (১-৩ দিন)</option>
+                    <option value="Within 15 Days">Within 15 Days (১৫ দিন)</option>
+                    <option value="Next Month">Next Month (পরবর্তী মাস)</option>
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Notes</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Notes & Objections</label>
                 <textarea
                   rows={2}
-                  value={newLead.notes}
-                  onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })}
+                  value={leadFormData.notes}
+                  onChange={(e) => setLeadFormData({ ...leadFormData, notes: e.target.value })}
+                  placeholder="Key background, interest in package, follow-up preferences..."
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddLeadModal(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-750"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all"
+                  className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30"
                 >
                   Save Lead
                 </button>
@@ -2204,7 +2509,357 @@ export function App() {
         </div>
       )}
 
-      {/* MODAL: ADD TREE NODE MEMBER */}
+      {/* ======================================================== */}
+      {/* MODAL 2: EDIT LEAD */}
+      {/* ======================================================== */}
+      {showEditLeadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowEditLeadModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-orange-400" />
+              <span>{lang === 'bn' ? 'লিড তথ্য সম্পাদনা করুন' : 'Edit Lead Information'}</span>
+            </h2>
+
+            <form onSubmit={handleUpdateLead} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'নাম *' : 'Name *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={leadFormData.name}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'মোবাইল নম্বর *' : 'Mobile *'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={leadFormData.mobile}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, mobile: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={leadFormData.whatsapp}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, whatsapp: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={leadFormData.email}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Stage</label>
+                  <select
+                    value={leadFormData.stage}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, stage: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  >
+                    <option value="new">New Lead</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="follow_up">Follow Up</option>
+                    <option value="presentation">Presentation</option>
+                    <option value="negotiation">Negotiation</option>
+                    <option value="won">Won / Converted</option>
+                    <option value="lost">Lost</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Temperature</label>
+                  <select
+                    value={leadFormData.temperature}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, temperature: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  >
+                    <option value="hot">🔥 Hot</option>
+                    <option value="warm">☀️ Warm</option>
+                    <option value="cold">❄️ Cold</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Target Budget (BDT)</label>
+                  <input
+                    type="number"
+                    value={leadFormData.budgetRange}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, budgetRange: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={leadFormData.location}
+                    onChange={(e) => setLeadFormData({ ...leadFormData, location: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Notes</label>
+                <textarea
+                  rows={2}
+                  value={leadFormData.notes}
+                  onChange={(e) => setLeadFormData({ ...leadFormData, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditLeadModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-750"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30"
+                >
+                  Update Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: LEAD DETAILS & ACTIVITY LOG DRAWER */}
+      {/* ======================================================== */}
+      {showDetailLeadModal && activeLeadDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto space-y-5">
+            <button
+              onClick={() => setShowDetailLeadModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header info */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-white">{activeLeadDetail.name}</h2>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      activeLeadDetail.temperature === 'hot'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {activeLeadDetail.temperature}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-600/20 text-orange-300 border border-orange-500/30">
+                    {activeLeadDetail.score || 30} pts
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  ID: #{activeLeadDetail.id} • Created: {new Date(activeLeadDetail.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={`https://wa.me/${(activeLeadDetail.whatsapp || activeLeadDetail.mobile || '').replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-bold text-xs flex items-center gap-1.5"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>WhatsApp</span>
+                </a>
+                <a
+                  href={`tel:${activeLeadDetail.mobile}`}
+                  className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 font-bold text-xs flex items-center gap-1.5"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call</span>
+                </a>
+                <button
+                  onClick={() => handleOpenEditLead(activeLeadDetail)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-orange-400 font-bold text-xs flex items-center gap-1.5"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Profile Matrix */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-800">
+                <span className="text-slate-400 block text-[10px]">Mobile</span>
+                <strong className="text-white block mt-0.5 font-mono">{activeLeadDetail.mobile}</strong>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-800">
+                <span className="text-slate-400 block text-[10px]">Stage</span>
+                <strong className="text-orange-400 block mt-0.5 uppercase">{activeLeadDetail.stage}</strong>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-800">
+                <span className="text-slate-400 block text-[10px]">Target Budget</span>
+                <strong className="text-white block mt-0.5 font-mono">
+                  {formatMoney(Number(activeLeadDetail.budgetRange || 50000))}
+                </strong>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-800">
+                <span className="text-slate-400 block text-[10px]">Location</span>
+                <strong className="text-white block mt-0.5">{activeLeadDetail.location || 'N/A'}</strong>
+              </div>
+            </div>
+
+            {/* Notes Section */}
+            {activeLeadDetail.notes && (
+              <div className="p-3.5 bg-slate-800/40 rounded-xl border border-slate-800 text-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Lead Notes
+                </span>
+                <p className="text-slate-300 leading-relaxed">{activeLeadDetail.notes}</p>
+              </div>
+            )}
+
+            {/* Activity History & Logger */}
+            <div className="space-y-3 pt-2 border-t border-slate-800">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                <ActivityIcon className="w-4 h-4 text-orange-400" />
+                <span>Follow-up History & Activity Logs</span>
+              </h3>
+
+              {/* Log new activity form */}
+              <form onSubmit={handleAddActivity} className="p-3 bg-slate-800/50 rounded-xl border border-slate-750 flex gap-2">
+                <select
+                  value={activityType}
+                  onChange={(e) => setActivityType(e.target.value)}
+                  className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-lg px-2 py-1.5"
+                >
+                  <option value="call">Call</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="meeting">Meeting</option>
+                  <option value="note">Note</option>
+                </select>
+                <input
+                  type="text"
+                  required
+                  placeholder="Log follow-up discussion or next steps..."
+                  value={activityNote}
+                  onChange={(e) => setActivityNote(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoggingActivity}
+                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs rounded-lg transition-colors"
+                >
+                  {isLoggingActivity ? 'Saving...' : 'Add Log'}
+                </button>
+              </form>
+
+              {/* History list */}
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {activeLeadDetail.activities && activeLeadDetail.activities.length > 0 ? (
+                  activeLeadDetail.activities.map((act: any) => (
+                    <div
+                      key={act.id}
+                      className="p-2.5 rounded-lg bg-slate-800/30 border border-slate-800 text-xs flex items-start justify-between gap-2"
+                    >
+                      <div>
+                        <span className="font-bold text-orange-400 uppercase text-[10px] mr-2">
+                          [{act.type}]
+                        </span>
+                        <span className="text-slate-300">{act.details}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                        {new Date(act.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-slate-500 text-xs">
+                    No activity logs recorded yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 4: DELETE CONFIRMATION */}
+      {/* ======================================================== */}
+      {deleteConfirmLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-white">
+              {lang === 'bn' ? 'লিড মুছে ফেলতে চান?' : 'Delete Prospect?'}
+            </h3>
+
+            <p className="text-xs text-slate-400">
+              {lang === 'bn'
+                ? `আপনি কি নিশ্চিত যে "${deleteConfirmLead.name}" লিডটি মুছে ফেলতে চান?`
+                : `Are you sure you want to delete "${deleteConfirmLead.name}"?`}
+            </p>
+
+            <div className="flex justify-center gap-2 pt-2">
+              <button
+                onClick={() => setDeleteConfirmLead(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteLead}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-600/30"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 5: ADD TREE NODE MEMBER */}
+      {/* ======================================================== */}
       {showAddNodeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
@@ -2300,7 +2955,9 @@ export function App() {
         </div>
       )}
 
-      {/* MODAL: PRESENTATION BROCHURE SLIDER */}
+      {/* ======================================================== */}
+      {/* MODAL 6: DIGITAL PRESENTATION BROCHURE SLIDER */}
+      {/* ======================================================== */}
       {presentationOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
           <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
@@ -2345,19 +3002,19 @@ export function App() {
                     <div className="p-4 bg-slate-800/60 rounded-2xl border border-slate-750 grid grid-cols-2 gap-2 text-xs">
                       <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
                         <span className="text-slate-400 block text-[10px]">Capital</span>
-                        <strong className="text-white block mt-0.5">
+                        <strong className="text-white block mt-0.5 font-mono">
                           {formatMoney(currentPkg.capitalBdt)}
                         </strong>
                       </div>
                       <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
                         <span className="text-slate-400 block text-[10px]">Setup Fee</span>
-                        <strong className="text-white block mt-0.5">
+                        <strong className="text-white block mt-0.5 font-mono">
                           {formatMoney(currentPkg.setupFeeBdt)}
                         </strong>
                       </div>
                       <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
                         <span className="text-slate-400 block text-[10px]">BV Points</span>
-                        <strong className="text-orange-400 block mt-0.5">{currentPkg.bv} BV</strong>
+                        <strong className="text-orange-400 block mt-0.5 font-mono">{currentPkg.bv} BV</strong>
                       </div>
                       <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
                         <span className="text-slate-400 block text-[10px]">Plan Duration</span>
@@ -2413,7 +3070,9 @@ export function App() {
         </div>
       )}
 
-      {/* MODAL: QR & PACKAGE COMPARISON */}
+      {/* ======================================================== */}
+      {/* MODAL 7: QR CODE SHEET */}
+      {/* ======================================================== */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
