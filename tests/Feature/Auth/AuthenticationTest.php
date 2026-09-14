@@ -51,4 +51,44 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect('/');
     }
+
+    public function test_user_can_access_dashboard_after_login(): void
+    {
+        $user = User::factory()->create(['phone' => '01833876434', 'status' => 'active']);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        $response->assertStatus(200);
+    }
+
+    public function test_user_can_login_with_phone_and_redirect_to_dashboard(): void
+    {
+        $user = User::factory()->create([
+            'phone' => '01833876434',
+            'password' => bcrypt('password123'),
+            'status' => 'active',
+        ]);
+
+        $response = $this->post('/login', [
+            'login' => '01833876434',
+            'password' => 'password123',
+        ]);
+
+        $this->assertAuthenticated();
+        $response->assertRedirect('/dashboard');
+
+        $dash = $this->get('/dashboard');
+        $dash->assertStatus(200);
+    }
+
+    public function test_login_with_non_existent_phone(): void
+    {
+        $response = $this->post('/login', [
+            'login' => '01833876434',
+            'password' => 'SomePassword123!',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('login');
+    }
 }

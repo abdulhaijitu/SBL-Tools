@@ -171,23 +171,39 @@ class RoleAndPermissionSeeder extends Seeder
                 'designation' => 'Prospective Member',
                 'role' => 'demo',
             ],
+            [
+                'name' => 'Md. Abdul Hai',
+                'email' => '01833876434@sbl.test',
+                'phone' => '01833876434',
+                'designation' => 'Member',
+                'role' => 'member',
+            ],
         ];
 
         foreach ($team as $memberData) {
-            $user = User::firstOrCreate(
-                ['email' => $memberData['email']],
-                [
+            $user = User::where('phone', $memberData['phone'])
+                ->orWhere('email', $memberData['email'])
+                ->first();
+
+            if (! $user) {
+                $user = User::create([
                     'name' => $memberData['name'],
-                    'password' => Hash::make('password'),
+                    'email' => $memberData['email'],
+                    'password' => Hash::make('Admin@123'),
                     'phone' => $memberData['phone'],
                     'designation' => $memberData['designation'],
                     'status' => 'active',
                     'email_verified_at' => now(),
-                ]
-            );
+                ]);
+            } else {
+                $user->update([
+                    'phone' => $user->phone ?: $memberData['phone'],
+                    'status' => 'active',
+                ]);
+            }
 
             if (isset($roleModels[$memberData['role']]) && !$user->roles->contains($roleModels[$memberData['role']]->id)) {
-                $user->roles()->sync([$roleModels[$memberData['role']]->id]);
+                $user->roles()->syncWithoutDetaching([$roleModels[$memberData['role']]->id]);
             }
         }
     }

@@ -143,6 +143,6 @@ trait HasRolesAndPermissions
      */
     public function getPrimaryRoleAttribute(): ?Role
     {
-        return $this->roles->first();
+        return $this->roles->first() ?? Role::where('slug', 'member')->first();
     }
 }

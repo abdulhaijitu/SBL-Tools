@@ -18,5 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            return redirect()->route('login')->with('status', 'আপনার সেশনের মেয়াদ শেষ হয়েছিল। অনুগ্রহ করে আবার চেষ্টা করুন।');
+        });
     })->create();

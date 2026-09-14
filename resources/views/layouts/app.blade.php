@@ -39,7 +39,7 @@
         </div>
         @include('layouts.sidebar')
         <div class="app-sidebar-footer">
-            <a href="{{ route('profile.edit') }}" class="min-w-0 flex-1"><strong class="block truncate text-sm text-white">{{ Auth::user()->name }}</strong><span class="text-xs text-slate-400">{{ Auth::user()->primary_role->name ?? 'Member' }}</span></a>
+            <a href="{{ route('profile.edit') }}" class="min-w-0 flex-1"><strong class="block truncate text-sm text-white">{{ Auth::user()->name }}</strong><span class="text-xs text-slate-400">{{ Auth::user()->primary_role?->name ?? 'Member' }}</span></a>
             <form method="POST" action="{{ route('logout') }}">@csrf<button class="icon-button" aria-label="Sign out"><x-ui-icon name="logout" /></button></form>
         </div>
     </aside>

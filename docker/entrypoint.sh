@@ -83,10 +83,13 @@ fi
 # Ensure storage symlink exists
 php artisan storage:link --force 2>/dev/null || true
 
-# Production optimizations
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+# Ensure proper ownership and permissions for web server (www-data)
+if [ -n "$PERSISTENT_DIR" ]; then
+    chown -R www-data:www-data "$PERSISTENT_DIR" 2>/dev/null || true
+    chmod -R 775 "$PERSISTENT_DIR" 2>/dev/null || true
+fi
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 
 echo "Starting Supervisor (Nginx + PHP-FPM) on port $PORT..."
 exec /usr/bin/supervisord -c /etc/supervisord.conf
