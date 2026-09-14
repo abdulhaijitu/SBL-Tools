@@ -2,7 +2,6 @@
 @section('page-title', 'SBL Business Glossary')
 @section('page-subtitle', 'Essential SBL, e-commerce, marketing and business terms explained simply.')
 @section('content')
-<div class="space-y-4" x-data="abbreviationManager" data-terms="{{ json_encode($abbreviations) }}" data-can-manage="{{ auth()->user()?->hasPermission('users.manage') ? '1' : '0' }}">
 <div class="space-y-4" x-data="abbreviationManager" data-terms="{{ json_encode($abbreviations) }}" data-can-manage="{{ auth()->user()?->isSuperAdmin() ? '1' : '0' }}">
     <!-- 1. Header Area (Compact & Informative) -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs">

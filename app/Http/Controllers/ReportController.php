@@ -26,7 +26,6 @@ class ReportController extends Controller
         $activityQuery = Activity::query();
         $taskQuery = Task::query();
 
-        if (! $isSuperAdmin && $user) {
         if ($user) {
             $leadQuery->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
@@ -76,7 +75,7 @@ class ReportController extends Controller
         // Lead Sources Performance (Optimized via single query with conditional counts)
         $periodLeadIds = (clone $leadQuery)->select('leads.id');
         $sources = LeadSource::withCount([
-            'leads' => fn ($q) => $q->whereIn('leads.id', clone $periodLeadIds),
+            'leads' => fn($q) => $q->whereIn('leads.id', clone $periodLeadIds),
             'leads' => fn($q) => $q->whereIn('leads.id', clone $periodLeadIds),
             'leads as converted_count' => function ($q) use ($periodLeadIds) {
                 $q->whereIn('leads.id', clone $periodLeadIds)->where('stage', LeadStage::CONVERTED->value);
@@ -100,7 +99,6 @@ class ReportController extends Controller
         })->sortByDesc('total_leads');
 
         $presentationQuery = Presentation::query();
-        if (! $isSuperAdmin && $user) {
         if ($user) {
             $presentationQuery->where('user_id', $user->id);
         }

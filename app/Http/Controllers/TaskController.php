@@ -25,7 +25,6 @@ class TaskController extends Controller
 
         $query = Task::with(['lead', 'user']);
 
-        if (! $isSuperAdmin && $user) {
         if ($user) {
             $query->where('user_id', $user->id);
         }
@@ -56,7 +55,6 @@ class TaskController extends Controller
         $tasks = $query->paginate(20)->withQueryString();
 
         $leadsQuery = Lead::select(['id', 'name', 'mobile'])->activePipeline();
-        if (! $isSuperAdmin && $user) {
         if ($user) {
             $leadsQuery->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
@@ -70,7 +68,6 @@ class TaskController extends Controller
         $statuses = TaskStatus::cases();
 
         $statsQuery = Task::query();
-        if (! $isSuperAdmin && $user) {
         if ($user) {
             $statsQuery->where('user_id', $user->id);
         }
@@ -98,7 +95,6 @@ class TaskController extends Controller
 
         if (!empty($validated['related_lead_id'])) {
             $relatedLead = Lead::findOrFail($validated['related_lead_id']);
-            if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
             if (Auth::user() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
                 abort(403, 'You can only attach tasks to your own leads.');
             }
@@ -155,7 +151,6 @@ class TaskController extends Controller
 
         if (!empty($validated['related_lead_id'])) {
             $relatedLead = Lead::findOrFail($validated['related_lead_id']);
-            if (Auth::user() && !Auth::user()->isSuperAdmin() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
             if (Auth::user() && (int)$relatedLead->owner_user_id !== (int)Auth::id() && (int)$relatedLead->assigned_to !== (int)Auth::id()) {
                 abort(403, 'You can only attach tasks to your own leads.');
             }

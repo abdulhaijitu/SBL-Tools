@@ -68,14 +68,12 @@ class SearchController extends Controller
             }
         }
 
-        // 2. Leads (Scope to user if not super admin)
         // 2. Leads (Scope strictly to current user)
         $leadsQuery = Lead::query();
-        if (!$isSuperAdmin && $user) {
         if ($user) {
             $leadsQuery->where(function ($b) use ($user) {
                 $b->where('assigned_to', $user->id)
-                  ->orWhere('owner_user_id', $user->id);
+                    ->orWhere('owner_user_id', $user->id);
             });
         }
         $leads = $leadsQuery->where(function ($b) use ($q) {
@@ -102,10 +100,8 @@ class SearchController extends Controller
             ];
         }
 
-        // 3. Team Members (Binary Nodes)
         // 3. Team Members (Binary Nodes - scoped to tree owner)
         $teamQuery = BinaryNode::query();
-        if (!$isSuperAdmin && $user) {
         if ($user) {
             $teamQuery->where('tree_owner_id', $user->id);
         }

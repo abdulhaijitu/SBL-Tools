@@ -1,6 +1,5 @@
 @extends('layouts.app')
 
-@section('page-title', 'Contact & Support')
 @section('page-title', 'SBL Contact')
 @section('page-subtitle', 'Find the right SBL support contact and connect instantly via Phone or WhatsApp.')
 
@@ -9,7 +8,6 @@
      class="max-w-7xl mx-auto space-y-6"
      x-data="contactsManager"
      data-contacts="{{ json_encode($contacts) }}"
-     data-can-manage="{{ (Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin()) ? '1' : '0' }}">
      data-can-manage="{{ Auth::user()?->isSuperAdmin() ? '1' : '0' }}">
 
     <!-- ==================== 1. PAGE HEADER ==================== -->
@@ -18,9 +16,6 @@
             <div class="flex items-center gap-2.5 flex-wrap">
                 <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight"
                     :style="isBn ? 'letter-spacing: normal; word-break: normal;' : ''"
-                    data-en="Contact & Support"
-                    data-bn="কন্টাক্ট ও সাপোর্ট">
-                    Contact & Support
                     data-en="SBL Contact"
                     data-bn="এসবিএল কন্টাক্ট">
                     SBL Contact
@@ -40,7 +35,6 @@
             </p>
         </div>
 
-        @if(Auth::user()->can('users.manage') || Auth::user()->isSuperAdmin())
         @if(Auth::user()?->isSuperAdmin())
         <div class="flex items-center gap-2 flex-shrink-0">
             <button type="button" 

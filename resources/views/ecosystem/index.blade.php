@@ -32,8 +32,6 @@
         </div>
 
         <div class="flex items-center gap-3 flex-shrink-0">
-            @if(!Auth::user() || Auth::user()->hasRole(['super-admin', 'sales-manager']) || Auth::user()->can('toolkit.view'))
-            <button @click="createModalOpen = true" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-2">
             @if(Auth::user()?->isSuperAdmin())
             <button @click="createModalOpen = true" class="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors flex items-center gap-2 cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -132,7 +130,6 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                 </a>
 
-                @if(!Auth::user() || Auth::user()->hasRole(['super-admin', 'sales-manager']))
                 @if(Auth::user()?->isSuperAdmin())
                 <button @click="
                     editingLink = {
@@ -146,7 +143,6 @@
                         sort_order: {{ $link->sort_order ?? 0 }}
                     };
                     editModalOpen = true;
-                " class="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-colors" title="Edit">
                 " class="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-colors cursor-pointer" title="Edit">
                     ✏️
                 </button>
@@ -154,7 +150,6 @@
                 <form action="{{ route('ecosystem.destroy', $link) }}" method="POST" onsubmit="return confirm('Remove {{ addslashes($link->title) }}?');" class="inline">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors" title="Delete">
                     <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer" title="Delete">
                         🗑️
                     </button>

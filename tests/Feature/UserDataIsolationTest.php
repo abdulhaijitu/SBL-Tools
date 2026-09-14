@@ -119,37 +119,26 @@ class UserDataIsolationTest extends TestCase
         $this->assertDatabaseHas('leads', ['id' => $leadA->id, 'name' => 'User A Private Lead']);
     }
 
-    public function test_super_admin_can_access_all_leads(): void
     public function test_super_admin_does_not_see_or_access_other_members_leads(): void
     {
-        $superAdmin = User::where('email', 'admin@sbl.test')->first() ?? User::factory()->create();
         $superAdmin = User::factory()->create();
         $adminRole = Role::where('slug', 'super-admin')->first();
-        if (! $superAdmin->roles->contains($adminRole->id)) {
-            $superAdmin->roles()->attach($adminRole);
-        }
         $superAdmin->roles()->attach($adminRole);
 
         $memberRole = Role::where('slug', 'member')->first();
-        $userA = User::factory()->create();
-        $userA->roles()->attach($memberRole);
         $member = User::factory()->create(['name' => 'Md. Abdul Hai Jitu']);
         $member->roles()->attach($memberRole);
 
         $lead = Lead::create([
-            'name' => 'Member Lead Visible To Admin',
             'name' => 'Md. Abdul Hai Jitu Private Lead',
             'mobile' => '01744444444',
             'stage' => LeadStage::NEW,
             'temperature' => LeadTemperature::WARM,
             'lead_source_id' => $this->source->id,
             'interest_types' => ['Business'],
-            'owner_user_id' => $userA->id,
             'owner_user_id' => $member->id,
         ]);
 
-        $this->actingAs($superAdmin)->get(route('leads.index'))->assertOk()->assertSee('Member Lead Visible To Admin');
-        $this->actingAs($superAdmin)->get(route('leads.show', $lead))->assertOk();
         // Super Admin visits leads index -> must NOT see member's lead
         $this->actingAs($superAdmin)->get(route('leads.index'))
             ->assertOk()

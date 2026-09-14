@@ -78,7 +78,6 @@ class EcosystemController extends Controller
             return redirect()->back()->withErrors(['url' => "A resource with this URL already exists: '{$existing->title}'."]);
         }
 
-        $validated['icon'] = $validated['icon'] ?: '🌐';
         $validated['icon'] = !empty($validated['icon']) ? $validated['icon'] : '🌐';
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = true;
@@ -147,8 +146,6 @@ class EcosystemController extends Controller
             return redirect()->back()->withErrors(['url' => "Another resource with this URL already exists: '{$existing->title}'."]);
         }
 
-        $validated['icon'] = $validated['icon'] ?: '🌐';
-        $validated['is_active'] = $request->has('is_active') ? (bool)$request->is_active : true;
         $validated['icon'] = !empty($validated['icon']) ? $validated['icon'] : '🌐';
         $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : true;
         $validated['is_official'] = $request->boolean('is_official');

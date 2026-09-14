@@ -25,7 +25,6 @@ class DashboardController extends Controller
         $taskScope = Task::query();
         $presentationScope = Presentation::query();
 
-        if ($user && ! $user->isSuperAdmin()) {
         if ($user) {
             $leadScope->where(function ($q) use ($user) {
                 $q->where('owner_user_id', $user->id)
@@ -160,7 +159,6 @@ class DashboardController extends Controller
 
         $totalLeads = array_sum($stageCounts);
         $totalActiveLeads = (clone $leadScope)->activePipeline()->count();
-        $totalPresentations = Presentation::count();
         $totalPresentations = (clone $presentationScope)->count();
 
         // 4. Hot Leads (Deduplicated visually by phone)
@@ -200,13 +198,8 @@ class DashboardController extends Controller
             ->values();
 
         // 6. Recent Activities
-        $recentActivities = Activity::with(['lead', 'user'])
-            ->orderBy('performed_at', 'desc')
-            ->limit(6)
-            ->get();
         $activityScope = Activity::with(['lead', 'user'])
             ->orderBy('performed_at', 'desc');
-        if ($user && ! $user->isSuperAdmin()) {
         if ($user) {
             $activityScope->where('user_id', $user->id);
         }

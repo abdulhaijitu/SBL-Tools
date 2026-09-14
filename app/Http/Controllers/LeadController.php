@@ -39,8 +39,6 @@ class LeadController extends Controller
 
         $query = Lead::with(['source', 'owner', 'interests']);
 
-        // Data Isolation: non-superadmin users only see their own leads or directly assigned leads
-        if (! $isSuperAdmin && $user) {
         // Data Isolation: every account strictly sees only its own leads or directly assigned leads
         if ($user) {
             $query->where(function ($q) use ($user) {
@@ -537,16 +535,13 @@ class LeadController extends Controller
     }
 
     /**
-     * Authorize user access to lead (Super Admin or owner/assigned user).
+     * Authorize user access to lead (owner/assigned user only).
      */
     protected function authorizeLeadAccess(Lead $lead): void
     {
         $user = Auth::user();
         if (! $user) {
             abort(401);
-        }
-        if ($user->isSuperAdmin()) {
-            return;
         }
         if ((int)$lead->owner_user_id === (int)$user->id || (int)$lead->assigned_to === (int)$user->id) {
             return;

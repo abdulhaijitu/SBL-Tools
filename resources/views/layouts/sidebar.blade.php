@@ -110,13 +110,13 @@
     </div>
 
     <!-- 5. Super Admin SaaS Platform Administration -->
-    @if($isSuperAdmin || Auth::user()->can('users.view') || Auth::user()->can('roles.view'))
+    @if($isSuperAdmin || Auth::user()?->can('users.view') || Auth::user()?->can('roles.view'))
     <div class="pt-4 pb-1">
         <div class="px-3 py-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase text-slate-400">
             <span>SaaS Administration</span>
         </div>
         <div class="mt-1 space-y-0.5">
-            @if(Auth::user()->can('users.view'))
+            @if(Auth::user()?->can('users.view'))
             <a href="{{ route('users.index') }}" 
                @if(request()->routeIs('users.*')) aria-current="page" @endif
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('users.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
@@ -125,7 +125,7 @@
             </a>
             @endif
 
-            @if(Auth::user()->can('roles.view'))
+            @if(Auth::user()?->can('roles.view'))
             <a href="{{ route('roles.index') }}" 
                @if(request()->routeIs('roles.*')) aria-current="page" @endif
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium {{ request()->routeIs('roles.*') ? 'bg-slate-800 text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
