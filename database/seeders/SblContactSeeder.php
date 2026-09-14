@@ -218,9 +218,6 @@ class SblContactSeeder extends Seeder
             ],
         ];
 
-        // Clean up duplicate records if id > 6
-        SblContact::where('id', '>', 6)->delete();
-
         foreach ($contacts as $contact) {
             SblContact::updateOrCreate(
                 ['id' => $contact['id']],

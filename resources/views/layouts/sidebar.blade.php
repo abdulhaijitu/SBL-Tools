@@ -26,13 +26,11 @@
     </a>
     @endcan
 
-    <!-- 3. Team Explorer (User's Own Tool directly under Leads) -->
     <!-- 3. Team Tree (User's Own Tool directly under Leads) -->
     <a href="{{ route('team.index') }}" 
        @if(request()->routeIs('team.*', 'binary.*')) aria-current="page" @endif 
        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium {{ request()->routeIs('team.*', 'binary.*') ? 'bg-orange-600 text-white shadow-sm font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
         <span class="text-base">👥</span>
-        <span data-en="Team Explorer" data-bn="টিম এক্সপ্লোরার">Team Explorer</span>
         <span data-en="Team Tree" data-bn="টিম ট্রি">Team Tree</span>
     </a>
 

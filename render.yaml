@@ -28,9 +28,11 @@ services:
       - key: LOG_CHANNEL
         value: stderr
       - key: DB_CONNECTION
-        value: sqlite
+        sync: false
       - key: DB_DATABASE
-        value: /var/www/html/database/database.sqlite
+        sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: SESSION_DRIVER
         value: database
       - key: QUEUE_CONNECTION
