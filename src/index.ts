@@ -29,7 +29,7 @@ app.get("/", (c) => {
         status: "online",
         system: "SBL Growth Manager Edge API",
         runtime: "Cloudflare Workers + Hono",
-        database: "PostgreSQL (Drizzle ORM + Hyperdrive)",
+        database: "Cloudflare D1 (Drizzle ORM)",
         storage: "Cloudflare R2",
         timestamp: new Date().toISOString(),
     });
