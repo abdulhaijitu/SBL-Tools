@@ -669,12 +669,18 @@
 
             <p class="text-xs font-semibold text-slate-700" x-text="shareTarget.title"></p>
 
-            <div class="grid grid-cols-2 gap-2 text-xs">
-                <a :href="'https://wa.me/?text=' + encodeURIComponent(shareTarget.title + '\n' + shareTarget.url)" target="_blank" rel="noopener noreferrer" class="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold flex items-center justify-center gap-2">
-                    <span>💬</span> WhatsApp
+            <div class="grid grid-cols-3 gap-2 text-xs">
+                <a :href="'https://wa.me/?text=' + encodeURIComponent(shareTarget.title + '\n' + shareTarget.url)" target="_blank" rel="noopener noreferrer" class="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold flex flex-col items-center justify-center gap-1 text-center transition-all active:scale-95">
+                    <span class="text-base">💬</span>
+                    <span>WhatsApp</span>
                 </a>
-                <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareTarget.url)" target="_blank" rel="noopener noreferrer" class="p-3 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl font-bold flex items-center justify-center gap-2">
-                    <span>🌐</span> Facebook
+                <a :href="'https://t.me/share/url?url=' + encodeURIComponent(shareTarget.url) + '&text=' + encodeURIComponent(shareTarget.title)" target="_blank" rel="noopener noreferrer" class="p-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl font-bold flex flex-col items-center justify-center gap-1 text-center transition-all active:scale-95">
+                    <span class="text-base">✈️</span>
+                    <span>Telegram</span>
+                </a>
+                <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareTarget.url)" target="_blank" rel="noopener noreferrer" class="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl font-bold flex flex-col items-center justify-center gap-1 text-center transition-all active:scale-95">
+                    <span class="text-base">🌐</span>
+                    <span>Facebook</span>
                 </a>
             </div>
 

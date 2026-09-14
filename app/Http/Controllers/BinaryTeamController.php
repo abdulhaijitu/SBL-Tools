@@ -67,7 +67,6 @@ class BinaryTeamController extends Controller
         $weakerLeg = $treeData['stats']['weaker_leg'] ?? 'LEFT';
         $autoBalanceSlot = ($weakerLeg === 'LEFT' ? $firstVacantLeft : $firstVacantRight) ?: ($firstVacantLeft ?: $firstVacantRight);
 
-        $crmLeads = \App\Models\Lead::orderBy('name')->get(['id', 'name', 'mobile', 'email', 'profession_or_business', 'location']);
         $crmLeadsQuery = \App\Models\Lead::orderBy('name');
         if (! $isSuperAdmin && $currentUser) {
             $crmLeadsQuery->where(function ($q) use ($currentUser) {

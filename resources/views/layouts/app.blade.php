@@ -22,7 +22,24 @@
     </title>
     @hasSection('meta-description')
         <meta name="description" content="@yield('meta-description')">
+    @else
+        <meta name="description" content="SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.">
     @endif
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SBL Tools">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="@hasSection('meta-title')@yield('meta-title')@else @yield('page-title', 'Dashboard') · SBL Marketing @endif">
+    <meta property="og:description" content="@hasSection('meta-description')@yield('meta-description')@else SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.@endif">
+    <meta property="og:image" content="{{ asset('images/sbl-logo.webp') }}">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="@hasSection('meta-title')@yield('meta-title')@else @yield('page-title', 'Dashboard') · SBL Marketing @endif">
+    <meta name="twitter:description" content="@hasSection('meta-description')@yield('meta-description')@else SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.@endif">
+    <meta name="twitter:image" content="{{ asset('images/sbl-logo.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

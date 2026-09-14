@@ -14,6 +14,22 @@
         <link rel="shortcut icon" href="/favicon.ico">
 
         <title>@hasSection('title')@yield('title') - {{ config('app.name', 'SBL Tools') }}@else{{ config('app.name', 'SBL Tools') }} - Authentication & Access @endif</title>
+        <meta name="description" content="SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.">
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="SBL Tools">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:title" content="@hasSection('title')@yield('title') - {{ config('app.name', 'SBL Tools') }}@else{{ config('app.name', 'SBL Tools') }} - Authentication & Access @endif">
+        <meta property="og:description" content="SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.">
+        <meta property="og:image" content="{{ asset('images/sbl-logo.webp') }}">
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:url" content="{{ url()->current() }}">
+        <meta name="twitter:title" content="@hasSection('title')@yield('title') - {{ config('app.name', 'SBL Tools') }}@else{{ config('app.name', 'SBL Tools') }} - Authentication & Access @endif">
+        <meta name="twitter:description" content="SBL Tools - Smart Business Logistics & Dropshipping CRM, 10-Slot Team Explorer, and Productivity Toolkit.">
+        <meta name="twitter:image" content="{{ asset('images/sbl-logo.webp') }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
