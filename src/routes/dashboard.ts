@@ -28,7 +28,7 @@ dashboardRouter.get("/summary", async (c) => {
     const stageCounts = await db
         .select({
             stage: schema.leads.stage,
-            count: sql<number>`count(*)::int`,
+            count: sql<number>`count(*)`,
         })
         .from(schema.leads)
         .where(and(...baseConditions))
@@ -38,7 +38,7 @@ dashboardRouter.get("/summary", async (c) => {
     const tempCounts = await db
         .select({
             temperature: schema.leads.temperature,
-            count: sql<number>`count(*)::int`,
+            count: sql<number>`count(*)`,
         })
         .from(schema.leads)
         .where(and(...baseConditions))
