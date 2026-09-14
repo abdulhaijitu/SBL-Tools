@@ -35,7 +35,12 @@ class BinaryTeamController extends Controller
         }
 
         // Auto-ensure user root exists if authenticated
-        if ($currentUser && ! BinaryNode::where('tree_owner_id', $currentUser->id)->whereNull('parent_id')->exists()) {
+        if ($ownerId && ! BinaryNode::where('tree_owner_id', $ownerId)->whereNull('parent_id')->exists()) {
+            $targetUser = User::find($ownerId);
+            if ($targetUser) {
+                $this->treeService->ensureUserRoot($targetUser);
+            }
+        } elseif ($currentUser && ! BinaryNode::where('tree_owner_id', $currentUser->id)->whereNull('parent_id')->exists()) {
             $this->treeService->ensureUserRoot($currentUser);
         }
 

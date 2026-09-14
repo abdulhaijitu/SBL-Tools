@@ -133,8 +133,15 @@
                 </div>
             </div>
 
-            <!-- Right Actions: Profile -->
+            <!-- Right Actions: Edit & Profile -->
             <div class="flex items-center gap-2 self-start sm:self-center flex-shrink-0">
+                <button type="button" 
+                        @click="openEditModal({{ $root->id }})" 
+                        class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer border border-white/20"
+                        title="Edit member name and info">
+                    <span>✏️</span>
+                    <span data-en="Edit Name" data-bn="নাম পরিবর্তন">Edit Name</span>
+                </button>
                 <button type="button" 
                         data-btn-full-details
                         @click="openDetailsModal({{ $root->id }})" 
@@ -521,6 +528,12 @@
                                         <span data-en="Explore Team" data-bn="টিম দেখুন">Explore Team</span>
                                     </a>
                                     <button type="button" 
+                                            @click="openEditModal({{ $slotData['id'] }})"
+                                            class="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center text-xs transition-colors cursor-pointer border border-amber-200"
+                                            title="Edit Member">
+                                        ✏️
+                                    </button>
+                                    <button type="button" 
                                             @click="openDetailsModal({{ $slotData['id'] }})"
                                             class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
                                             title="View Details">
@@ -671,6 +684,12 @@
                                         <span>👥</span>
                                         <span data-en="Explore Team" data-bn="টিম দেখুন">Explore Team</span>
                                     </a>
+                                    <button type="button" 
+                                            @click="openEditModal({{ $slotData['id'] }})"
+                                            class="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 flex items-center justify-center text-xs transition-colors cursor-pointer border border-amber-200"
+                                            title="Edit Member">
+                                        ✏️
+                                    </button>
                                     <button type="button" 
                                             @click="openDetailsModal({{ $slotData['id'] }})"
                                             class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"

@@ -27,23 +27,19 @@ class BinaryTreeService
 
         if ($ownerId) {
             $query->where('tree_owner_id', $ownerId);
+        } elseif (auth()->check()) {
+            $query->where('tree_owner_id', auth()->id());
         }
 
-        // Try to match Abdul Hai first if no specific owner is passed
-        if (! $ownerId) {
-            $namedRoot = (clone $query)
-                ->where(function ($q) {
-                    $q->where('member_name', 'like', '%Abdul Hai%')
-                        ->orWhere('member_code', 'like', '%abdulhai%');
-                })
-                ->first();
-
-            if ($namedRoot) {
-                return $namedRoot;
-            }
+        $root = $query->first();
+        if ($root) {
+            return $root;
         }
 
-        return $query->orderBy('id')->first();
+        return BinaryNode::with(['user', 'sponsor', 'parent', 'investments'])
+            ->whereNull('parent_id')
+            ->orderBy('id')
+            ->first();
     }
 
     /**
@@ -737,6 +733,13 @@ class BinaryTreeService
             }
 
             $node->update($updateData);
+
+            // Sync user account name if updating the root node of an account
+            $targetUserId = $node->user_id ?: $node->tree_owner_id;
+            if ($node->parent_id === null && $targetUserId && !empty($updateData['member_name'])) {
+                User::whereKey($targetUserId)->update(['name' => $updateData['member_name']]);
+            }
+
             $this->syncUplineCounts($node);
 
             return $node;

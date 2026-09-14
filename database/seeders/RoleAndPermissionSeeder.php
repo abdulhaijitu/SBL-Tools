@@ -139,7 +139,7 @@ class RoleAndPermissionSeeder extends Seeder
             ]
         );
         $admin->update([
-            'name' => 'Md. Abdul Hai',
+            'name' => $admin->name ?: 'Md. Abdul Hai',
             'phone' => '01777656517',
             'designation' => $admin->designation ?: 'System Administrator',
             'status' => 'active',

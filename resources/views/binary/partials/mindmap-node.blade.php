@@ -39,6 +39,7 @@
         @endif
         <div class="mindmap-actions">
             <a href="{{ route('team.show', ['memberId' => $node['id'], 'owner_id' => request('owner_id')]) }}">View team</a>
+            <button type="button" @click="openEditModal({{ $node['id'] }})">Edit</button>
             @if($hasBranches)<button type="button" @click="expanded = !expanded; $nextTick(() => draw())" :aria-expanded="expanded" x-text="expanded ? 'Collapse' : 'Expand'"></button>@endif
         </div>
     </div>

@@ -107,6 +107,7 @@ class UserController extends Controller
         ]);
 
         $user->roles()->sync([$validated['role_id']]);
+        app(\App\Services\BinaryTreeService::class)->ensureUserRoot($user);
 
         return redirect()->route('users.index')->with('success', "সিস্টেম ইউজার '{$user->name}' সফলভাবে তৈরি হয়েছে। মোবাইল: {$user->phone}");
     }
@@ -155,6 +156,12 @@ class UserController extends Controller
 
         $user->update($data);
         $user->roles()->sync([$validated['role_id']]);
+
+        // Sync root binary node name if name changed
+        \App\Models\BinaryNode::where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->orWhere('tree_owner_id', $user->id);
+        })->whereNull('parent_id')->update(['member_name' => $user->name]);
 
         return redirect()->route('users.index')->with('success', "User '{$user->name}' updated successfully.");
     }

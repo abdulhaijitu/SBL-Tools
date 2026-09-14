@@ -34,6 +34,12 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
+        // Sync root binary node name if user updated name
+        \App\Models\BinaryNode::where(function ($q) use ($request) {
+            $q->where('user_id', $request->user()->id)
+                ->orWhere('tree_owner_id', $request->user()->id);
+        })->whereNull('parent_id')->update(['member_name' => $request->user()->name]);
+
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
@@ -48,7 +54,7 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        if ($user->isSuperAdmin() && !\App\Models\User::where('id', '!=', $user->id)->where('status', 'active')->whereHas('roles', fn ($query) => $query->where('slug', 'super-admin'))->exists()) {
+        if ($user->isSuperAdmin() && !\App\Models\User::where('id', '!=', $user->id)->where('status', 'active')->whereHas('roles', fn($query) => $query->where('slug', 'super-admin'))->exists()) {
             throw \Illuminate\Validation\ValidationException::withMessages(['password' => 'Assign another active Super Admin before deleting your account.']);
         }
 

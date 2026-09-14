@@ -335,4 +335,54 @@ class BinaryTeamCrudTest extends TestCase
             'slot_number' => 1,
         ]);
     }
+
+    public function test_user_can_customize_root_member_name_and_sync_with_user(): void
+    {
+        $response = $this->actingAs($this->admin)->put(route('team.update', $this->root), [
+            'member_name' => 'Customized Super Admin Name',
+            'member_code' => $this->root->member_code,
+            'phone' => '01777656517',
+            'package_name' => 'National 120k',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->root->refresh();
+        $this->admin->refresh();
+
+        $this->assertEquals('Customized Super Admin Name', $this->root->member_name);
+        $this->assertEquals('Customized Super Admin Name', $this->admin->name);
+    }
+
+    public function test_user_profile_update_syncs_root_node_name(): void
+    {
+        $response = $this->actingAs($this->admin)->patch(route('profile.update'), [
+            'name' => 'Profile Updated Admin Name',
+            'email' => $this->admin->email,
+            'phone' => '01777656517',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->root->refresh();
+        $this->admin->refresh();
+
+        $this->assertEquals('Profile Updated Admin Name', $this->admin->name);
+        $this->assertEquals('Profile Updated Admin Name', $this->root->member_name);
+    }
+
+    public function test_different_users_have_isolated_team_roots(): void
+    {
+        $user2 = User::factory()->create([
+            'name' => 'Nusrat Jahan',
+            'phone' => '01911223344',
+            'email' => 'nusrat@sbl.test',
+        ]);
+
+        $this->actingAs($user2)->get(route('team.index'));
+
+        $user2Root = BinaryNode::where('tree_owner_id', $user2->id)->whereNull('parent_id')->first();
+        $this->assertNotNull($user2Root);
+        $this->assertEquals('Nusrat Jahan', $user2Root->member_name);
+        $this->assertEquals($user2->id, $user2Root->tree_owner_id);
+        $this->assertNotEquals($this->root->id, $user2Root->id);
+    }
 }

@@ -48,6 +48,7 @@ class RegisteredUserController extends Controller
         $user->assignRole($role);
 
         Auth::login($user);
+        app(\App\Services\BinaryTreeService::class)->ensureUserRoot($user);
 
         return redirect(route('dashboard', absolute: false));
     }

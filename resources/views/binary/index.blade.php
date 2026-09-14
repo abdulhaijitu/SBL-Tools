@@ -673,8 +673,13 @@ function teamExplorerData() {
                 </div>
 
                 <div class="flex items-center gap-2">
+                    <button type="button" 
+                            @click="detailsModalOpen = false; openEditModal(detailsNode.id)" 
+                            class="px-3 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer">
+                        <span>✏️</span> <span data-en="Edit" data-bn="সম্পাদনা">Edit</span>
+                    </button>
                     <a :href="'/team/' + detailsNode.id" 
-                       class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1">
+                       class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1">
                         <span>👥</span> <span>View Team</span>
                     </a>
                     <button @click="detailsModalOpen = false" class="text-slate-400 hover:text-slate-600 text-2xl font-bold cursor-pointer">&times;</button>
