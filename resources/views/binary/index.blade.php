@@ -1144,7 +1144,7 @@ function teamExplorerData() {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
-                        <input type="text" name="member_name" x-model="placementMemberName" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <input type="text" name="member_name" x-ref="placementMemberNameInput" x-model="placementMemberName" required placeholder="e.g. Md. Karim" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Username / Member Code</label>
@@ -1155,8 +1155,40 @@ function teamExplorerData() {
                 <!-- Phone & Email -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-                        <input type="text" name="phone" x-model="placementPhone" placeholder="017xxxxxxxx" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:bg-white focus:ring-2 focus:ring-orange-500">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700">Phone Number</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.placementPhoneInput, $refs.placementMemberNameInput, { onSuccess: (c) => { placementPhone = $refs.placementPhoneInput.value; if(c.name && !placementMemberName) placementMemberName = c.name[0]; } }) : null" 
+                                    class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="text" 
+                                   name="phone" 
+                                   x-ref="placementPhoneInput" 
+                                   x-model="placementPhone" 
+                                   placeholder="017xxxxxxxx" 
+                                   class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 pr-8 focus:bg-white focus:ring-2 focus:ring-orange-500 font-mono">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.placementPhoneInput, $refs.placementMemberNameInput, { onSuccess: (c) => { placementPhone = $refs.placementPhoneInput.value; if(c.name && !placementMemberName) placementMemberName = c.name[0]; } }) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-orange-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
@@ -1164,17 +1196,12 @@ function teamExplorerData() {
                     </div>
                 </div>
 
-                <!-- Sponsor Name & Package -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                 <!-- Sponsor (Referrer) -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                         <span class="flex items-center gap-1.5">
                             <span>🤝</span>
                             <span>Sponsor (Referrer)</span>
-                            <span class="text-[10px] text-slate-400 font-normal">Referrer</span>
                         </span>
                         <span class="text-[10px] text-slate-400 font-normal">Direct Sponsor</span>
                     </label>
@@ -1564,8 +1591,39 @@ function teamExplorerData() {
                 <!-- Phone & Email -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-                        <input type="text" name="phone" x-model="editNode.phone" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700">Phone Number</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editPhoneInput, null, { onSuccess: (c) => { editNode.phone = $refs.editPhoneInput.value; } }) : null" 
+                                    class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="text" 
+                                   name="phone" 
+                                   x-ref="editPhoneInput"
+                                   x-model="editNode.phone" 
+                                   class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 pr-8 font-mono">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editPhoneInput, null, { onSuccess: (c) => { editNode.phone = $refs.editPhoneInput.value; } }) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-orange-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>

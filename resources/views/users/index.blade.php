@@ -791,13 +791,40 @@
                 @csrf
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
-                    <input type="text" name="name" required placeholder="e.g. Mahfuzur Rahman" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none min-h-[44px]">
+                    <input type="text" name="name" x-ref="userNameInput" required placeholder="e.g. Mahfuzur Rahman" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none min-h-[44px]">
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number (লগইন আইডি) *</label>
-                        <input type="tel" name="phone" required placeholder="01XXXXXXXXX" pattern="^(?:\+8801|8801|01)[3-9]\d{8}$" title="Valid Bangladesh mobile number (e.g. 017XXXXXXXX)" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono min-h-[44px]">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Mobile Number (লগইন আইডি) *</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.userPhoneInput, $refs.userNameInput) : null" 
+                                    class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="tel" name="phone" x-ref="userPhoneInput" required placeholder="01XXXXXXXXX" pattern="^(?:\+8801|8801|01)[3-9]\d{8}$" title="Valid Bangladesh mobile number (e.g. 017XXXXXXXX)" class="w-full px-3 py-2 pr-9 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono min-h-[44px]">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.userPhoneInput, $refs.userNameInput) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-orange-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div x-data="{ showPass: false }">
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Login Password *</label>
@@ -883,8 +910,35 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Mobile Number (লগইন আইডি) *</label>
-                        <input type="tel" name="phone" x-model="editingUser.phone" required pattern="^(?:\+8801|8801|01)[3-9]\d{8}$" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono min-h-[44px]">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Mobile Number (লগইন আইডি) *</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editUserPhoneInput, null, { onSuccess: (c) => { editingUser.phone = $refs.editUserPhoneInput.value; } }) : null" 
+                                    class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="tel" name="phone" x-ref="editUserPhoneInput" x-model="editingUser.phone" required pattern="^(?:\+8801|8801|01)[3-9]\d{8}$" class="w-full px-3 py-2 pr-9 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-orange-500 focus:outline-none font-mono min-h-[44px]">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editUserPhoneInput, null, { onSuccess: (c) => { editingUser.phone = $refs.editUserPhoneInput.value; } }) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-orange-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div x-data="{ showPass: false }">
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Set New Password</label>

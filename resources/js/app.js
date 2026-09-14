@@ -4,6 +4,7 @@ import { registerUsers } from "./users";
 import { registerRoles } from "./roles";
 import "./bootstrap";
 import "./toolkit-analytics";
+import "./contact-picker";
 
 import Alpine from "alpinejs";
 import collapse from "@alpinejs/collapse";

@@ -125,16 +125,44 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Mobile Number <span class="text-rose-500">*</span>
-                    </label>
-                    <input type="tel" 
-                           name="mobile" 
-                           required 
-                           inputmode="tel"
-                           x-model="mobile" 
-                           @input="onMobileChange()"
-                           class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                            Mobile Number <span class="text-rose-500">*</span>
+                        </label>
+                        <button type="button" 
+                                @click="window.pickMobileContact ? window.pickMobileContact($refs.leadEditMobileInput, null, { onSuccess: (c) => { mobile = $refs.leadEditMobileInput.value; onMobileChange(); } }) : null" 
+                                class="text-[11px] font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span>কন্টাক্ট থেকে</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="tel" 
+                               name="mobile" 
+                               x-ref="leadEditMobileInput"
+                               required 
+                               inputmode="tel"
+                               x-model="mobile" 
+                               @input="onMobileChange()"
+                               class="w-full text-sm rounded-xl border border-slate-300 focus:border-orange-500 px-3.5 py-2.5 pr-10 font-medium">
+                        <button type="button" 
+                                @click="window.pickMobileContact ? window.pickMobileContact($refs.leadEditMobileInput, null, { onSuccess: (c) => { mobile = $refs.leadEditMobileInput.value; onMobileChange(); } }) : null" 
+                                title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-orange-600 rounded-lg transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </button>
+                    </div>
                     @error('mobile')
                         <p class="text-rose-600 text-[11px] mt-1">{{ $message }}</p>
                     @enderror

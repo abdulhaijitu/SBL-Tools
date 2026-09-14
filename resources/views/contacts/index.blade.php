@@ -499,9 +499,36 @@
                 <!-- Row 2: Phone & WhatsApp -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Hotline *</label>
-                        <input type="text" name="phone" required placeholder="01700000000" 
-                               class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-semibold text-slate-700">Phone Hotline *</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.contactPhoneInput, $refs.contactPersonInput) : null" 
+                                    class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="text" name="phone" x-ref="contactPhoneInput" required placeholder="01700000000" 
+                                   class="w-full px-3.5 py-2 pr-9 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden font-mono">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.contactPhoneInput, $refs.contactPersonInput) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp Number</label>
@@ -514,7 +541,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Contact Person</label>
-                        <input type="text" name="contact_person" placeholder="e.g. SBL Helpdesk Lead" 
+                        <input type="text" name="contact_person" x-ref="contactPersonInput" placeholder="e.g. SBL Helpdesk Lead" 
                                class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden">
                     </div>
                     <div>
@@ -657,9 +684,36 @@
                 <!-- Row 2: Phone & WhatsApp -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Hotline *</label>
-                        <input type="text" name="phone" x-model="editingContact.phone" required 
-                               class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-semibold text-slate-700">Phone Hotline *</label>
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editContactPhoneInput, null, { onSuccess: (c) => { editingContact.phone = $refs.editContactPhoneInput.value; } }) : null" 
+                                    class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span>কন্টাক্ট থেকে</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="text" name="phone" x-ref="editContactPhoneInput" x-model="editingContact.phone" required 
+                                   class="w-full px-3.5 py-2 pr-9 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-hidden font-mono">
+                            <button type="button" 
+                                    @click="window.pickMobileContact ? window.pickMobileContact($refs.editContactPhoneInput, null, { onSuccess: (c) => { editingContact.phone = $refs.editContactPhoneInput.value; } }) : null" 
+                                    title="মোবাইল কন্টাক্ট থেকে নম্বর আনুন"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp Number</label>

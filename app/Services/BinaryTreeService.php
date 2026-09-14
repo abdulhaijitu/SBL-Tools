@@ -544,10 +544,6 @@ class BinaryTreeService
                 $memberCode = 'SBL-' . $nextId;
             }
 
-            $pointValue = isset($data['point_value']) ? (float)$data['point_value'] : 100.00;
-            $packageName = $data['package_name'] ?? 'National 120k';
-            if (isset($data['package_name'])) {
-                if (str_contains(strtolower($packageName), '550')) {
             $packageName = $data['package_name'] ?? 'National Package (120K)';
             if (isset($data['point_value']) && is_numeric($data['point_value'])) {
                 $pointValue = (float)$data['point_value'];
@@ -556,10 +552,8 @@ class BinaryTreeService
                 $pkgLower = strtolower($packageName);
                 if (str_contains($pkgLower, '550')) {
                     $pointValue = 500.00;
-                } elseif (str_contains(strtolower($packageName), '120')) {
                 } elseif (str_contains($pkgLower, '120')) {
                     $pointValue = 100.00;
-                } elseif (str_contains(strtolower($packageName), '25')) {
                 } elseif (str_contains($pkgLower, '10k') || str_contains($pkgLower, 'starter') || str_contains($pkgLower, '10000') || str_contains($pkgLower, '10,000')) {
                     $pointValue = 10.00;
                 } elseif (str_contains($pkgLower, '25')) {
@@ -599,16 +593,12 @@ class BinaryTreeService
             ]);
 
             // Create initial Investment record if not target
-            if (! $isTarget && ($pointValue > 0 || !empty($data['contributions']))) {
             if (! $isTarget && ($pointValue > 0 || !empty($data['contributions']) || !empty($data['total_price']))) {
                 $contribs = $data['contributions'] ?? [];
                 if (!empty($contribs) && is_array($contribs)) {
                     foreach ($contribs as $c) {
                         Investment::create([
                             'binary_node_id' => $node->id,
-                            'plan_name' => $c['note'] ?? $packageName,
-                            'amount' => (float)($c['amount'] ?? $pointValue),
-                            'point_value' => (float)($c['amount'] ?? $pointValue),
                             'plan_name' => $c['plan_name'] ?? ($c['note'] ?? $packageName),
                             'amount' => (float)($c['amount'] ?? ($c['point_value'] ?? $pointValue)),
                             'point_value' => (float)($c['point_value'] ?? ($c['amount'] ?? $pointValue)),
@@ -630,7 +620,6 @@ class BinaryTreeService
                     Investment::create([
                         'binary_node_id' => $node->id,
                         'plan_name' => $packageName,
-                        'amount' => $pointValue,
                         'amount' => $initialAmount,
                         'point_value' => $pointValue,
                         'status' => 'active',
