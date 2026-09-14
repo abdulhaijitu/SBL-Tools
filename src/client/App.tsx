@@ -45,6 +45,7 @@ import {
   Mail,
   Check,
   Activity as ActivityIcon,
+  Send,
 } from 'lucide-react';
 
 // Types
@@ -141,6 +142,10 @@ export function App() {
   const [presentationOpen, setPresentationOpen] = useState(false);
   const [presentationIndex, setPresentationIndex] = useState(0);
   const [showQrModal, setShowQrModal] = useState(false);
+
+  // Social Share & Referral Modal
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePackageData, setSharePackageData] = useState<any | null>(null);
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -717,6 +722,18 @@ export function App() {
             </button>
 
             <button
+              onClick={() => {
+                setSharePackageData(null);
+                setShowShareModal(true);
+              }}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 transition-colors flex items-center gap-1.5"
+              title={lang === 'bn' ? 'প্ল্যাটফর্ম শেয়ার করুন' : 'Share Platform'}
+            >
+              <Share2 className="w-4 h-4 text-orange-400" />
+              <span className="hidden sm:inline">{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
+            </button>
+
+            <button
               onClick={handleOpenAddLead}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-orange-600/30"
             >
@@ -743,8 +760,8 @@ export function App() {
         </div>
       </header>
 
-      {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+      {/* Main Container with Responsive Mobile Padding */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 pt-6 pb-24 lg:pb-8 flex flex-col lg:flex-row gap-6">
         {/* SIDEBAR NAVIGATION */}
         <aside
           className={`lg:w-64 shrink-0 space-y-5 ${
@@ -1848,14 +1865,12 @@ export function App() {
                     <div className="pt-4 mt-4 border-t border-slate-800 flex gap-2">
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(
-                            `https://sbltool.creationtech.info/packages?pkg=${pkg.id}`,
-                          );
-                          showToast(lang === 'bn' ? 'প্যাকেজ লিংক কপি করা হয়েছে!' : 'Package link copied!');
+                          setSharePackageData(pkg);
+                          setShowShareModal(true);
                         }}
                         className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
                       >
-                        <Share2 className="w-3.5 h-3.5" />
+                        <Share2 className="w-3.5 h-3.5 text-orange-400" />
                         <span>{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
                       </button>
                     </div>
@@ -3098,9 +3113,199 @@ export function App() {
         </div>
       )}
 
+      {/* ======================================================== */}
+      {/* MODAL 8: SOCIAL SHARE & REFERRAL HUB */}
+      {/* ======================================================== */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5">
+            <button
+              onClick={() => {
+                setShowShareModal(false);
+                setSharePackageData(null);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-orange-600/20 border border-orange-500/30 text-orange-400 flex items-center justify-center">
+                <Share2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white">
+                  {sharePackageData
+                    ? `${sharePackageData.name} - ${lang === 'bn' ? 'শেয়ার করুন' : 'Share Package'}`
+                    : lang === 'bn'
+                      ? 'এসবিএল প্লাটফর্ম ও রেফারাল শেয়ার'
+                      : 'Share SBL Growth Platform'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {lang === 'bn'
+                    ? 'হোয়াটসঅ্যাপ, ফেসবুক বা টেলিগ্রামে ১-ক্লিকেই ইনভাইটেশন লিংক পাঠান'
+                    : '1-click shareable invites for WhatsApp, Facebook, and Telegram'}
+                </p>
+              </div>
+            </div>
+
+            {/* Generated Message Preview */}
+            {(() => {
+              const shareUrl = sharePackageData
+                ? `https://sbltool.creationtech.info/packages?pkg=${sharePackageData.id}`
+                : 'https://sbltool.creationtech.info/';
+              const shareText = sharePackageData
+                ? lang === 'bn'
+                  ? `🔥 এসবিএল (SBL) অফিসিয়াল পার্টনারশিপ প্যাকেজ: *${sharePackageData.name}*\n💰 বাজেট: ${formatMoney(sharePackageData.priceBdt)} | পয়েন্ট: ${sharePackageData.bv} BV\n✨ সুবিধা: ${sharePackageData.benefits.slice(0, 2).join(', ')}\n\nবিস্তারিত দেখুন ও যুক্ত হোন:\n${shareUrl}`
+                  : `🔥 Check out SBL Official Partnership Package: *${sharePackageData.name}*\n💰 Investment: ${formatMoney(sharePackageData.priceBdt)} | Points: ${sharePackageData.bv} BV\n✨ Perks: ${sharePackageData.benefits.slice(0, 2).join(', ')}\n\nExplore & Join:\n${shareUrl}`
+                : lang === 'bn'
+                  ? `🚀 স্মার্ট বিজনেস লজিস্টিকস ও ডিজিটাল কমার্স লিডারশিপে এসবিএল প্ল্যাটফর্মে আপনাকে স্বাগতম!\n\nসেলস পাইপলাইন অটোমেশন, ১০-স্লট বাইনারি নেটওয়ার্ক এবং ম্যাচিং কমিশনের বিস্তারিত জানতে ভিজিট করুন:\n${shareUrl}`
+                  : `🚀 Welcome to SBL Growth Platform - Smart Business Logistics & Marketing Ecosystem!\n\nAutomate your sales pipeline, binary team tracking, and matching commissions. Explore here:\n${shareUrl}`;
+
+              return (
+                <div className="space-y-4">
+                  <div className="p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700/80 text-xs text-slate-200 whitespace-pre-line leading-relaxed font-sans max-h-40 overflow-y-auto">
+                    {shareText}
+                  </div>
+
+                  {/* Share Action Buttons */}
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <MessageSquare className="w-5 h-5 text-emerald-400" />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <ExternalLink className="w-5 h-5 text-blue-400" />
+                      <span>Facebook</span>
+                    </a>
+
+                    <a
+                      href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 font-bold text-xs flex flex-col items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Send className="w-5 h-5 text-sky-400" />
+                      <span>Telegram</span>
+                    </a>
+                  </div>
+
+                  {/* Copy Link Row */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareUrl}
+                      className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 text-xs font-mono select-all focus:outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareText);
+                        showToast(lang === 'bn' ? 'মেসেজ এবং লিংক কপি করা হয়েছে!' : 'Message & link copied to clipboard!');
+                      }}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-orange-600/30"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'কপি করুন' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MOBILE BOTTOM NAVIGATION BAR (SMARTPHONE OPTIMIZED) */}
+      {/* ======================================================== */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-1.5 flex items-center justify-around pb-safe shadow-2xl">
+        <button
+          onClick={() => {
+            setActiveTab('dashboard');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-colors ${
+            activeTab === 'dashboard' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <LayoutDashboard className="w-5 h-5" />
+          <span className="text-[10px]">{lang === 'bn' ? 'ড্যাশবোর্ড' : 'Home'}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('leads');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-colors ${
+            activeTab === 'leads' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          <span className="text-[10px]">{lang === 'bn' ? 'লিডস' : 'Leads'}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('tree');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-colors ${
+            activeTab === 'tree' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Network className="w-5 h-5" />
+          <span className="text-[10px]">{lang === 'bn' ? '১০-স্লট টিম' : 'Team'}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('packages');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center gap-0.5 p-1.5 rounded-xl transition-colors ${
+            activeTab === 'packages' ? 'text-orange-500 font-bold' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Package className="w-5 h-5" />
+          <span className="text-[10px]">{lang === 'bn' ? 'প্যাকেজ' : 'Packages'}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setSharePackageData(null);
+            setShowShareModal(true);
+          }}
+          className="flex flex-col items-center gap-0.5 p-1.5 rounded-xl text-orange-400 hover:text-orange-300 transition-colors"
+        >
+          <Share2 className="w-5 h-5" />
+          <span className="text-[10px] font-bold">{lang === 'bn' ? 'শেয়ার' : 'Share'}</span>
+        </button>
+
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="flex flex-col items-center gap-0.5 p-1.5 rounded-xl text-slate-400 hover:text-white transition-colors"
+        >
+          <Menu className="w-5 h-5" />
+          <span className="text-[10px]">{lang === 'bn' ? 'মেনু' : 'Menu'}</span>
+        </button>
+      </nav>
+
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2">
+        <div className="fixed bottom-16 lg:bottom-6 right-6 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2">
           <span className="text-emerald-400">✓</span>
           <span>{toastMessage}</span>
         </div>
