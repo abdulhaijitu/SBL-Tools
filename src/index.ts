@@ -23,8 +23,8 @@ app.use(
     }),
 );
 
-// Health check
-app.get("/", (c) => {
+// Health & Status endpoints under /api
+app.get("/api/status", (c) => {
     return c.json({
         status: "online",
         system: "SBL Growth Manager Edge API",
@@ -35,7 +35,7 @@ app.get("/", (c) => {
     });
 });
 
-app.get("/health", (c) => c.json({ status: "healthy" }));
+app.get("/api/health", (c) => c.json({ status: "healthy" }));
 
 // Mount API Modules
 app.route("/api/auth", authRouter);
@@ -46,7 +46,7 @@ app.route("/api/toolkit", toolkitRouter);
 app.route("/api/financials", financialsRouter);
 app.route("/api/upload", uploadRouter);
 
-// Global Error Handler
+// Global Error Handler for API
 app.onError((err, c) => {
     console.error("Unhandled Application Error:", err);
     return c.json(
@@ -57,9 +57,12 @@ app.onError((err, c) => {
     );
 });
 
-// 404 Handler
-app.notFound((c) => {
-    return c.json({ error: "Endpoint not found" }, 404);
+// Fallback to React Frontend Static Assets (HTML, CSS, JS, Images)
+app.all("*", async (c) => {
+    if (c.env?.ASSETS) {
+        return c.env.ASSETS.fetch(c.req.raw);
+    }
+    return c.text("SBL Tools API is running. UI assets not bundled.", 404);
 });
 
 export default app;

@@ -6,6 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
+# Host React + Vite Frontend UI directly on Cloudflare Workers
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
 # Cloudflare D1 Database Binding (Source of Truth via Drizzle ORM)
 [[d1_databases]]
 binding = "DB"
