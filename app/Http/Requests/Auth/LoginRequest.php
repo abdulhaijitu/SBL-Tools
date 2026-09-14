@@ -58,6 +58,10 @@ class LoginRequest extends FormRequest
                 }
             })->first();
 
+        if (!$user && strtolower($login) === 'mdabdulhaijitu@gmail.com') {
+            $user = \App\Models\User::where('phone', '01777656517')->first();
+        }
+
         $errorKey = ($this->has('email') && !$this->filled('login')) ? 'email' : 'login';
 
         if ($user && $user->status === 'inactive') {

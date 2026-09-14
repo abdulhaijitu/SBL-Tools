@@ -76,9 +76,16 @@ class RoleAndPermissionSeeder extends Seeder
                 'description' => 'Standard member access to personal leads, tasks, presentations, toolkit, and team management.',
                 'is_system' => true,
                 'permissions' => [
-                    'leads.view', 'leads.create', 'leads.edit', 'leads.delete', 'leads.convert',
-                    'tasks.view', 'tasks.manage', 'tasks.delete',
-                    'presentations.view', 'presentations.manage',
+                    'leads.view',
+                    'leads.create',
+                    'leads.edit',
+                    'leads.delete',
+                    'leads.convert',
+                    'tasks.view',
+                    'tasks.manage',
+                    'tasks.delete',
+                    'presentations.view',
+                    'presentations.manage',
                     'marketing.view',
                     'reports.view',
                     'toolkit.view',
@@ -119,20 +126,21 @@ class RoleAndPermissionSeeder extends Seeder
             $roleModels[$slug] = $role;
         }
 
-        // 3. Attach Super Admin Role to primary admin
+        // 3. Attach Super Admin Role to primary admin (Md. Abdul Hai / 01777656517)
         $admin = User::firstOrCreate(
             ['email' => 'admin@sbl.test'],
             [
-                'name' => 'SBL Admin',
-                'password' => Hash::make('password'),
-                'phone' => '01700000000',
+                'name' => 'Md. Abdul Hai',
+                'password' => Hash::make('Admin@123'),
+                'phone' => '01777656517',
                 'designation' => 'System Administrator',
                 'status' => 'active',
                 'email_verified_at' => now(),
             ]
         );
         $admin->update([
-            'phone' => $admin->phone ?: '01700000000',
+            'name' => 'Md. Abdul Hai',
+            'phone' => '01777656517',
             'designation' => $admin->designation ?: 'System Administrator',
             'status' => 'active',
         ]);

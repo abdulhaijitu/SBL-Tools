@@ -15,7 +15,7 @@ class BinaryTeamSeeder extends Seeder
             return;
         }
 
-        $admin = User::first();
+        $admin = User::where('phone', '01777656517')->first() ?? User::first();
         $adminId = $admin ? $admin->id : 1;
 
         // Root Node - Blank team initially, user manages their own team
@@ -24,8 +24,8 @@ class BinaryTeamSeeder extends Seeder
             'user_id' => $admin?->id,
             'member_name' => $admin?->name ?? 'Md. Abdul Hai',
             'member_code' => 'mdabdulhaijitu1',
-            'phone' => $admin?->phone ?? '01711000000',
-            'email' => $admin?->email ?? 'abdulhaijitu@gmail.com',
+            'phone' => $admin?->phone ?? '01777656517',
+            'email' => $admin?->email ?? 'mdabdulhaijitu@gmail.com',
             'password_plain' => 'Admin@123',
             'tpin' => '1234',
             'package_name' => 'National 120k',
