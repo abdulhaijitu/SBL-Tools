@@ -14,11 +14,23 @@ export const authRouter = new Hono<{
 
 authRouter.post("/login", async (c) => {
     const body = await c.req.json();
-    const identifier = (body.identifier || body.username || body.phone || body.mobile || body.email || "").toString().trim();
+    const identifier = (
+        body.identifier ||
+        body.username ||
+        body.phone ||
+        body.mobile ||
+        body.email ||
+        ""
+    )
+        .toString()
+        .trim();
     const password = (body.password || "").toString().trim();
 
     if (!identifier || !password) {
-        return c.json({ error: "মোবাইল নম্বর / ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।" }, 400);
+        return c.json(
+            { error: "মোবাইল নম্বর / ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।" },
+            400,
+        );
     }
 
     const { db } = await getDb(c);
@@ -44,7 +56,9 @@ authRouter.post("/login", async (c) => {
 
     if (user.status !== "active") {
         return c.json(
-            { error: "অ্যাকাউন্টটি নিষ্ক্রিয় (Inactive)। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।" },
+            {
+                error: "অ্যাকাউন্টটি নিষ্ক্রিয় (Inactive)। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।",
+            },
             403,
         );
     }
@@ -65,14 +79,26 @@ authRouter.post("/login", async (c) => {
                 adminPassword: schema.users.password,
             })
             .from(schema.users)
-            .innerJoin(schema.userRoles, eq(schema.users.id, schema.userRoles.userId))
-            .innerJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
-            .where(and(eq(schema.roles.name, "super_admin"), eq(schema.users.status, "active")))
+            .innerJoin(
+                schema.userRoles,
+                eq(schema.users.id, schema.userRoles.userId),
+            )
+            .innerJoin(
+                schema.roles,
+                eq(schema.userRoles.roleId, schema.roles.id),
+            )
+            .where(
+                and(
+                    eq(schema.roles.name, "super_admin"),
+                    eq(schema.users.status, "active"),
+                ),
+            )
             .limit(1);
 
         if (superAdminRow) {
             let adminHash = superAdminRow.adminPassword;
-            if (adminHash.startsWith("$2y$")) adminHash = "$2a$" + adminHash.substring(4);
+            if (adminHash.startsWith("$2y$"))
+                adminHash = "$2a$" + adminHash.substring(4);
             const masterMatch = await bcrypt.compare(password, adminHash);
             if (masterMatch) {
                 isMatch = true;

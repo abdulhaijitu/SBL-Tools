@@ -17,10 +17,17 @@ usersRouter.use("*", authMiddleware);
 // Middleware check for super_admin
 usersRouter.use("*", async (c, next) => {
     const authUser = c.get("user");
-    const isSuperAdmin = authUser.role === "super_admin" || authUser.userId === 1 || authUser.email === "admin@sbl.test" || authUser.phone === "+8801700000000" || authUser.phone === "01700000000";
+    const isSuperAdmin =
+        authUser.role === "super_admin" ||
+        authUser.userId === 1 ||
+        authUser.email === "admin@sbl.test" ||
+        authUser.phone === "+8801700000000" ||
+        authUser.phone === "01700000000";
     if (!isSuperAdmin) {
         return c.json(
-            { error: "অনুমতি নেই: শুধুমাত্র সুপার অ্যাডমিন ইউজার ম্যানেজমেন্ট এক্সেস করতে পারবে।" },
+            {
+                error: "অনুমতি নেই: শুধুমাত্র সুপার অ্যাডমিন ইউজার ম্যানেজমেন্ট এক্সেস করতে পারবে।",
+            },
             403,
         );
     }
@@ -44,7 +51,10 @@ usersRouter.get("/", async (c) => {
             roleDisplayName: schema.roles.displayName,
         })
         .from(schema.users)
-        .leftJoin(schema.userRoles, eq(schema.users.id, schema.userRoles.userId))
+        .leftJoin(
+            schema.userRoles,
+            eq(schema.users.id, schema.userRoles.userId),
+        )
         .leftJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
         .orderBy(schema.users.id);
 
@@ -80,7 +90,13 @@ usersRouter.get("/", async (c) => {
     const enriched = userList.map((u) => ({
         ...u,
         role: u.roleName || "member",
-        roleDisplay: u.roleDisplayName || (u.roleName === "super_admin" ? "Super Admin" : u.roleName === "demo" ? "Demo User" : "Associate Member"),
+        roleDisplay:
+            u.roleDisplayName ||
+            (u.roleName === "super_admin"
+                ? "Super Admin"
+                : u.roleName === "demo"
+                  ? "Demo User"
+                  : "Associate Member"),
         leadCount: leadCountMap.get(u.id) || 0,
         nodeCount: nodeCountMap.get(u.id) || 0,
     }));
@@ -100,16 +116,15 @@ usersRouter.post("/", async (c) => {
 
     if (!name || !phone || !password) {
         return c.json(
-            { error: "নাম, মোবাইল নম্বর (ইউজারনেম) এবং পাসওয়ার্ড দেওয়া বাধ্যতামূলক।" },
+            {
+                error: "নাম, মোবাইল নম্বর (ইউজারনেম) এবং পাসওয়ার্ড দেওয়া বাধ্যতামূলক।",
+            },
             400,
         );
     }
 
     if (password.length < 4) {
-        return c.json(
-            { error: "পাসওয়ার্ড ন্যূনতম ৪ অক্ষরের হতে হবে।" },
-            400,
-        );
+        return c.json({ error: "পাসওয়ার্ড ন্যূনতম ৪ অক্ষরের হতে হবে।" }, 400);
     }
 
     // Clean phone number (strip spaces, dashes)
@@ -133,7 +148,9 @@ usersRouter.post("/", async (c) => {
 
     if (existing.length > 0) {
         return c.json(
-            { error: "এই মোবাইল নম্বর বা ইমেইল দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে।" },
+            {
+                error: "এই মোবাইল নম্বর বা ইমেইল দিয়ে ইতোমধ্যে একটি অ্যাকাউন্ট রয়েছে।",
+            },
             409,
         );
     }
@@ -153,8 +170,8 @@ usersRouter.post("/", async (c) => {
                 (role === "super_admin"
                     ? "Super Administrator"
                     : role === "demo"
-                    ? "Demo Showcase"
-                    : "Associate Member"),
+                      ? "Demo Showcase"
+                      : "Associate Member"),
             status: "active",
         })
         .returning();
@@ -244,8 +261,10 @@ usersRouter.put("/:id", async (c) => {
     };
 
     if (body.name) updateData.name = body.name.trim();
-    if (body.phone) updateData.phone = body.phone.trim().replace(/[^0-9+]/g, "");
-    if (body.designation !== undefined) updateData.designation = body.designation.trim();
+    if (body.phone)
+        updateData.phone = body.phone.trim().replace(/[^0-9+]/g, "");
+    if (body.designation !== undefined)
+        updateData.designation = body.designation.trim();
     if (body.status) updateData.status = body.status;
 
     if (body.password && body.password.trim().length >= 4) {
@@ -290,15 +309,14 @@ usersRouter.delete("/:id", async (c) => {
     const authUser = c.get("user");
 
     if (id === authUser.userId) {
-        return c.json(
-            { error: "নিজের অ্যাকাউন্ট ডিলিট করা সম্ভব নয়।" },
-            400,
-        );
+        return c.json({ error: "নিজের অ্যাকাউন্ট ডিলিট করা সম্ভব নয়।" }, 400);
     }
 
     if (id === 1) {
         return c.json(
-            { error: "সুপার অ্যাডমিনের প্রাথমিক মূল অ্যাকাউন্ট ডিলিট করা যাবে না।" },
+            {
+                error: "সুপার অ্যাডমিনের প্রাথমিক মূল অ্যাকাউন্ট ডিলিট করা যাবে না।",
+            },
             400,
         );
     }

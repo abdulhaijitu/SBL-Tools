@@ -234,3 +234,4 @@ with open('src/client/App.tsx', 'w', encoding='utf-8') as f:
     f.write(content)
 
 print('Updated App.tsx successfully!')
+
