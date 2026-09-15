@@ -2152,7 +2152,7 @@ export function App() {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(
-                            `https://sbltool.creationtech.info/packages?pkg=${pkg.id}`,
+                            `https://sbltools.creationtech.info/packages?pkg=${pkg.id}`,
                           );
                           showToast(lang === 'bn' ? 'প্যাকেজ লিংক কপি করা হয়েছে!' : 'Package link copied!');
                           setSharePackageData(pkg);
@@ -2400,7 +2400,7 @@ export function App() {
                   ? links
                   : [
                       { id: 1, title: 'SBL Official Corporate Portal', url: 'https://sbl.com.bd', category: 'Official' },
-                      { id: 2, title: 'Associate Growth Manager', url: 'https://sbltool.creationtech.info', category: 'Platform' },
+                      { id: 2, title: 'Associate Growth Manager', url: 'https://sbltools.creationtech.info', category: 'Platform' },
                       { id: 3, title: 'Central Support Desk', url: 'https://wa.me/8801700000000', category: 'Support' },
                     ]
                 ).map((link: any) => (
@@ -3560,8 +3560,8 @@ export function App() {
             {/* Generated Message Preview */}
             {(() => {
               const shareUrl = sharePackageData
-                ? `https://sbltool.creationtech.info/packages?pkg=${sharePackageData.id}`
-                : 'https://sbltool.creationtech.info/';
+                ? `https://sbltools.creationtech.info/packages?pkg=${sharePackageData.id}`
+                : 'https://sbltools.creationtech.info/';
               const shareText = sharePackageData
                 ? lang === 'bn'
                   ? `🔥 এসবিএল (SBL) অফিসিয়াল পার্টনারশিপ প্যাকেজ: *${sharePackageData.name}*\n💰 বাজেট: ${formatMoney(sharePackageData.priceBdt)} | পয়েন্ট: ${sharePackageData.bv} BV\n✨ সুবিধা: ${sharePackageData.benefits.slice(0, 2).join(', ')}\n\nবিস্তারিত দেখুন ও যুক্ত হোন:\n${shareUrl}`

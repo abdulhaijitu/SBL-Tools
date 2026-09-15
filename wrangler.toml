@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 routes = [
+  { pattern = "sbltools.creationtech.info", custom_domain = true },
   { pattern = "sbltool.creationtech.info", custom_domain = true }
 ]
 
