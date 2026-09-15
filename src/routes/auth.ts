@@ -206,11 +206,13 @@ authRouter.get("/me", authMiddleware, async (c) => {
         .innerJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
         .where(eq(schema.userRoles.userId, user.id));
 
+    const roleName = userRolesList[0]?.roleName || "member";
     return c.json({
         user: {
             ...user,
+            role: roleName,
+            primaryRole: roleName,
             roles: userRolesList,
-            primaryRole: userRolesList[0]?.roleName || "member",
         },
     });
 });

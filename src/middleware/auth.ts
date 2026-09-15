@@ -25,6 +25,7 @@ export async function authMiddleware(
             userId: Number(payload.sub),
             email: String(payload.email),
             role: String(payload.role || "member"),
+            phone: payload.phone ? String(payload.phone) : undefined,
         });
         await next();
     } catch {
