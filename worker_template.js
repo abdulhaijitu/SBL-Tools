@@ -962,7 +962,7 @@ export default {
                             success: true,
                             currency: curr,
                             symbol: curr === "BDT" ? "৳" : "$",
-                            rate: curr === "BDT" ? 120 : 1,
+                            rate: curr === "BDT" ? 100 : 1,
                         }),
                         {
                             headers: {

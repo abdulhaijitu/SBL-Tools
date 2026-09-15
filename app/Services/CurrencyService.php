@@ -8,7 +8,7 @@ class CurrencyService
     public const BDT = 'BDT';
 
     public const USD_RATE = 1.0;
-    public const BDT_RATE = 120.0; // 1 USD = 120 BDT
+    public const BDT_RATE = 100.0; // 1 USD = 100 BDT (SBL Ecosystem)
 
     /**
      * Get the active currency from session, cookie, or default to USD.

@@ -29,7 +29,7 @@ For a **new local demo database only**, `php artisan db:seed` creates sample use
 - Registration assigns the Members role; an administrator configures its permissions. Members and Demo Members have no administrative access by default.
 - Member passwords and TPINs use encrypted casts, are excluded from serialization, and load through an authorized, non-cacheable endpoint only after selecting Show.
 - Preserve `APP_KEY` with database backups. **Do not regenerate it for an existing database**; stored member credentials depend on it. The encryption migration intentionally does not restore plaintext on rollback.
-- Currency conversion uses a fixed demonstration rate of 1 USD = 120 BDT, not a live feed. Package calculators retain BDT inputs and model-based projections.
+- Currency conversion uses the official SBL Ecosystem rate of 1 USD = 100 BDT (1 Dollar = 100 Taka). Package calculators retain BDT inputs and model-based projections.
 
 ## Verify
 

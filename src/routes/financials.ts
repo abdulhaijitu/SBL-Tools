@@ -76,7 +76,7 @@ financialsRouter.post("/calculate", async (c) => {
     const weeklyReturnBdt = (bdt * weeklyRate) / 100;
     const totalReturnBdt = weeklyReturnBdt * weeks;
     const totalProfitBdt = totalReturnBdt - bdt;
-    const usd = bdt / 120;
+    const usd = bdt / 100;
 
     // Projected lifetime monthly profit sharing after 100 weeks
     const monthlyLifetimeMin =
@@ -87,7 +87,7 @@ financialsRouter.post("/calculate", async (c) => {
     return c.json({
         amountBdt: bdt.toFixed(2),
         amountUsd: usd.toFixed(2),
-        exchangeRate: "1 USD = 120 BDT",
+        exchangeRate: "1 USD = 100 BDT",
         weeklyRatePercent: weeklyRate,
         weeklyReturnBdt: weeklyReturnBdt.toFixed(2),
         durationWeeks: weeks,

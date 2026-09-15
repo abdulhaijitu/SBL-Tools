@@ -404,7 +404,10 @@ treeRouter.put("/nodes/:id", async (c) => {
         return c.json({ error: "Node not found" }, 404);
     }
 
-    if (authUser.role !== "super_admin" && existingNode.userId !== authUser.userId) {
+    if (
+        authUser.role !== "super_admin" &&
+        existingNode.userId !== authUser.userId
+    ) {
         return c.json({ error: "Permission denied" }, 403);
     }
 
@@ -412,13 +415,16 @@ treeRouter.put("/nodes/:id", async (c) => {
         updatedAt: new Date(),
     };
 
-    if (body.memberName !== undefined) updateData.memberName = body.memberName.trim();
+    if (body.memberName !== undefined)
+        updateData.memberName = body.memberName.trim();
     if (body.phone !== undefined) updateData.phone = body.phone?.trim() || null;
     if (body.rank !== undefined) updateData.rank = body.rank;
-    if (body.packageName !== undefined) updateData.packageName = body.packageName;
+    if (body.packageName !== undefined)
+        updateData.packageName = body.packageName;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
-    if (body.sponsorName !== undefined) updateData.sponsorName = body.sponsorName;
+    if (body.sponsorName !== undefined)
+        updateData.sponsorName = body.sponsorName;
 
     const [updatedNode] = await db
         .update(schema.binaryNodes)
@@ -449,7 +455,10 @@ treeRouter.delete("/nodes/:id", async (c) => {
         return c.json({ error: "Node not found" }, 404);
     }
 
-    if (authUser.role !== "super_admin" && existingNode.userId !== authUser.userId) {
+    if (
+        authUser.role !== "super_admin" &&
+        existingNode.userId !== authUser.userId
+    ) {
         return c.json({ error: "Permission denied" }, 403);
     }
 
@@ -474,4 +483,3 @@ treeRouter.delete("/nodes/:id", async (c) => {
 
     return c.json({ message: "Member node deleted successfully", id: nodeId });
 });
-

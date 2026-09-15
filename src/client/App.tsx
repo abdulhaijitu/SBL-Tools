@@ -1036,7 +1036,7 @@ export function App() {
       { abbr: 'BV', term: 'Business Volume', desc: 'কমিশন গণনার একক পয়েন্ট (১ BV = কমিশনযোগ্য পয়েন্ট)' },
       { abbr: 'PV', term: 'Point Volume', desc: 'প্যাকেজ এবং মার্চেন্ডাইজ ক্রয়ের বিপরীতে অর্জিত পয়েন্ট' },
       { abbr: 'TPIN', term: 'Transaction PIN', desc: 'ব্যালেন্স উইথড্রয়াল ও মেম্বার ট্রান্সফারের ৪ সংখ্যার পিন কোড' },
-      { abbr: 'BDT', term: 'Bangladeshi Taka', desc: 'বাংলাদেশের জাতীয় মুদ্রা (স্ট্যান্ডার্ড রেট: ১ USD = ১২০ BDT)' },
+      { abbr: 'BDT', term: 'Bangladeshi Taka', desc: 'বাংলাদেশের জাতীয় মুদ্রা (SBL রেট: ১ USD = ১০০ BDT)' },
       { abbr: 'KYC', term: 'Know Your Customer', desc: 'জাতীয় পরিচয়পত্র বা পাসপোর্ট ভেরিফিকেশন প্রক্রিয়া' },
       { abbr: 'Spillover', term: 'Leg Placement Spill', desc: 'আপলাইনের টিম সম্প্রসারণের মাধ্যমে নিচের লিঙ্কে পাওয়া সদস্য প্লেসমেন্ট' },
       { abbr: 'Daily Cap', term: 'Daily Earnings Limit', desc: 'প্যাকেজ অনুযায়ী প্রতিদিন সর্বোচ্চ বাইনারি কমিশন উত্তোলনের সীমা' },
@@ -1234,7 +1234,10 @@ export function App() {
           {/* Controls */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Currency Toggle [ USD | BDT ] */}
-            <div className="flex items-center rounded-xl bg-slate-800 border border-slate-700 p-0.5 shadow-xs">
+            <div
+              className="flex items-center rounded-xl bg-slate-800 border border-slate-700 p-0.5 shadow-xs"
+              title="SBL Ecosystem Rate: 1 USD = 100 BDT (১ ডলার = ১০০ টাকা)"
+            >
               <button
                 type="button"
                 onClick={() => setCurrency('USD')}
@@ -1243,7 +1246,7 @@ export function App() {
                     ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                title="Default: USD ($)"
+                title="USD ($) - 1 USD = 100 BDT"
               >
                 USD ($)
               </button>
@@ -1255,7 +1258,7 @@ export function App() {
                     ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                title="BDT (৳)"
+                title="BDT (৳) - 100 BDT = 1 USD"
               >
                 BDT (৳)
               </button>

@@ -22,7 +22,10 @@ toolkitRouter.get("/links", async (c) => {
     const links = await db
         .select()
         .from(schema.ecosystemLinks)
-        .orderBy(asc(schema.ecosystemLinks.sortOrder), schema.ecosystemLinks.title);
+        .orderBy(
+            asc(schema.ecosystemLinks.sortOrder),
+            schema.ecosystemLinks.title,
+        );
     return c.json(links);
 });
 
@@ -47,7 +50,8 @@ toolkitRouter.post("/links", async (c) => {
             category: body.category?.trim() || "General",
             description: body.description?.trim() || null,
             sortOrder: Number(body.sortOrder || 0),
-            isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
+            isActive:
+                body.isActive !== undefined ? Boolean(body.isActive) : true,
         })
         .returning();
 
@@ -69,9 +73,12 @@ toolkitRouter.put("/links/:id", async (c) => {
     if (body.title !== undefined) updateData.title = body.title.trim();
     if (body.url !== undefined) updateData.url = body.url.trim();
     if (body.category !== undefined) updateData.category = body.category.trim();
-    if (body.description !== undefined) updateData.description = body.description?.trim() || null;
-    if (body.sortOrder !== undefined) updateData.sortOrder = Number(body.sortOrder);
-    if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
+    if (body.description !== undefined)
+        updateData.description = body.description?.trim() || null;
+    if (body.sortOrder !== undefined)
+        updateData.sortOrder = Number(body.sortOrder);
+    if (body.isActive !== undefined)
+        updateData.isActive = Boolean(body.isActive);
 
     const [updated] = await db
         .update(schema.ecosystemLinks)
@@ -160,13 +167,17 @@ toolkitRouter.put("/contacts/:id", async (c) => {
 
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
-    if (body.designation !== undefined) updateData.designation = body.designation.trim();
-    if (body.department !== undefined) updateData.department = body.department?.trim() || null;
+    if (body.designation !== undefined)
+        updateData.designation = body.designation.trim();
+    if (body.department !== undefined)
+        updateData.department = body.department?.trim() || null;
     if (body.phone !== undefined) updateData.phone = body.phone.trim();
-    if (body.whatsapp !== undefined) updateData.whatsapp = body.whatsapp?.trim() || null;
+    if (body.whatsapp !== undefined)
+        updateData.whatsapp = body.whatsapp?.trim() || null;
     if (body.email !== undefined) updateData.email = body.email?.trim() || null;
     if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
-    if (body.sortOrder !== undefined) updateData.sortOrder = Number(body.sortOrder);
+    if (body.sortOrder !== undefined)
+        updateData.sortOrder = Number(body.sortOrder);
 
     const [updated] = await db
         .update(schema.sblContacts)
@@ -191,9 +202,7 @@ toolkitRouter.delete("/contacts/:id", async (c) => {
     const id = Number(c.req.param("id"));
     const { db } = await getDb(c);
 
-    await db
-        .delete(schema.sblContacts)
-        .where(eq(schema.sblContacts.id, id));
+    await db.delete(schema.sblContacts).where(eq(schema.sblContacts.id, id));
 
     return c.json({ message: "Contact deleted successfully", id });
 });
@@ -208,7 +217,10 @@ toolkitRouter.get("/abbreviations", async (c) => {
     const abbreviations = await db
         .select()
         .from(schema.abbreviations)
-        .orderBy(asc(schema.abbreviations.sortOrder), schema.abbreviations.abbreviation);
+        .orderBy(
+            asc(schema.abbreviations.sortOrder),
+            schema.abbreviations.abbreviation,
+        );
     return c.json(abbreviations);
 });
 
@@ -221,7 +233,10 @@ toolkitRouter.post("/abbreviations", async (c) => {
 
     const body = await c.req.json();
     if (!body.abbreviation || !body.term || !body.definition) {
-        return c.json({ error: "Abbreviation, Term, and Definition are required" }, 400);
+        return c.json(
+            { error: "Abbreviation, Term, and Definition are required" },
+            400,
+        );
     }
 
     const { db } = await getDb(c);
@@ -251,11 +266,15 @@ toolkitRouter.put("/abbreviations/:id", async (c) => {
     const { db } = await getDb(c);
 
     const updateData: any = {};
-    if (body.abbreviation !== undefined) updateData.abbreviation = body.abbreviation.trim().toUpperCase();
+    if (body.abbreviation !== undefined)
+        updateData.abbreviation = body.abbreviation.trim().toUpperCase();
     if (body.term !== undefined) updateData.term = body.term.trim();
-    if (body.definition !== undefined) updateData.definition = body.definition.trim();
-    if (body.category !== undefined) updateData.category = body.category?.trim() || "General";
-    if (body.sortOrder !== undefined) updateData.sortOrder = Number(body.sortOrder);
+    if (body.definition !== undefined)
+        updateData.definition = body.definition.trim();
+    if (body.category !== undefined)
+        updateData.category = body.category?.trim() || "General";
+    if (body.sortOrder !== undefined)
+        updateData.sortOrder = Number(body.sortOrder);
 
     const [updated] = await db
         .update(schema.abbreviations)
@@ -342,8 +361,10 @@ toolkitRouter.put("/resources/:id", async (c) => {
     const updateData: any = {};
     if (body.title !== undefined) updateData.title = body.title.trim();
     if (body.category !== undefined) updateData.category = body.category.trim();
-    if (body.fileR2Key !== undefined) updateData.fileR2Key = body.fileR2Key.trim();
-    if (body.fileSize !== undefined) updateData.fileSize = Number(body.fileSize);
+    if (body.fileR2Key !== undefined)
+        updateData.fileR2Key = body.fileR2Key.trim();
+    if (body.fileSize !== undefined)
+        updateData.fileSize = Number(body.fileSize);
 
     const [updated] = await db
         .update(schema.marketingResources)
