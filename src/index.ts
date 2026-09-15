@@ -9,9 +9,11 @@ import { treeRouter } from "./routes/tree";
 import { toolkitRouter } from "./routes/toolkit";
 import { financialsRouter } from "./routes/financials";
 import { uploadRouter } from "./routes/upload";
+import { usersRouter } from "./routes/users";
 
 const app = new Hono<{ Bindings: Env; Variables: HonoVariables }>();
 
+// Global Middleware
 // 1. Global Logger Middleware
 app.use("*", logger());
 
@@ -24,16 +26,19 @@ app.use("*", async (c, next) => {
     c.res.headers.set("X-Frame-Options", "SAMEORIGIN");
     c.res.headers.set("X-XSS-Protection", "1; mode=block");
     c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    c.res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    c.res.headers.set(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    );
     c.res.headers.set(
         "Strict-Transport-Security",
-        "max-age=31536000; includeSubDomains; preload"
+        "max-age=31536000; includeSubDomains; preload",
     );
 
     // Content Security Policy
     c.res.headers.set(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https:; object-src 'none'; base-uri 'self';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https:; object-src 'none'; base-uri 'self';",
     );
 });
 
@@ -48,6 +53,7 @@ app.use(
     }),
 );
 
+// Health & Status endpoints under /api
 // 4. Health & Status endpoints under /api
 app.get("/api/status", (c) => {
     return c.json({
@@ -64,6 +70,7 @@ app.get("/api/status", (c) => {
 
 app.get("/api/health", (c) => c.json({ status: "healthy" }));
 
+// Mount API Modules
 // 5. Mount API Modules
 app.route("/api/auth", authRouter);
 app.route("/api/leads", leadsRouter);
@@ -72,7 +79,9 @@ app.route("/api/tree", treeRouter);
 app.route("/api/toolkit", toolkitRouter);
 app.route("/api/financials", financialsRouter);
 app.route("/api/upload", uploadRouter);
+app.route("/api/users", usersRouter);
 
+// Global Error Handler for API
 // 6. Global Error Handler for API
 app.onError((err, c) => {
     console.error("Unhandled Application Error:", err);
@@ -84,6 +93,7 @@ app.onError((err, c) => {
     );
 });
 
+// Fallback to React Frontend Static Assets (HTML, CSS, JS, Images)
 // 7. Static Asset Serving with Speed & Cache Optimization
 app.all("*", async (c) => {
     if (c.env?.ASSETS) {
@@ -97,7 +107,7 @@ app.all("*", async (c) => {
         if (url.pathname.startsWith("/assets/")) {
             newResponse.headers.set(
                 "Cache-Control",
-                "public, max-age=31536000, immutable"
+                "public, max-age=31536000, immutable",
             );
         } else if (
             url.pathname.endsWith(".webp") ||
@@ -109,13 +119,13 @@ app.all("*", async (c) => {
             // Images: Cache for 7 days with stale-while-revalidate
             newResponse.headers.set(
                 "Cache-Control",
-                "public, max-age=604800, stale-while-revalidate=86400"
+                "public, max-age=604800, stale-while-revalidate=86400",
             );
         } else {
             // HTML documents: Revalidate to always pick up latest SPA releases
             newResponse.headers.set(
                 "Cache-Control",
-                "public, max-age=0, must-revalidate"
+                "public, max-age=0, must-revalidate",
             );
         }
 

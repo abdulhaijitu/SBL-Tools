@@ -122,6 +122,14 @@ leadsRouter.get("/:id", async (c) => {
 // Create lead
 leadsRouter.post("/", async (c) => {
     const authUser = c.get("user");
+
+    if (authUser.role === "demo") {
+        return c.json(
+            { error: "ডেমো অ্যাকাউন্টে নতুন লিড তৈরি করার অনুমতি নেই (Demo mode is read-only)।" },
+            403,
+        );
+    }
+
     const body = await c.req.json();
 
     if (!body.name || !body.mobile) {
@@ -138,6 +146,12 @@ leadsRouter.post("/", async (c) => {
     if (body.decisionTimeline === "Immediate") score += 20;
     if (body.temperature === "hot") score += 20;
     else if (body.temperature === "warm") score += 10;
+
+    // Super Admin can optionally assign to another user, otherwise owner is authUser
+    const assignedOwnerId =
+        authUser.role === "super_admin" && body.ownerUserId
+            ? Number(body.ownerUserId)
+            : authUser.userId;
 
     const [newLead] = await db
         .insert(schema.leads)
@@ -157,7 +171,7 @@ leadsRouter.post("/", async (c) => {
             score: score,
             budgetRange: body.budgetRange ? String(body.budgetRange) : null,
             decisionTimeline: body.decisionTimeline || null,
-            ownerUserId: authUser.userId,
+            ownerUserId: assignedOwnerId,
             nextActionType: body.nextActionType || null,
             nextActionAt: body.nextActionAt
                 ? new Date(body.nextActionAt)
@@ -172,8 +186,31 @@ leadsRouter.post("/", async (c) => {
 // Update lead
 leadsRouter.put("/:id", async (c) => {
     const id = Number(c.req.param("id"));
-    const body = await c.req.json();
+    const authUser = c.get("user");
+
+    if (authUser.role === "demo") {
+        return c.json(
+            { error: "ডেমো অ্যাকাউন্টে তথ্য পরিবর্তন করার অনুমতি নেই (Demo mode is read-only)।" },
+            403,
+        );
+    }
+
     const { db } = await getDb(c);
+
+    // Verify ownership for non-super_admin
+    if (authUser.role !== "super_admin" && authUser.role !== "manager") {
+        const [existing] = await db
+            .select({ ownerUserId: schema.leads.ownerUserId })
+            .from(schema.leads)
+            .where(eq(schema.leads.id, id))
+            .limit(1);
+
+        if (!existing || existing.ownerUserId !== authUser.userId) {
+            return c.json({ error: "এই লিডটি পরিবর্তন করার অনুমতি আপনার নেই।" }, 403);
+        }
+    }
+
+    const body = await c.req.json();
 
     const [updated] = await db
         .update(schema.leads)
@@ -211,7 +248,29 @@ leadsRouter.put("/:id", async (c) => {
 // Soft delete lead
 leadsRouter.delete("/:id", async (c) => {
     const id = Number(c.req.param("id"));
+    const authUser = c.get("user");
+
+    if (authUser.role === "demo") {
+        return c.json(
+            { error: "ডেমো অ্যাকাউন্টে লিড মুছে ফেলার অনুমতি নেই (Demo mode is read-only)।" },
+            403,
+        );
+    }
+
     const { db } = await getDb(c);
+
+    // Verify ownership for non-super_admin
+    if (authUser.role !== "super_admin" && authUser.role !== "manager") {
+        const [existing] = await db
+            .select({ ownerUserId: schema.leads.ownerUserId })
+            .from(schema.leads)
+            .where(eq(schema.leads.id, id))
+            .limit(1);
+
+        if (!existing || existing.ownerUserId !== authUser.userId) {
+            return c.json({ error: "এই লিডটি মুছে ফেলার অনুমতি আপনার নেই।" }, 403);
+        }
+    }
 
     await db
         .update(schema.leads)
@@ -225,6 +284,14 @@ leadsRouter.delete("/:id", async (c) => {
 leadsRouter.post("/:id/activity", async (c) => {
     const leadId = Number(c.req.param("id"));
     const authUser = c.get("user");
+
+    if (authUser.role === "demo") {
+        return c.json(
+            { error: "ডেমো অ্যাকাউন্টে অ্যাক্টিভিটি যোগ করার অনুমতি নেই।" },
+            403,
+        );
+    }
+
     const body = await c.req.json();
 
     if (!body.type) {

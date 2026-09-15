@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { api, setAuthToken, clearAuthToken, getAuthToken } from './lib/api';
+import {
+  api,
+  setAuthToken,
+  clearAuthToken,
+  getAuthToken,
+  getBackupAdminToken,
+  setBackupAdminToken,
+  clearBackupAdminToken,
+} from './lib/api';
 import {
   Users,
+  UserPlus,
   LayoutDashboard,
   Network,
   Package,
@@ -135,7 +144,32 @@ export function App() {
     sponsorName: '',
     password: 'password123',
     tpin: '1234',
-    packageName: 'National Growth',
+    packageName: 'Starter',
+    amountBdt: 10000,
+  });
+
+  // Tree recursive drill-down navigation & project allocation
+  const [treePath, setTreePath] = useState<Array<{ id: number | null; name: string }>>([
+    { id: null, name: 'হোম ট্রি (Root)' },
+  ]);
+  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+  const [selectedMemberForProject, setSelectedMemberForProject] = useState<any | null>(null);
+  const [projectFormData, setProjectFormData] = useState({
+    projectName: 'Starter',
+    amountBdt: 10000,
+    referenceNote: '',
+  });
+
+  // Super Admin Users Management
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserFormData, setNewUserFormData] = useState({
+    name: '',
+    phone: '',
+    password: '',
+    role: 'member',
+    designation: 'Associate Member',
   });
 
   // Package presentation brochure modal
@@ -187,7 +221,12 @@ export function App() {
       loadLeads();
       api.getLeadSources().then(setLeadSources).catch(console.error);
     } else if (activeTab === 'tree') {
-      api.getTreeNodes().then(setTreeNodes).catch(console.error);
+      const currentParentId = treePath[treePath.length - 1]?.id;
+      api.getTreeNodes(currentParentId || undefined).then(setTreeNodes).catch(console.error);
+    } else if (activeTab === 'users') {
+      if (user?.role === 'super_admin') {
+        loadUsers();
+      }
     } else if (activeTab === 'links' || activeTab === 'contacts' || activeTab === 'glossary') {
       Promise.all([api.getLinks(), api.getContacts(), api.getAbbreviations()])
         .then(([l, c, a]) => {
@@ -203,19 +242,115 @@ export function App() {
     api.getLeads(leadFilter).then(setLeads).catch(console.error);
   };
 
-  // Handle Login
+  // Load tree nodes for parent
+  const loadTreeNodesFor = (parentId?: number | null) => {
+    api.getTreeNodes(parentId || undefined).then(setTreeNodes).catch(console.error);
+  };
+
+  // Tree recursive drill-down navigation
+  const handleDrillDownTree = (node: any) => {
+    setTreePath((prev) => [...prev, { id: node.id, name: node.memberName }]);
+    loadTreeNodesFor(node.id);
+  };
+
+  const handleNavigateTreeBreadcrumb = (index: number) => {
+    const target = treePath[index];
+    const newPath = treePath.slice(0, index + 1);
+    setTreePath(newPath);
+    loadTreeNodesFor(target?.id);
+  };
+
+  // Add Project to Member Node
+  const handleOpenAddProject = (node: any) => {
+    setSelectedMemberForProject(node);
+    setProjectFormData({
+      projectName: 'Starter',
+      amountBdt: 10000,
+      referenceNote: '',
+    });
+    setShowAddProjectModal(true);
+  };
+
+  const handleSaveMemberProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMemberForProject) return;
+    try {
+      await api.addProjectToNode({
+        nodeId: selectedMemberForProject.id,
+        projectName: projectFormData.projectName,
+        amountBdt: Number(projectFormData.amountBdt),
+        referenceNote: projectFormData.referenceNote,
+      });
+      setShowAddProjectModal(false);
+      showToast(lang === 'bn' ? 'প্রজেক্ট সফলভাবে যুক্ত হয়েছে!' : 'Project added successfully!');
+      const currentParentId = treePath[treePath.length - 1]?.id;
+      loadTreeNodesFor(currentParentId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to add project');
+    }
+  };
+
+  // Super Admin: Load & Manage Users
+  const loadUsers = () => {
+    setIsLoadingUsers(true);
+    api.getUsers()
+      .then((data) => setUsersList(data || []))
+      .catch(console.error)
+      .finally(() => setIsLoadingUsers(false));
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createUser(newUserFormData);
+      setShowAddUserModal(false);
+      setNewUserFormData({
+        name: '',
+        phone: '',
+        password: '',
+        role: 'member',
+        designation: 'Associate Member',
+      });
+      showToast(lang === 'bn' ? 'নতুন ইউজার সফলভাবে তৈরি হয়েছে!' : 'User created successfully!');
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to create user');
+    }
+  };
+
+  const handleImpersonate = async (targetUser: any) => {
+    if (!confirm(lang === 'bn' ? `আপনি কি "${targetUser.name}" এর অ্যাকাউন্টে প্রবেশ করতে চান?` : `Switch into ${targetUser.name}'s account?`)) {
+      return;
+    }
+    try {
+      // Backup current admin token if not already backed up
+      if (!getBackupAdminToken() && token) {
+        setBackupAdminToken(token);
+      }
+      const res = await api.impersonateUser(targetUser.id);
+      setAuthToken(res.token);
+      setToken(res.token);
+      setUser(res.user);
+      setActiveTab('dashboard');
+      showToast(lang === 'bn' ? `"${res.user.name}" অ্যাকাউন্টে সফলভাবে প্রবেশ করা হয়েছে!` : `Switched to ${res.user.name}`);
+    } catch (err: any) {
+      alert(err.message || 'Impersonation failed');
+    }
+  };
+
+  // Handle Login (Supports Mobile Number as Username)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
     setLoginError('');
 
     try {
-      const res = await api.login({ email: loginEmail, password: loginPassword });
+      const res = await api.login({ identifier: loginEmail, email: loginEmail, password: loginPassword });
       setAuthToken(res.token);
       setToken(res.token);
       setUser(res.user);
     } catch (err: any) {
-      setLoginError(err.message || 'Login failed. Please check credentials.');
+      setLoginError(err.message || 'লগিন ব্যর্থ হয়েছে। সঠিক মোবাইল নম্বর ও পাসওয়ার্ড দিন।');
     } finally {
       setIsLoggingIn(false);
     }
@@ -353,13 +488,15 @@ export function App() {
   const handleCreateNode = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const currentParentId = treePath[treePath.length - 1]?.id || undefined;
       await api.addTreeNode({
         ...newNode,
+        parentId: currentParentId,
         userId: user?.id || 1,
       });
       setShowAddNodeModal(false);
       showToast(lang === 'bn' ? 'টিম মেম্বার যুক্ত হয়েছে!' : 'Team member placed successfully!');
-      api.getTreeNodes().then(setTreeNodes);
+      loadTreeNodesFor(currentParentId);
     } catch (err: any) {
       alert(err.message || 'Failed to place member');
     }
@@ -370,96 +507,73 @@ export function App() {
     () => [
       {
         id: 'starter',
-        name: lang === 'bn' ? 'বেসিক স্টার্টার' : 'Basic Starter',
-        priceBdt: 15000,
+        name: lang === 'bn' ? 'স্টার্টার প্রজেক্ট' : 'Starter Project',
+        priceBdt: 10000,
         badge: lang === 'bn' ? 'এন্ট্রি প্যাকেজ' : 'Entry Tier',
-        badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
         bv: 100,
-        capitalBdt: 12000,
-        setupFeeBdt: 3000,
-        duration: '180 Days (6 Months)',
+        capitalBdt: 10000,
+        setupFeeBdt: 0,
+        duration: '100 Weeks (24 Months)',
         dailyCap: 5000,
-        returnRate: '8.5% - 10%',
+        returnRate: '১৫০ টাকা / সপ্তাহ (১০০ সপ্তাহে ১৫,০০০ টাকা রিটার্ন)',
         description:
           lang === 'bn'
-            ? 'নতুন অ্যাসোসিয়েটদের জন্য সহজ সূচনা প্যাকেজ।'
-            : 'Steady baseline package designed for new network partners.',
+            ? '১০০ সপ্তাহে ১৫,০০০ টাকা রিটার্ন (সপ্তাহে ১৫০ টাকা)। ফ্রি ফেসবুক পেজ সেটআপ ও অ্যাফিলিয়েট অ্যাকাউন্ট।'
+            : '৳10,000 capital with guaranteed ৳15,000 return over 100 weeks (৳150/week).',
         benefits: [
-          lang === 'bn' ? '১০০ BV পয়েন্ট অ্যাক্টিভেশন' : '100 Point Volume (BV) activation',
-          lang === 'bn' ? 'দৈনিক ম্যাচিং ক্যাপিং ৳৫,০০০' : 'Daily matching capping ৳5,000',
-          lang === 'bn' ? 'বেসিক ডিজিটাল মার্কেটিং টুলকিট' : 'Basic digital marketing toolkit',
-          lang === 'bn' ? 'অফিসিয়াল সেমিনার ও কাউন্সেলিং অ্যাক্সেস' : 'Official seminar & counseling access',
+          lang === 'bn' ? '১০০ সপ্তাহে মূলধনসহ ১৫,০০০ টাকা রিটার্ন (১৫০ টাকা/সপ্তাহ)' : '৳15,000 return over 100 weeks (৳150/week)',
+          lang === 'bn' ? 'ফ্রি ফেসবুক পেজ সেটআপ ও টেকনিক্যাল সাপোর্ট' : 'Free professional Facebook business page setup',
+          lang === 'bn' ? 'ফ্রি অ্যাফিলিয়েট অ্যাকাউন্ট ও ট্রেনিং' : 'Free affiliate account and orientation',
+          lang === 'bn' ? 'আনলিমিটেড স্পনসর সুবিধা ও ফ্রি কনটেন্ট' : 'Unlimited direct sponsoring and content assets',
         ],
       },
       {
         id: 'national',
-        name: lang === 'bn' ? 'ন্যাশনাল গ্রোথ' : 'National Growth',
-        priceBdt: 35000,
+        name: lang === 'bn' ? 'ন্যাশনাল প্রজেক্ট' : 'National Project',
+        priceBdt: 100000,
         badge: lang === 'bn' ? 'সবচেয়ে জনপ্রিয়' : 'Most Popular',
-        badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-        bv: 250,
-        capitalBdt: 28000,
-        setupFeeBdt: 7000,
-        duration: '270 Days (9 Months)',
-        dailyCap: 15000,
-        returnRate: '10% - 12%',
+        badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        bv: 1000,
+        capitalBdt: 100000,
+        setupFeeBdt: 20000,
+        duration: '100 Weeks + Lifetime Profit Sharing',
+        dailyCap: 25000,
+        returnRate: '১.৭৫% / সপ্তাহ (১০০ সপ্তাহে ১,৭৫,০০০ টাকা রিটার্ন)',
         description:
           lang === 'bn'
-            ? 'টিম বিল্ডারদের জন্য সর্বাধুনিক সুবিধাসহ ব্যালান্সড প্যাকেজ।'
-            : 'Balanced package for active team builders with enhanced matching power.',
+            ? '১,০০,০০০ - ৪,৯০,০০০ টাকা। প্রতি সপ্তাহে ১.৭৫% হিসেবে ১০০ সপ্তাহে ১,৭৫,০০০ টাকা গ্যারান্টিযুক্ত রিটার্ন ও আজীবন মাসিক মুনাফা শেয়ারিং।'
+            : '৳1,00,000 - ৳4,90,000. 1.75%/week for 100 weeks (৳1,75,000 return) + lifetime profit sharing.',
         benefits: [
-          lang === 'bn' ? '২৫০ BV পয়েন্ট অ্যাক্টিভেশন' : '250 Point Volume (BV) activation',
-          lang === 'bn' ? 'দৈনিক ম্যাচিং ক্যাপিং ৳১৫,০০০' : 'Daily matching capping ৳15,000',
-          lang === 'bn' ? '১০-স্লট টিম এক্সপ্লোরার সম্পূর্ণ সুবিধা' : '10-Slot Team Explorer full access',
-          lang === 'bn' ? 'ডিরেক্ট স্পন্সর ১০% ও বাইনারি বোনাস' : 'Direct sponsor 10% + Binary bonus',
-          lang === 'bn' ? 'অগ্রাধিকার গ্রাহক সহায়তা' : 'Priority hotline & support',
+          lang === 'bn' ? '১০০ সপ্তাহে ১.৭৫%/সপ্তাহে মোট ১,৭৫,০০০ টাকা রিটার্ন' : '1.75%/week return for 100 weeks (৳175,000 total)',
+          lang === 'bn' ? 'ওয়েবসাইট ডেভেলপমেন্ট ফি মাত্র ২০,০০০ টাকা' : 'Website development fee ৳20,000',
+          lang === 'bn' ? '১০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সুবিধা' : 'Crowdfunding eligibility up to 10 Lac BDT',
+          lang === 'bn' ? '১০০ সপ্তাহ পর আজীবন মাসিক ৫,০০০ - ২০,০০০ টাকা প্রফিট শেয়ারিং' : 'Lifetime profit sharing after 100 weeks (৳5k - ৳20k/mo)',
+          lang === 'bn' ? 'ব্র্যান্ডেড শপিফাই স্টোর ও নিজস্ব প্যাকেজিং সাপোর্ট' : 'Branded Shopify eCommerce store and custom packaging',
         ],
       },
       {
         id: 'international',
-        name: lang === 'bn' ? 'ইন্টারন্যাশনাল এক্সিকিউটিভ' : 'International Executive',
-        priceBdt: 75000,
-        badge: lang === 'bn' ? 'হাই ইয়েল্ড' : 'High Yield',
+        name: lang === 'bn' ? 'ইন্টারন্যাশনাল প্রজেক্ট' : 'International Project',
+        priceBdt: 500000,
+        badge: lang === 'bn' ? 'গ্লোবাল এন্টারপ্রাইজ' : 'Global Enterprise',
         badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-        bv: 600,
-        capitalBdt: 60000,
-        setupFeeBdt: 15000,
-        duration: '365 Days (12 Months)',
-        dailyCap: 35000,
-        returnRate: '12% - 15%',
+        bv: 5000,
+        capitalBdt: 500000,
+        setupFeeBdt: 50000,
+        duration: '100 Weeks + Lifetime Profit Sharing',
+        dailyCap: 50000,
+        returnRate: '২.০% / সপ্তাহ (১০০ সপ্তাহে ১০,০০,০০০ টাকা রিটার্ন)',
         description:
           lang === 'bn'
-            ? 'আন্তর্জাতিক টিম এবং দীর্ঘমেয়াদি আয়ের জন্য প্রিমিয়াম প্যাকেজ।'
-            : 'Premium tier for serious associates aiming for maximum matching yield.',
+            ? '৫,০০,০০০ - আনলিমিটেড। প্রতি সপ্তাহে ২.০% হিসেবে ১০০ সপ্তাহে ১০,০০,০০০ টাকা (৫ লাখে) গ্যারান্টিযুক্ত রিটার্ন ও আজীবন মাসিক ২৫,০০০-১,০০,০০০ টাকা প্রফিট শেয়ারিং।'
+            : '৳5,00,000+. 2.0%/week for 100 weeks (৳10,00,000 return per 5L) + lifetime profit sharing.',
         benefits: [
-          lang === 'bn' ? '৬০০ BV পয়েন্ট অ্যাক্টিভেশন' : '600 Point Volume (BV) activation',
-          lang === 'bn' ? 'দৈনিক ম্যাচিং ক্যাপিং ৳৩৫,০০০' : 'Daily matching capping ৳35,000',
-          lang === 'bn' ? 'গ্লোবাল লিডারশিপ রিওয়ার্ড পুল অ্যাক্সেস' : 'Global leadership reward pool access',
-          lang === 'bn' ? 'ব্যক্তিগত মেন্টরশিপ ও কাউন্সেলিং গাইড' : 'Personal 1-on-1 counseling playbook',
-          lang === 'bn' ? 'সর্বোচ্চ বাইনারি কমিশন পার্সেন্টেজ' : 'Maximum pairing commission percentage',
-        ],
-      },
-      {
-        id: 'leadership',
-        name: lang === 'bn' ? 'লিডারশিপ এলিট' : 'Leadership Elite',
-        priceBdt: 150000,
-        badge: lang === 'bn' ? 'এলিট ক্লাব' : 'VIP Elite',
-        badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-        bv: 1250,
-        capitalBdt: 125000,
-        setupFeeBdt: 25000,
-        duration: '365 Days (12 Months)',
-        dailyCap: 75000,
-        returnRate: '15% - 18%',
-        description:
-          lang === 'bn'
-            ? 'টপ নেটওয়ার্ক ডিরেক্টরদের জন্য সর্বোচ্চ প্রফিট শেয়ারিং প্যাকেজ।'
-            : 'Top director tier with full profit-sharing pools and international rewards.',
-        benefits: [
-          lang === 'bn' ? '১২৫০ BV পয়েন্ট অ্যাক্টিভেশন' : '1,250 Point Volume (BV) activation',
-          lang === 'bn' ? 'দৈনিক ম্যাচিং ক্যাপিং ৳৭৫,০০০' : 'Daily matching capping ৳75,000',
-          lang === 'bn' ? 'আন্তর্জাতিক কনফারেন্স ট্রাভেল ফান্ড' : 'International travel tour fund qualification',
-          lang === 'bn' ? 'লাইফটাইম ভিআইপি সাপোর্ট ও অ্যাকাউন্ট ম্যানেজার' : 'Lifetime VIP manager assignment',
+          lang === 'bn' ? '১০০ সপ্তাহে ২.০%/সপ্তাহে মোট ১০,০০,০০০ টাকা রিটার্ন (৫ লাখে)' : '2.0%/week return for 100 weeks (৳10 Lac per 5 Lac)',
+          lang === 'bn' ? 'আন্তর্জাতিক ওয়েবসাইট ও কনটেন্ট ফি ৫০,০০০ টাকা' : 'International website & video content fee ৳50,000',
+          lang === 'bn' ? '৫০ লাখ টাকা পর্যন্ত ক্রাউডফান্ডিং সুবিধা' : 'Crowdfunding eligibility up to 50 Lac BDT',
+          lang === 'bn' ? '১০০ সপ্তাহ পর আজীবন মাসিক ২৫,০০০ - ১,০০,০০০ টাকা প্রফিট শেয়ারিং' : 'Lifetime profit sharing after 100 weeks (৳25k - ৳1 Lac/mo)',
+          lang === 'bn' ? 'ডেডিকেটেড প্রজেক্ট ম্যানেজমেন্ট টিম ও আনলিমিটেড ইউজিসি কনটেন্ট' : 'Dedicated project management team and unlimited UGC content',
         ],
       },
     ],
@@ -469,43 +583,50 @@ export function App() {
   // Ranks List
   const ranksList = [
     {
-      title: 'Associate',
-      titleBn: 'অ্যাসোসিয়েট',
-      bvReq: '100 BV Left / 100 BV Right',
-      matchBonus: '8%',
-      reward: lang === 'bn' ? 'স্বাগতম কিট' : 'Welcome Starter Kit',
+      title: 'FME (Field Marketing Executive)',
+      titleBn: 'এফএমই (Field Marketing Executive)',
+      bvReq: lang === 'bn' ? 'ডিরেক্ট রেফারেন্স ১০ জন' : 'Direct Reference 10 Members',
+      matchBonus: '১০%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫,০০০' : 'Cash Incentive ৳5,000',
     },
     {
-      title: 'Executive',
-      titleBn: 'এক্সিকিউটিভ',
-      bvReq: '1,000 BV Left / 1,000 BV Right',
-      matchBonus: '10%',
-      reward: lang === 'bn' ? 'স্মার্টওয়াচ / ৳৫,০০০' : 'Smartwatch / ৳5,000',
+      title: 'SME (Senior Marketing Executive)',
+      titleBn: 'এসএমই (Senior Marketing Executive)',
+      bvReq: lang === 'bn' ? '৩০০ Pair Reward (ম্যাচিং)' : '300 Pair Reward Matches',
+      matchBonus: '১২%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫০,০০০' : 'Cash Incentive ৳50,000',
     },
     {
-      title: 'Senior Manager',
-      titleBn: 'সিনিয়র ম্যানেজার',
-      bvReq: '5,000 BV Left / 5,000 BV Right',
-      matchBonus: '12%',
-      reward: lang === 'bn' ? 'ট্যাবলেট পিসি / ৳১৫,০০০' : 'Tablet PC / ৳15,000',
+      title: 'PME (Promotional Marketing Executive)',
+      titleBn: 'পিএমই (Promotional Marketing Executive)',
+      bvReq: lang === 'bn' ? 'টিম: SME (লেফট ১৩ : রাইট ৭)' : 'Team: SME (Left 13 : Right 7)',
+      matchBonus: '১৪%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳১,০০,০০০' : 'Cash Incentive ৳1,00,000',
     },
     {
-      title: 'Director',
-      titleBn: 'ডিরেক্টর',
-      bvReq: '25,000 BV Left / 25,000 BV Right',
-      matchBonus: '14%',
-      reward: lang === 'bn' ? 'ল্যাপটপ ও ব্যাংকক ট্যুর' : 'Laptop & Bangkok Tour',
+      title: 'BME (Brand Marketing Executive)',
+      titleBn: 'বিএমই (Brand Marketing Executive)',
+      bvReq: lang === 'bn' ? 'টিম: PME (লেফট ১০ : রাইট ৫)' : 'Team: PME (Left 10 : Right 5)',
+      matchBonus: '১৫%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫,০০,০০০' : 'Cash Incentive ৳5,00,000',
     },
     {
-      title: 'Crown Diamond',
-      titleBn: 'ক্রাউন ডায়মন্ড',
-      bvReq: '100,000 BV Left / 100,000 BV Right',
-      matchBonus: '16%',
-      reward: lang === 'bn' ? 'লাক্সারি কার ফান্ড (৳২০ লাখ)' : 'Luxury Car Fund (৳2,000,000)',
+      title: 'GME (Global Marketing Executive)',
+      titleBn: 'জিএমই (Global Marketing Executive)',
+      bvReq: lang === 'bn' ? 'টিম: BME (লেফট ৮ : রাইট ৪)' : 'Team: BME (Left 8 : Right 4)',
+      matchBonus: '১৬%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳১০,০০,০০০' : 'Cash Incentive ৳10,00,000',
+    },
+    {
+      title: 'ETD (Executive Team Director)',
+      titleBn: 'ইটিডি (Executive Team Director)',
+      bvReq: lang === 'bn' ? 'টিম: GME (লেফট ৭ : রাইট ৩)' : 'Team: GME (Left 7 : Right 3)',
+      matchBonus: '১৮%',
+      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳২০,০০,০০০ (মোট ৪০ লাখ টাকা পুরস্কার)' : 'Cash Incentive ৳20,00,000 (Total 40 Lac BDT)',
     },
   ];
 
-  // Objection scripts for Counseling Guide
+    // Objection scripts for Counseling Guide
   const objections = [
     {
       qEn: '"I do not have enough money to start right now."',
@@ -618,14 +739,15 @@ export function App() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                {lang === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email Address'}
+                {lang === 'bn' ? 'মোবাইল নম্বর / ইউজারনেম' : 'Mobile Number / Username'}
               </label>
               <input
-                type="email"
+                type="text"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="017XXXXXXXX"
                 required
-                className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
               />
             </div>
             <div>
@@ -656,11 +778,40 @@ export function App() {
             </button>
           </form>
 
-          <div className="mt-6 p-3 rounded-xl bg-slate-800/40 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-            <div>
-              <span className="font-bold text-slate-300">Demo Admin:</span> admin@sbl.test
+          <div className="mt-6 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/80 text-xs space-y-2">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              {lang === 'bn' ? 'দ্রুত লগিন টেস্ট অ্যাকাউন্টস:' : 'Quick Login Accounts:'}
             </div>
-            <span className="text-slate-500 font-mono">password</span>
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="font-bold text-orange-400">👑 Super Admin:</span>
+              <button
+                type="button"
+                onClick={() => { setLoginEmail('01700000000'); setLoginPassword('password'); }}
+                className="hover:underline font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
+              >
+                01700000000 / password
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="font-bold text-blue-400">👤 Member:</span>
+              <button
+                type="button"
+                onClick={() => { setLoginEmail('01700000001'); setLoginPassword('password'); }}
+                className="hover:underline font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
+              >
+                01700000001 / password
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="font-bold text-emerald-400">👀 Demo (Read-Only):</span>
+              <button
+                type="button"
+                onClick={() => { setLoginEmail('01700000003'); setLoginPassword('password'); }}
+                className="hover:underline font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded border border-slate-700"
+              >
+                01700000003 / password
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -671,6 +822,42 @@ export function App() {
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col antialiased">
       <div className="sbl-ribbon" />
+
+      {/* Impersonation Return Banner */}
+      {getBackupAdminToken() && (
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-4 py-2 text-xs font-bold flex items-center justify-between sticky top-0 z-50 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span>
+              {lang === 'bn'
+                ? `আপনি বর্তমানে "${user?.name}" (মোবাইল: ${user?.phone || user?.username}) হিসেবে আছেন (Impersonated View)`
+                : `Currently viewing account of "${user?.name}" (Mobile: ${user?.phone || user?.username})`}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              const adminTok = getBackupAdminToken();
+              if (adminTok) {
+                setAuthToken(adminTok);
+                clearBackupAdminToken();
+                window.location.reload();
+              }
+            }}
+            className="px-3 py-1 bg-slate-950 hover:bg-slate-900 text-amber-300 rounded-lg text-xs font-black shadow-sm transition-all"
+          >
+            {lang === 'bn' ? 'সুপার অ্যাডমিনে ফিরে যান ➔' : 'Back to Super Admin ➔'}
+          </button>
+        </div>
+      )}
+
+      {/* Demo Mode Read-Only Banner */}
+      {user?.role === 'demo' && (
+        <div className="bg-blue-600/20 border-b border-blue-500/30 text-blue-300 font-bold px-4 py-1.5 text-xs text-center">
+          {lang === 'bn'
+            ? '👀 ডেমো অ্যাকাউন্ট মোড: আপনি প্ল্যাটফর্মের সকল ফিচার দেখতে পারবেন, তবে ডাটা পরিবর্তন বা যোগ করার অনুমতি নেই (Read-Only Demo)'
+            : '👀 Demo Mode: You are in read-only observation mode.'}
+        </div>
+      )}
 
       {/* Top Navbar */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
@@ -952,28 +1139,30 @@ export function App() {
             </div>
           </div>
 
-          {/* Administration Group */}
-          <div>
-            <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              {lang === 'bn' ? 'প্ল্যাটফর্ম অ্যাডমিন' : 'SaaS Administration'}
+          {/* Administration Group (Super Admin Only) */}
+          {user?.role === 'super_admin' && (
+            <div>
+              <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                {lang === 'bn' ? 'প্ল্যাটফর্ম অ্যাডমিন' : 'SaaS Administration'}
+              </div>
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    setActiveTab('users');
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                    activeTab === 'users'
+                      ? 'bg-slate-800 text-white font-bold'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`}
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>{lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস' : 'Users & Accounts'}</span>
+                </button>
+              </div>
             </div>
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  setActiveTab('users');
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                  activeTab === 'users'
-                    ? 'bg-slate-800 text-white font-bold'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                }`}
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>{lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস' : 'Users & Accounts'}</span>
-              </button>
-            </div>
-          </div>
+          )}
         </aside>
 
         {/* MAIN WORKSPACE */}
@@ -1604,19 +1793,50 @@ export function App() {
                 </div>
               </div>
 
+              {/* Breadcrumb Hierarchy Bar */}
+              <div className="flex items-center flex-wrap gap-2 p-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs">
+                <span className="text-slate-400 font-bold flex items-center gap-1.5">
+                  <Network className="w-3.5 h-3.5 text-orange-400" />
+                  <span>{lang === 'bn' ? 'টিম হাইয়ারার্কি:' : 'Hierarchy:'}</span>
+                </span>
+                {treePath.map((step, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5">
+                    {idx > 0 && <span className="text-slate-600 font-bold">›</span>}
+                    <button
+                      onClick={() => handleNavigateTreeBreadcrumb(idx)}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                        idx === treePath.length - 1
+                          ? 'bg-orange-600 text-white shadow-sm shadow-orange-600/30'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                      }`}
+                    >
+                      {step.name}
+                    </button>
+                  </div>
+                ))}
+                {treePath.length > 1 && (
+                  <button
+                    onClick={() => handleNavigateTreeBreadcrumb(0)}
+                    className="ml-auto px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[11px] font-bold transition-colors"
+                  >
+                    {lang === 'bn' ? 'মূল হোমে ফিরুন' : 'Back to Root'}
+                  </button>
+                )}
+              </div>
+
               {/* 10-Slot Grid Visualizer */}
               {treeView === 'slots' ? (
                 <div className="space-y-6">
-                  {/* Root Leader Card */}
-                  <div className="max-w-md mx-auto p-4 rounded-2xl bg-gradient-to-r from-orange-600/30 to-amber-600/30 border border-orange-500/50 text-center shadow-lg">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-300">
-                      ROOT LEADER (YOU)
+                  {/* Current Root Leader Card */}
+                  <div className="max-w-md mx-auto p-4 rounded-2xl bg-gradient-to-r from-orange-600/25 to-amber-600/25 border border-orange-500/40 text-center shadow-lg">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-400">
+                      {treePath.length === 1 ? 'ROOT LEADER (YOU)' : 'CURRENT FOCUS LEADER'}
                     </span>
                     <h3 className="text-base font-black text-white mt-0.5">
-                      {user?.name || 'Admin Leader'}
+                      {treePath[treePath.length - 1].name}
                     </h3>
                     <div className="text-xs text-slate-300 font-mono mt-0.5">
-                      ID: {user?.id || 1} • Package: Leadership Elite
+                      {lang === 'bn' ? '১০-স্লট বাইনারি টিম ম্যানেজমেন্ট' : '10-Slot Binary Team Management'}
                     </div>
                   </div>
 
@@ -1651,10 +1871,25 @@ export function App() {
                                   L{slotNumber}
                                 </span>
                                 {node ? (
-                                  <div>
-                                    <div className="font-bold text-white text-xs">{node.memberName}</div>
-                                    <div className="text-[10px] text-slate-400 font-mono">
-                                      {node.phone} • {node.packageName || 'Growth Builder'}
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-white text-xs">{node.memberName}</span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                          (node.activeProject || node.packageName) === 'International'
+                                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                            : (node.activeProject || node.packageName) === 'National'
+                                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                              : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                        }`}
+                                      >
+                                        {node.activeProject || node.packageName || 'Starter'}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                                      <span>{node.phone}</span>
+                                      <span>•</span>
+                                      <span className="text-orange-400 font-bold">৳{(node.totalProjectInvest || 10000).toLocaleString()}</span>
                                     </div>
                                   </div>
                                 ) : (
@@ -1664,7 +1899,25 @@ export function App() {
                                 )}
                               </div>
 
-                              {!node && (
+                              {node ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleOpenAddProject(node)}
+                                    className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-colors"
+                                    title={lang === 'bn' ? 'প্রজেক্ট যুক্ত করুন' : 'Add Project'}
+                                  >
+                                    + প্রজেক্ট
+                                  </button>
+                                  <button
+                                    onClick={() => handleDrillDownTree(node)}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors"
+                                    title={lang === 'bn' ? 'সাব-টিম দেখুন' : 'Explore Sub-team'}
+                                  >
+                                    <span>টিম ({node.childCount || 0})</span>
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
                                 <button
                                   onClick={() => {
                                     setNewNode({ ...newNode, placementPosition: slotNumber });
@@ -1710,10 +1963,25 @@ export function App() {
                                   R{slotNumber - 5}
                                 </span>
                                 {node ? (
-                                  <div>
-                                    <div className="font-bold text-white text-xs">{node.memberName}</div>
-                                    <div className="text-[10px] text-slate-400 font-mono">
-                                      {node.phone} • {node.packageName || 'Growth Builder'}
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-white text-xs">{node.memberName}</span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                          (node.activeProject || node.packageName) === 'International'
+                                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                            : (node.activeProject || node.packageName) === 'National'
+                                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                              : 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                        }`}
+                                      >
+                                        {node.activeProject || node.packageName || 'Starter'}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
+                                      <span>{node.phone}</span>
+                                      <span>•</span>
+                                      <span className="text-orange-400 font-bold">৳{(node.totalProjectInvest || 10000).toLocaleString()}</span>
                                     </div>
                                   </div>
                                 ) : (
@@ -1723,7 +1991,25 @@ export function App() {
                                 )}
                               </div>
 
-                              {!node && (
+                              {node ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleOpenAddProject(node)}
+                                    className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-colors"
+                                    title={lang === 'bn' ? 'প্রজেক্ট যুক্ত করুন' : 'Add Project'}
+                                  >
+                                    + প্রজেক্ট
+                                  </button>
+                                  <button
+                                    onClick={() => handleDrillDownTree(node)}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors"
+                                    title={lang === 'bn' ? 'সাব-টিম দেখুন' : 'Explore Sub-team'}
+                                  >
+                                    <span>টিম ({node.childCount || 0})</span>
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
                                 <button
                                   onClick={() => {
                                     setNewNode({ ...newNode, placementPosition: slotNumber });
@@ -1865,6 +2151,10 @@ export function App() {
                     <div className="pt-4 mt-4 border-t border-slate-800 flex gap-2">
                       <button
                         onClick={() => {
+                          navigator.clipboard.writeText(
+                            `https://sbltool.creationtech.info/packages?pkg=${pkg.id}`,
+                          );
+                          showToast(lang === 'bn' ? 'প্যাকেজ লিংক কপি করা হয়েছে!' : 'Package link copied!');
                           setSharePackageData(pkg);
                           setShowShareModal(true);
                         }}
@@ -2318,31 +2608,148 @@ export function App() {
           {/* TAB 12: USERS & ACCOUNTS */}
           {activeTab === 'users' && (
             <div className="space-y-6">
-              <div className="pb-2 border-b border-slate-800">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস অ্যাডমিনিস্ট্রেশন' : 'Users & Accounts'}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  {lang === 'bn'
-                    ? 'প্ল্যাটফর্মের সহযোগী সদস্য ও সুপার অ্যাডমিন অ্যাকাউন্ট ব্যবস্থাপনা'
-                    : 'System accounts, role hierarchy and security control'}
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস অ্যাডমিনিস্ট্রেশন' : 'Users & Accounts'}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                    {lang === 'bn'
+                      ? 'মোবাইল নম্বর দিয়ে ইউজার ও পাসওয়ার্ড তৈরি, রোল নির্ধারণ ও ডিরেক্ট অ্যাকাউন্ট লগিন'
+                      : 'Create users with phone number & password, set roles (Super Admin, Member, Demo)'}
+                  </p>
+                </div>
+                {user?.role === 'super_admin' && (
+                  <button
+                    onClick={() => setShowAddUserModal(true)}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-2 self-start sm:self-auto"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{lang === 'bn' ? '+ নতুন ইউজার তৈরি করুন' : '+ Create New User'}</span>
+                  </button>
+                )}
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-750">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-orange-600 text-white font-black flex items-center justify-center text-sm">
-                      A
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">Administrator (Admin)</div>
-                      <div className="text-[11px] text-slate-400">admin@sbl.test • Chief Operating Officer</div>
-                    </div>
+              {/* Role Permission Legend */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
+                  <div className="font-black text-orange-400 flex items-center gap-1.5">
+                    <span>👑 Super Admin</span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
-                    super_admin
+                  <div className="text-[11px] text-slate-300 mt-1">
+                    {lang === 'bn' ? 'সকল ইউজারের ডাটা দেখতে পারবে, এডিট করতে পারবে এবং যেকোনো অ্যাকাউন্টে সুইচ করতে পারবে।' : 'Full administrative access and account impersonation.'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs">
+                  <div className="font-black text-blue-400 flex items-center gap-1.5">
+                    <span>👤 Member</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 mt-1">
+                    {lang === 'bn' ? 'শুধুমাত্র নিজের লিড, নিজস্ব টিম ও আন্ডারে থাকা প্রজেক্টসমূহ স্বাধীনভাবে পরিচালনা করবে।' : 'Isolated member workspace for assigned leads & personal downline.'}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                  <div className="font-black text-emerald-400 flex items-center gap-1.5">
+                    <span>👀 Demo</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 mt-1">
+                    {lang === 'bn' ? 'শুধুমাত্র সিস্টেমের ফিচারগুলো দেখতে পারবে (Read-Only), কোনো ডাটা পরিবর্তন করতে পারবে না।' : 'Read-only access to explore packages, calculator and team structure.'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Users Table */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
+                    {lang === 'bn' ? `মোট ইউজার তালিকা (${usersList.length} জন)` : `System Users (${usersList.length})`}
                   </span>
+                  <button
+                    onClick={loadUsers}
+                    className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 font-bold"
+                  >
+                    <span>{lang === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-slate-800/80 text-[11px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-700">
+                      <tr>
+                        <th className="p-3.5">{lang === 'bn' ? 'ইউজার ও পদবি' : 'User & Designation'}</th>
+                        <th className="p-3.5">{lang === 'bn' ? 'মোবাইল নম্বর (ইউজারনেম)' : 'Mobile (Username)'}</th>
+                        <th className="p-3.5">{lang === 'bn' ? 'রোল' : 'Role'}</th>
+                        <th className="p-3.5">{lang === 'bn' ? 'সংযুক্ত ডাটা' : 'Associated Data'}</th>
+                        <th className="p-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {usersList.length > 0 ? (
+                        usersList.map((u) => (
+                          <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                            <td className="p-3.5">
+                              <div className="font-bold text-white text-xs">{u.name}</div>
+                              <div className="text-[11px] text-slate-400">{u.designation || 'Associate'}</div>
+                            </td>
+                            <td className="p-3.5 font-mono text-slate-200">
+                              {u.phone || u.username || u.email}
+                            </td>
+                            <td className="p-3.5">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  u.role === 'super_admin'
+                                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                    : u.role === 'demo'
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                }`}
+                              >
+                                {u.role === 'super_admin' ? 'Super Admin' : u.role === 'demo' ? 'Demo' : 'Member'}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-[11px] text-slate-400">
+                              <div>লিড: {u.leadsCount || 0} টি</div>
+                              <div>টিম মেম্বার: {u.nodesCount || 0} জন</div>
+                            </td>
+                            <td className="p-3.5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {user?.role === 'super_admin' && u.id !== user?.id && (
+                                  <button
+                                    onClick={() => handleImpersonate(u)}
+                                    className="px-2.5 py-1 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+                                    title="Switch to this account"
+                                  >
+                                    <span>{lang === 'bn' ? 'লগিন করুন' : 'Login As'}</span>
+                                  </button>
+                                )}
+                                {user?.role === 'super_admin' && u.id !== user?.id && (
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(lang === 'bn' ? `আপনি কি ইউজার "${u.name}" ডিলিট করতে চান?` : `Delete user "${u.name}"?`)) {
+                                        await api.deleteUser(u.id);
+                                        showToast(lang === 'bn' ? 'ইউজার ডিলিট করা হয়েছে' : 'User deleted');
+                                        loadUsers();
+                                      }
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                    title="Delete user"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="text-center py-6 text-slate-500">
+                            {isLoadingUsers ? 'ইউজার লোড হচ্ছে...' : 'কোনো ইউজার পাওয়া যায়নি।'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -2937,16 +3344,17 @@ export function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Package Tier</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'প্রজেক্ট নির্বাচন করুন' : 'Select Project'}
+                </label>
                 <select
                   value={newNode.packageName}
                   onChange={(e) => setNewNode({ ...newNode, packageName: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
                 >
-                  <option value="Basic Starter">Basic Starter (৳15,000)</option>
-                  <option value="National Growth">National Growth (৳35,000)</option>
-                  <option value="International Executive">International Executive (৳75,000)</option>
-                  <option value="Leadership Elite">Leadership Elite (৳150,000)</option>
+                  <option value="Starter">1. Starter (৳১০,০০০ — ১০০ সপ্তাহে ৳১৫,০০০ রিটার্ন)</option>
+                  <option value="National">2. National (৳১,০০,০০০ - ৳৪,৯০,০০০ — ১.৭৫%/সপ্তাহ)</option>
+                  <option value="International">3. International (৳৫,০০,০০০+ — ২.০%/সপ্তাহ)</option>
                 </select>
               </div>
 
@@ -3302,6 +3710,211 @@ export function App() {
           <span className="text-[10px]">{lang === 'bn' ? 'মেনু' : 'Menu'}</span>
         </button>
       </nav>
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD PROJECT TO MEMBER */}
+      {/* ======================================================== */}
+      {showAddProjectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowAddProjectModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {lang === 'bn' ? 'মেম্বারের আন্ডারে প্রজেক্ট যুক্ত করুন' : 'Allocate Project to Member'}
+              </h2>
+            </div>
+
+            <div className="p-3 bg-slate-800/60 rounded-xl mb-4 text-xs border border-slate-800">
+              <span className="text-slate-400">{lang === 'bn' ? 'নির্বাচিত মেম্বার:' : 'Selected Member:'} </span>
+              <span className="font-bold text-white">{selectedMemberForProject?.memberName}</span>
+              <span className="text-slate-400 font-mono ml-2">({selectedMemberForProject?.phone})</span>
+            </div>
+
+            <form onSubmit={handleSaveMemberProject} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'প্রজেক্ট নির্বাচন করুন *' : 'Select SBL Project *'}
+                </label>
+                <select
+                  value={projectFormData.projectName}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    let defAmount = 10000;
+                    if (name === 'National') defAmount = 120000;
+                    if (name === 'International') defAmount = 550000;
+                    setProjectFormData({ ...projectFormData, projectName: name, amountBdt: defAmount });
+                  }}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                >
+                  <option value="Starter">1. Starter (৳১০,০০০ — ১০০ সপ্তাহে ৳১৫,০০০ রিটার্ন)</option>
+                  <option value="National">2. National (৳১,০০,০০০ - ৳৪,৯০,০০০ — ১.৭৫%/সপ্তাহ)</option>
+                  <option value="International">3. International (৳৫,০০,০০০+ — ২.০%/সপ্তাহ)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'বিনিয়োগের পরিমাণ (BDT) *' : 'Investment Amount (BDT) *'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={projectFormData.amountBdt}
+                  onChange={(e) => setProjectFormData({ ...projectFormData, amountBdt: Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'রেফারেন্স / নোট (ঐচ্ছিক)' : 'Reference / Note (Optional)'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={projectFormData.referenceNote}
+                  onChange={(e) => setProjectFormData({ ...projectFormData, referenceNote: e.target.value })}
+                  placeholder={lang === 'bn' ? 'যেমন: ন্যাশনাল ক্রাউডফান্ডিং পার্টনার' : 'e.g. National Shopify Store'}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddProjectModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30"
+                >
+                  {lang === 'bn' ? 'প্রজেক্ট নিশ্চিত করুন' : 'Confirm Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD / CREATE USER (SUPER ADMIN ONLY) */}
+      {/* ======================================================== */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowAddUserModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <UserPlus className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {lang === 'bn' ? 'নতুন ইউজার তৈরি করুন' : 'Create New User Account'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ইউজারের পুরো নাম *' : 'Full Name *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newUserFormData.name}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, name: e.target.value })}
+                  placeholder="e.g. Rafiqul Islam"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'মোবাইল নম্বর (ইউজারনেম) *' : 'Mobile Number (Username) *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newUserFormData.phone}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, phone: e.target.value })}
+                  placeholder="017XXXXXXXX"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'পাসওয়ার্ড সেট করুন *' : 'Set Password *'}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newUserFormData.password}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, password: e.target.value })}
+                  placeholder="Min 6 characters"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ইউজার রোল *' : 'User Role *'}
+                </label>
+                <select
+                  value={newUserFormData.role}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, role: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                >
+                  <option value="member">👤 Member (নিজস্ব ডাটা ও টিম পরিচালনা)</option>
+                  <option value="demo">👀 Demo (শুধুমাত্র ভিউ ও ডেমো দেখা)</option>
+                  <option value="super_admin">👑 Super Admin (সর্বোচ্চ ক্ষমতা ও নিয়ন্ত্রণ)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'পদবি / ডেজিগনেশন' : 'Designation'}
+                </label>
+                <input
+                  type="text"
+                  value={newUserFormData.designation}
+                  onChange={(e) => setNewUserFormData({ ...newUserFormData, designation: e.target.value })}
+                  placeholder="e.g. Marketing Associate"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'ইউজার তৈরি করুন' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* GLOBAL TOAST NOTIFICATION */}
       {toastMessage && (

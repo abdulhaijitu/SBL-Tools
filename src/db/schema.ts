@@ -399,6 +399,35 @@ export const binaryNodes = sqliteTable(
     ],
 );
 
+export const memberProjects = sqliteTable(
+    "member_projects",
+    {
+        id: integer("id").primaryKey({ autoIncrement: true }),
+        nodeId: integer("node_id")
+            .notNull()
+            .references(() => binaryNodes.id, { onDelete: "cascade" }),
+        userId: integer("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
+        projectName: text("project_name").notNull(), // Starter, National, International
+        amountBdt: numeric("amount_bdt").notNull(),
+        weeklyReturnRate: numeric("weekly_return_rate"), // e.g. 1.75, 2.0
+        durationWeeks: integer("duration_weeks").default(100),
+        status: text("status").notNull().default("active"),
+        referenceNote: text("reference_note"),
+        startDate: integer("start_date", { mode: "timestamp" }).$defaultFn(
+            () => new Date(),
+        ),
+        createdAt: integer("created_at", { mode: "timestamp" })
+            .notNull()
+            .$defaultFn(() => new Date()),
+    },
+    (table) => [
+        index("idx_member_projects_node").on(table.nodeId),
+        index("idx_member_projects_user").on(table.userId),
+    ],
+);
+
 // ==========================================
 // 6. TOOLKIT, DIRECTORY & GLOSSARY
 // ==========================================

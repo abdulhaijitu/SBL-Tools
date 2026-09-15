@@ -12,6 +12,18 @@ export function clearAuthToken(): void {
     localStorage.removeItem("sbl_token");
 }
 
+export function getBackupAdminToken(): string | null {
+    return localStorage.getItem("sbl_admin_backup_token");
+}
+
+export function setBackupAdminToken(token: string): void {
+    localStorage.setItem("sbl_admin_backup_token", token);
+}
+
+export function clearBackupAdminToken(): void {
+    localStorage.removeItem("sbl_admin_backup_token");
+}
+
 async function request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -107,17 +119,47 @@ export const api = {
             method: "POST",
             body: JSON.stringify(node),
         }),
+    addProjectToNode: (data: {
+        nodeId: number;
+        projectName: string;
+        amountBdt: number;
+        referenceNote?: string;
+    }) =>
+        request<any>("/tree/projects", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getNodeProjects: (nodeId: number) =>
+        request<any[]>(`/tree/nodes/${nodeId}/projects`),
 
     // Financials
     getPlans: () => request<any[]>("/financials/plans"),
+    getRanks: () => request<any[]>("/financials/ranks"),
     getMyInvestments: () => request<any[]>("/financials/my-investments"),
-    calculatePackage: (data: {
-        amountBdt: number;
-        durationDays: number;
-        ratePercent: number;
-    }) =>
+    calculatePackage: (data: any) =>
         request<any>("/financials/calculate", {
             method: "POST",
             body: JSON.stringify(data),
+        }),
+
+    // Users & Roles (Super Admin)
+    getUsers: () => request<any[]>("/users"),
+    createUser: (userData: any) =>
+        request<any>("/users", {
+            method: "POST",
+            body: JSON.stringify(userData),
+        }),
+    updateUser: (id: number, userData: any) =>
+        request<any>(`/users/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(userData),
+        }),
+    deleteUser: (id: number) =>
+        request<any>(`/users/${id}`, {
+            method: "DELETE",
+        }),
+    impersonateUser: (id: number) =>
+        request<{ token: string; user: any }>(`/users/${id}/impersonate`, {
+            method: "POST",
         }),
 };

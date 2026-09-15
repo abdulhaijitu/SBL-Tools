@@ -23,6 +23,16 @@ financialsRouter.get("/plans", async (c) => {
     return c.json(plans);
 });
 
+// List official ranks with rewards
+financialsRouter.get("/ranks", async (c) => {
+    const { db } = await getDb(c);
+    const ranksList = await db
+        .select()
+        .from(schema.ranks)
+        .orderBy(schema.ranks.levelOrder);
+    return c.json(ranksList);
+});
+
 // List user investments
 financialsRouter.get("/my-investments", async (c) => {
     const authUser = c.get("user");
@@ -50,22 +60,41 @@ financialsRouter.get("/my-investments", async (c) => {
     return c.json(investments);
 });
 
-// Financial Package Calculator endpoint (BDT <-> USD at 1 USD = 120 BDT)
+// Financial Package Calculator endpoint (100-Week SBL Model & USD Converter)
 financialsRouter.post("/calculate", async (c) => {
-    const { amountBdt, durationDays, ratePercent } = await c.req.json();
-    const bdt = Number(amountBdt) || 0;
-    const rate = Number(ratePercent) || 0;
-    const days = Number(durationDays) || 365;
+    const { amountBdt, projectName, durationWeeks } = await c.req.json();
+    const bdt = Number(amountBdt) || 10000;
+    const weeks = Number(durationWeeks) || 100;
 
+    let weeklyRate = 1.75; // default National
+    if (projectName === "Starter" || bdt <= 25000) {
+        weeklyRate = 1.5; // Starter 10k -> 15k over 100 weeks = 150/week = 1.5%
+    } else if (projectName === "International" || bdt >= 500000) {
+        weeklyRate = 2.0;
+    }
+
+    const weeklyReturnBdt = (bdt * weeklyRate) / 100;
+    const totalReturnBdt = weeklyReturnBdt * weeks;
+    const totalProfitBdt = totalReturnBdt - bdt;
     const usd = bdt / 120;
-    const projectedReturnBdt = bdt * (1 + (rate / 100) * (days / 365));
-    const profitBdt = projectedReturnBdt - bdt;
+
+    // Projected lifetime monthly profit sharing after 100 weeks
+    const monthlyLifetimeMin =
+        weeklyRate >= 2.0 ? 25000 : weeklyRate >= 1.75 ? 5000 : 0;
+    const monthlyLifetimeMax =
+        weeklyRate >= 2.0 ? 100000 : weeklyRate >= 1.75 ? 20000 : 0;
 
     return c.json({
         amountBdt: bdt.toFixed(2),
         amountUsd: usd.toFixed(2),
         exchangeRate: "1 USD = 120 BDT",
-        projectedReturnBdt: projectedReturnBdt.toFixed(2),
-        profitBdt: profitBdt.toFixed(2),
+        weeklyRatePercent: weeklyRate,
+        weeklyReturnBdt: weeklyReturnBdt.toFixed(2),
+        durationWeeks: weeks,
+        durationMonths: Math.round(weeks / 4.16),
+        totalReturnBdt: totalReturnBdt.toFixed(2),
+        totalProfitBdt: totalProfitBdt.toFixed(2),
+        monthlyLifetimeMin,
+        monthlyLifetimeMax,
     });
 });

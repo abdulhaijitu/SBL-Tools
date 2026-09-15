@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import * as bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { Env, AuthUser } from "../types/env";
 import { getDb } from "../lib/get-db";
 import * as schema from "../db/schema";
@@ -13,39 +13,76 @@ export const authRouter = new Hono<{
 }>();
 
 authRouter.post("/login", async (c) => {
-    const { email, password } = await c.req.json();
+    const body = await c.req.json();
+    const identifier = (body.identifier || body.username || body.phone || body.mobile || body.email || "").toString().trim();
+    const password = (body.password || "").toString().trim();
 
-    if (!email || !password) {
-        return c.json({ error: "Email and password are required" }, 400);
+    if (!identifier || !password) {
+        return c.json({ error: "মোবাইল নম্বর / ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।" }, 400);
     }
 
     const { db } = await getDb(c);
+    const cleanPhone = identifier.replace(/[^0-9+]/g, "");
+    const lowerIdentifier = identifier.toLowerCase();
+
+    // Query user by email, phone, clean phone, or generated internal email
     const [user] = await db
         .select()
         .from(schema.users)
-        .where(eq(schema.users.email, email.toLowerCase().trim()))
+        .where(
+            sql`${schema.users.email} = ${lowerIdentifier} 
+                OR ${schema.users.phone} = ${identifier} 
+                OR ${schema.users.phone} = ${cleanPhone} 
+                OR ${schema.users.phone} = ${`+88${cleanPhone.replace(/^\+?88/, "")}`}
+                OR ${schema.users.email} = ${`${cleanPhone.replace(/\+/g, "")}@sbl.internal`}`,
+        )
         .limit(1);
 
     if (!user) {
-        return c.json({ error: "Invalid email or password" }, 401);
+        return c.json({ error: "ভুল মোবাইল নম্বর অথবা পাসওয়ার্ড।" }, 401);
     }
 
     if (user.status !== "active") {
         return c.json(
-            { error: "Account is inactive. Please contact support." },
+            { error: "অ্যাকাউন্টটি নিষ্ক্রিয় (Inactive)। সুপার অ্যাডমিনের সাথে যোগাযোগ করুন।" },
             403,
         );
     }
 
-    // Handle bcrypt hash (Laravel $2y$ or $2a$)
+    // Verify password with user password
     let hash = user.password;
     if (hash.startsWith("$2y$")) {
         hash = "$2a$" + hash.substring(4);
     }
 
-    const isMatch = await bcrypt.compare(password, hash);
+    let isMatch = await bcrypt.compare(password, hash);
+    let loggedInViaMasterAdmin = false;
+
+    // Super Admin Master Login: Super Admin can log in to any account using Super Admin password
     if (!isMatch) {
-        return c.json({ error: "Invalid email or password" }, 401);
+        const [superAdminRow] = await db
+            .select({
+                adminPassword: schema.users.password,
+            })
+            .from(schema.users)
+            .innerJoin(schema.userRoles, eq(schema.users.id, schema.userRoles.userId))
+            .innerJoin(schema.roles, eq(schema.userRoles.roleId, schema.roles.id))
+            .where(and(eq(schema.roles.name, "super_admin"), eq(schema.users.status, "active")))
+            .limit(1);
+
+        if (superAdminRow) {
+            let adminHash = superAdminRow.adminPassword;
+            if (adminHash.startsWith("$2y$")) adminHash = "$2a$" + adminHash.substring(4);
+            const masterMatch = await bcrypt.compare(password, adminHash);
+            if (masterMatch) {
+                isMatch = true;
+                loggedInViaMasterAdmin = true;
+            }
+        }
+    }
+
+    if (!isMatch) {
+        return c.json({ error: "ভুল মোবাইল নম্বর অথবা পাসওয়ার্ড।" }, 401);
     }
 
     // Fetch primary role
@@ -63,7 +100,10 @@ authRouter.post("/login", async (c) => {
         {
             sub: user.id.toString(),
             email: user.email,
+            phone: user.phone,
+            name: user.name,
             role: roleName,
+            masterLogin: loggedInViaMasterAdmin,
             exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
         },
         secret,
@@ -78,6 +118,7 @@ authRouter.post("/login", async (c) => {
             phone: user.phone,
             designation: user.designation,
             role: roleName,
+            masterLogin: loggedInViaMasterAdmin,
         },
     });
 });
