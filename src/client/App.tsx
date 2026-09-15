@@ -8,6 +8,8 @@ import {
   setBackupAdminToken,
   clearBackupAdminToken,
 } from './lib/api';
+import { useCurrency, formatMoney, CurrencyType } from './lib/currency';
+import { Pagination } from './components/Pagination';
 import {
   Users,
   UserPlus,
@@ -56,10 +58,14 @@ import {
   Activity as ActivityIcon,
   Send,
   LogIn,
+  Pencil,
+  ChevronLeft,
+  RefreshCw,
+  Building,
+  Globe,
 } from 'lucide-react';
 
 // Types
-type Currency = 'BDT' | 'USD';
 type Language = 'en' | 'bn';
 
 export function App() {
@@ -76,7 +82,9 @@ export function App() {
       user?.id === 1
     );
   }, [user]);
-  const [currency, setCurrency] = useState<Currency>('BDT');
+
+  // Global Currency State (Defaults to USD, persists across refresh)
+  const [currency, setCurrency] = useCurrency();
   const [lang, setLang] = useState<Language>('bn');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -113,6 +121,10 @@ export function App() {
   const [leadSources, setLeadSources] = useState<any[]>([]);
   const [leadFilter, setLeadFilter] = useState({ stage: '', temperature: '', search: '' });
 
+  // Leads Pagination
+  const [leadsPage, setLeadsPage] = useState(1);
+  const [leadsPageSize, setLeadsPageSize] = useState(25);
+
   // Leads CRUD Modals State
   const [showAddLeadModal, setShowAddLeadModal] = useState(false);
   const [showEditLeadModal, setShowEditLeadModal] = useState(false);
@@ -147,6 +159,7 @@ export function App() {
   const [links, setLinks] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [abbreviations, setAbbreviations] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
   const [treeNodes, setTreeNodes] = useState<any[]>([]);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
   const [newNode, setNewNode] = useState({
@@ -159,6 +172,18 @@ export function App() {
     packageName: 'Starter',
     amountBdt: 10000,
   });
+
+  // Tree Member CRUD Modals
+  const [viewingMemberNode, setViewingMemberNode] = useState<any | null>(null);
+  const [editingMemberNode, setEditingMemberNode] = useState<any | null>(null);
+  const [memberFormData, setMemberFormData] = useState({
+    memberName: '',
+    phone: '',
+    rank: 'FME',
+    notes: '',
+    status: 'active',
+  });
+  const [deleteConfirmNode, setDeleteConfirmNode] = useState<any | null>(null);
 
   // Tree recursive drill-down navigation & project allocation
   const [treePath, setTreePath] = useState<Array<{ id: number | null; name: string }>>([
@@ -183,6 +208,59 @@ export function App() {
     role: 'member',
     designation: 'Associate Member',
   });
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
+
+  // Content Pages CRUD States & Pagination
+  // 1. Links
+  const [linksSearch, setLinksSearch] = useState('');
+  const [linksPage, setLinksPage] = useState(1);
+  const [linksPageSize, setLinksPageSize] = useState(12);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [editingLink, setEditingLink] = useState<any | null>(null);
+  const [linkFormData, setLinkFormData] = useState({ title: '', url: '', category: 'Official' });
+  const [deleteConfirmLink, setDeleteConfirmLink] = useState<any | null>(null);
+
+  // 2. Resources
+  const [resourcesSearch, setResourcesSearch] = useState('');
+  const [resourcesPage, setResourcesPage] = useState(1);
+  const [resourcesPageSize, setResourcesPageSize] = useState(10);
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [editingResource, setEditingResource] = useState<any | null>(null);
+  const [resourceFormData, setResourceFormData] = useState({
+    title: '',
+    fileUrl: '',
+    description: '',
+    resourceType: 'pdf',
+  });
+  const [deleteConfirmResource, setDeleteConfirmResource] = useState<any | null>(null);
+
+  // 3. Contacts
+  const [contactsSearch, setContactsSearch] = useState('');
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsPageSize, setContactsPageSize] = useState(12);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<any | null>(null);
+  const [contactFormData, setContactFormData] = useState({
+    name: '',
+    designation: '',
+    phone: '',
+    email: '',
+  });
+  const [deleteConfirmContact, setDeleteConfirmContact] = useState<any | null>(null);
+
+  // 4. Glossary
+  const [glossarySearch, setGlossarySearch] = useState('');
+  const [glossaryPage, setGlossaryPage] = useState(1);
+  const [glossaryPageSize, setGlossaryPageSize] = useState(12);
+  const [showGlossaryModal, setShowGlossaryModal] = useState(false);
+  const [editingGlossary, setEditingGlossary] = useState<any | null>(null);
+  const [glossaryFormData, setGlossaryFormData] = useState({
+    abbreviation: '',
+    term: '',
+    definition: '',
+  });
+  const [deleteConfirmGlossary, setDeleteConfirmGlossary] = useState<any | null>(null);
 
   // Package presentation brochure modal
   const [presentationOpen, setPresentationOpen] = useState(false);
@@ -199,15 +277,6 @@ export function App() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // Currency Formatter Helper (Fixed baseline: 1 USD = 120 BDT)
-  const formatMoney = (amountBdt: number) => {
-    if (currency === 'USD') {
-      const usd = Math.round(amountBdt / 120);
-      return `$${usd.toLocaleString()}`;
-    }
-    return `৳${amountBdt.toLocaleString()}`;
   };
 
   // Check auth and fetch current user
@@ -241,16 +310,31 @@ export function App() {
       } else {
         setActiveTab('dashboard');
       }
-    } else if (activeTab === 'links' || activeTab === 'contacts' || activeTab === 'glossary') {
-      Promise.all([api.getLinks(), api.getContacts(), api.getAbbreviations()])
-        .then(([l, c, a]) => {
-          setLinks(l || []);
-          setContacts(c || []);
-          setAbbreviations(a || []);
-        })
-        .catch(console.error);
+    } else if (
+      activeTab === 'links' ||
+      activeTab === 'contacts' ||
+      activeTab === 'glossary' ||
+      activeTab === 'resources'
+    ) {
+      loadToolkit();
     }
   }, [token, activeTab, leadFilter, user]);
+
+  const loadToolkit = () => {
+    Promise.all([
+      api.getLinks(),
+      api.getContacts(),
+      api.getAbbreviations(),
+      api.getResources(),
+    ])
+      .then(([l, c, a, r]) => {
+        setLinks(l || []);
+        setContacts(c || []);
+        setAbbreviations(a || []);
+        setResources(r || []);
+      })
+      .catch(console.error);
+  };
 
   const loadLeads = () => {
     api.getLeads(leadFilter).then(setLeads).catch(console.error);
@@ -497,7 +581,7 @@ export function App() {
   };
 
   // ==========================================
-  // TREE NODE HANDLER
+  // TREE NODE & MEMBER CRUD HANDLERS
   // ==========================================
   const handleCreateNode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -514,6 +598,242 @@ export function App() {
     } catch (err: any) {
       alert(err.message || 'Failed to place member');
     }
+  };
+
+  const handleViewMemberProfile = async (node: any) => {
+    try {
+      const details = await api.getTreeNode(node.id);
+      setViewingMemberNode(details);
+    } catch {
+      setViewingMemberNode(node);
+    }
+  };
+
+  const handleOpenEditMember = (node: any) => {
+    setEditingMemberNode(node);
+    setMemberFormData({
+      memberName: node.memberName || '',
+      phone: node.phone || '',
+      rank: node.rank || 'FME',
+      notes: node.notes || '',
+      status: node.status || 'active',
+    });
+  };
+
+  const handleUpdateMemberNode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMemberNode) return;
+    try {
+      await api.updateTreeNode(editingMemberNode.id, memberFormData);
+      setEditingMemberNode(null);
+      showToast(lang === 'bn' ? 'মেম্বার তথ্য সফলভাবে আপডেট হয়েছে!' : 'Member updated successfully!');
+      const currentParentId = treePath[treePath.length - 1]?.id;
+      loadTreeNodesFor(currentParentId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update member');
+    }
+  };
+
+  const handleDeleteMemberNode = async () => {
+    if (!deleteConfirmNode) return;
+    try {
+      await api.deleteTreeNode(deleteConfirmNode.id);
+      setDeleteConfirmNode(null);
+      showToast(lang === 'bn' ? 'মেম্বার সফলভাবে ডিলিট করা হয়েছে!' : 'Member deleted successfully!');
+      const currentParentId = treePath[treePath.length - 1]?.id;
+      loadTreeNodesFor(currentParentId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete member');
+    }
+  };
+
+  // ==========================================
+  // TOOLKIT CRUD HANDLERS
+  // ==========================================
+  // Links
+  const handleSaveLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingLink) {
+        await api.updateLink(editingLink.id, linkFormData);
+        showToast(lang === 'bn' ? 'লিংক আপডেট হয়েছে!' : 'Link updated!');
+      } else {
+        await api.createLink(linkFormData);
+        showToast(lang === 'bn' ? 'লিংক তৈরি হয়েছে!' : 'Link created!');
+      }
+      setShowLinkModal(false);
+      setEditingLink(null);
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save link');
+    }
+  };
+
+  const handleDeleteLink = async () => {
+    if (!deleteConfirmLink) return;
+    try {
+      await api.deleteLink(deleteConfirmLink.id);
+      setDeleteConfirmLink(null);
+      showToast(lang === 'bn' ? 'লিংক ডিলিট করা হয়েছে!' : 'Link deleted!');
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete link');
+    }
+  };
+
+  // Resources
+  const handleSaveResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingResource) {
+        await api.updateResource(editingResource.id, resourceFormData);
+        showToast(lang === 'bn' ? 'রিসোর্স আপডেট হয়েছে!' : 'Resource updated!');
+      } else {
+        await api.createResource(resourceFormData);
+        showToast(lang === 'bn' ? 'রিসোর্স তৈরি হয়েছে!' : 'Resource created!');
+      }
+      setShowResourceModal(false);
+      setEditingResource(null);
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save resource');
+    }
+  };
+
+  const handleDeleteResource = async () => {
+    if (!deleteConfirmResource) return;
+    try {
+      await api.deleteResource(deleteConfirmResource.id);
+      setDeleteConfirmResource(null);
+      showToast(lang === 'bn' ? 'রিসোর্স ডিলিট করা হয়েছে!' : 'Resource deleted!');
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete resource');
+    }
+  };
+
+  // Contacts
+  const handleSaveContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingContact) {
+        await api.updateContact(editingContact.id, contactFormData);
+        showToast(lang === 'bn' ? 'যোগাযোগ আপডেট হয়েছে!' : 'Contact updated!');
+      } else {
+        await api.createContact(contactFormData);
+        showToast(lang === 'bn' ? 'যোগাযোগ তৈরি হয়েছে!' : 'Contact created!');
+      }
+      setShowContactModal(false);
+      setEditingContact(null);
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save contact');
+    }
+  };
+
+  const handleDeleteContact = async () => {
+    if (!deleteConfirmContact) return;
+    try {
+      await api.deleteContact(deleteConfirmContact.id);
+      setDeleteConfirmContact(null);
+      showToast(lang === 'bn' ? 'যোগাযোগ ডিলিট করা হয়েছে!' : 'Contact deleted!');
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete contact');
+    }
+  };
+
+  // Glossary / Abbreviations
+  const handleSaveAbbreviation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingGlossary) {
+        await api.updateAbbreviation(editingGlossary.id, glossaryFormData);
+        showToast(lang === 'bn' ? 'পরিভাষা আপডেট হয়েছে!' : 'Term updated!');
+      } else {
+        await api.createAbbreviation(glossaryFormData);
+        showToast(lang === 'bn' ? 'নতুন পরিভাষা যুক্ত হয়েছে!' : 'Term created!');
+      }
+      setShowGlossaryModal(false);
+      setEditingGlossary(null);
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save term');
+    }
+  };
+
+  const handleDeleteAbbreviation = async () => {
+    if (!deleteConfirmGlossary) return;
+    try {
+      await api.deleteAbbreviation(deleteConfirmGlossary.id);
+      setDeleteConfirmGlossary(null);
+      showToast(lang === 'bn' ? 'পরিভাষা ডিলিট করা হয়েছে!' : 'Term deleted!');
+      loadToolkit();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete term');
+    }
+  };
+
+  const handleOpenCreateLink = () => {
+    setEditingLink(null);
+    setLinkFormData({ title: '', url: '', category: 'Official' });
+    setShowLinkModal(true);
+  };
+
+  const handleOpenEditLink = (link: any) => {
+    setEditingLink(link);
+    setLinkFormData({ title: link.title || '', url: link.url || '', category: link.category || 'Official' });
+    setShowLinkModal(true);
+  };
+
+  const handleOpenCreateResource = () => {
+    setEditingResource(null);
+    setResourceFormData({ title: '', description: '', fileUrl: '', resourceType: 'image' });
+    setShowResourceModal(true);
+  };
+
+  const handleOpenEditResource = (res: any) => {
+    setEditingResource(res);
+    setResourceFormData({
+      title: res.title || '',
+      description: res.description || '',
+      fileUrl: res.fileUrl || '',
+      resourceType: res.resourceType || 'image',
+    });
+    setShowResourceModal(true);
+  };
+
+  const handleOpenCreateContact = () => {
+    setEditingContact(null);
+    setContactFormData({ name: '', designation: '', phone: '', email: '' });
+    setShowContactModal(true);
+  };
+
+  const handleOpenEditContact = (c: any) => {
+    setEditingContact(c);
+    setContactFormData({
+      name: c.name || '',
+      designation: c.designation || '',
+      phone: c.phone || '',
+      email: c.email || '',
+    });
+    setShowContactModal(true);
+  };
+
+  const handleOpenCreateGlossary = () => {
+    setEditingGlossary(null);
+    setGlossaryFormData({ abbreviation: '', term: '', definition: '' });
+    setShowGlossaryModal(true);
+  };
+
+  const handleOpenEditGlossary = (item: any) => {
+    setEditingGlossary(item);
+    setGlossaryFormData({
+      abbreviation: item.abbreviation || item.abbr || '',
+      term: item.term || '',
+      definition: item.definition || item.desc || '',
+    });
+    setShowGlossaryModal(true);
   };
 
   // Official SBL Packages (Matching sbl-tools.onrender.com)
@@ -594,49 +914,61 @@ export function App() {
     [lang],
   );
 
-  // Ranks List
+  // Ranks List (With prominent abbreviation codes & numeric reward)
   const ranksList = [
     {
-      title: 'FME (Field Marketing Executive)',
-      titleBn: 'এফএমই (Field Marketing Executive)',
-      bvReq: lang === 'bn' ? 'ডিরেক্ট রেফারেন্স ১০ জন' : 'Direct Reference 10 Members',
+      code: 'FME',
+      fullName: 'Field Marketing Executive',
+      fullNameBn: 'ফিল্ড মার্কেটিং এক্সিকিউটিভ',
+      bvReq: lang === 'bn' ? 'ডিরেক্ট রেফারেন্স ১০ জন সদস্য' : 'Direct Reference 10 Members',
       matchBonus: '১০%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫,০০০' : 'Cash Incentive ৳5,000',
+      rewardBdt: 5000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ' : 'Cash Incentive',
     },
     {
-      title: 'SME (Senior Marketing Executive)',
-      titleBn: 'এসএমই (Senior Marketing Executive)',
+      code: 'SME',
+      fullName: 'Senior Marketing Executive',
+      fullNameBn: 'সিনিয়র মার্কেটিং এক্সিকিউটিভ',
       bvReq: lang === 'bn' ? '৩০০ Pair Reward (ম্যাচিং)' : '300 Pair Reward Matches',
       matchBonus: '১২%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫০,০০০' : 'Cash Incentive ৳50,000',
+      rewardBdt: 50000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ' : 'Cash Incentive',
     },
     {
-      title: 'PME (Promotional Marketing Executive)',
-      titleBn: 'পিএমই (Promotional Marketing Executive)',
+      code: 'PME',
+      fullName: 'Promotional Marketing Executive',
+      fullNameBn: 'প্রমোশনাল মার্কেটিং এক্সিকিউটিভ',
       bvReq: lang === 'bn' ? 'টিম: SME (লেফট ১৩ : রাইট ৭)' : 'Team: SME (Left 13 : Right 7)',
       matchBonus: '১৪%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳১,০০,০০০' : 'Cash Incentive ৳1,00,000',
+      rewardBdt: 100000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ' : 'Cash Incentive',
     },
     {
-      title: 'BME (Brand Marketing Executive)',
-      titleBn: 'বিএমই (Brand Marketing Executive)',
+      code: 'BME',
+      fullName: 'Brand Marketing Executive',
+      fullNameBn: 'ব্র্যান্ড মার্কেটিং এক্সিকিউটিভ',
       bvReq: lang === 'bn' ? 'টিম: PME (লেফট ১০ : রাইট ৫)' : 'Team: PME (Left 10 : Right 5)',
       matchBonus: '১৫%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳৫,০০,০০০' : 'Cash Incentive ৳5,00,000',
+      rewardBdt: 500000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ' : 'Cash Incentive',
     },
     {
-      title: 'GME (Global Marketing Executive)',
-      titleBn: 'জিএমই (Global Marketing Executive)',
+      code: 'GME',
+      fullName: 'Global Marketing Executive',
+      fullNameBn: 'গ্লোবাল মার্কেটিং এক্সিকিউটিভ',
       bvReq: lang === 'bn' ? 'টিম: BME (লেফট ৮ : রাইট ৪)' : 'Team: BME (Left 8 : Right 4)',
       matchBonus: '১৬%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳১০,০০,০০০' : 'Cash Incentive ৳10,00,000',
+      rewardBdt: 1000000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ' : 'Cash Incentive',
     },
     {
-      title: 'ETD (Executive Team Director)',
-      titleBn: 'ইটিডি (Executive Team Director)',
+      code: 'ETD',
+      fullName: 'Executive Team Director',
+      fullNameBn: 'এক্সিকিউটিভ টিম ডিরেক্টর',
       bvReq: lang === 'bn' ? 'টিম: GME (লেফট ৭ : রাইট ৩)' : 'Team: GME (Left 7 : Right 3)',
       matchBonus: '১৮%',
-      reward: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ ৳২০,০০,০০০ (মোট ৪০ লাখ টাকা পুরস্কার)' : 'Cash Incentive ৳20,00,000 (Total 40 Lac BDT)',
+      rewardBdt: 2000000,
+      rewardText: lang === 'bn' ? 'ক্যাশ ইনসেন্টিভ (মোট ৪০ লাখ টাকা পুরস্কার)' : 'Cash Incentive (Total 40 Lac BDT)',
     },
   ];
 
@@ -698,8 +1030,7 @@ export function App() {
     };
   }, [calcLeftBv, calcRightBv, calcDirectReferrals]);
 
-  // Glossary filter
-  const [glossarySearch, setGlossarySearch] = useState('');
+  // Filtered glossary
   const filteredGlossary = useMemo(() => {
     const defaultGlossary = [
       { abbr: 'BV', term: 'Business Volume', desc: 'কমিশন গণনার একক পয়েন্ট (১ BV = কমিশনযোগ্য পয়েন্ট)' },
@@ -902,15 +1233,33 @@ export function App() {
 
           {/* Controls */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value as Currency)}
-              className="bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              title="Currency Converter (1 USD = 120 BDT)"
-            >
-              <option value="BDT">BDT (৳120/$)</option>
-              <option value="USD">USD ($)</option>
-            </select>
+            {/* Currency Toggle [ USD | BDT ] */}
+            <div className="flex items-center rounded-xl bg-slate-800 border border-slate-700 p-0.5 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setCurrency('USD')}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                  currency === 'USD'
+                    ? 'bg-orange-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Default: USD ($)"
+              >
+                USD ($)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency('BDT')}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                  currency === 'BDT'
+                    ? 'bg-orange-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="BDT (৳)"
+              >
+                BDT (৳)
+              </button>
+            </div>
 
             <button
               onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
@@ -1021,7 +1370,7 @@ export function App() {
                 }`}
               >
                 <Users className="w-4 h-4" />
-                <span>{lang === 'bn' ? 'লিডস ও পাইপলাইন' : 'Leads & Pipeline'}</span>
+                <span>{lang === 'bn' ? 'লিডস' : 'Leads'}</span>
               </button>
 
               <button
@@ -1036,7 +1385,7 @@ export function App() {
                 }`}
               >
                 <Network className="w-4 h-4" />
-                <span>{lang === 'bn' ? 'টিম ট্রি (১০-স্লট)' : 'Team Tree (10-Slot)'}</span>
+                <span>{lang === 'bn' ? 'টিম ট্রি' : 'Team Tree'}</span>
               </button>
             </div>
           </div>
@@ -1074,7 +1423,7 @@ export function App() {
                 }`}
               >
                 <Award className="w-4 h-4 text-orange-400" />
-                <span>{lang === 'bn' ? 'র‍্যাঙ্ক সিস্টেম' : 'Ranks System'}</span>
+                <span>{lang === 'bn' ? 'র‍্যাংক' : 'Ranks'}</span>
               </button>
 
               <button
@@ -1455,13 +1804,13 @@ export function App() {
             </div>
           )}
 
-          {/* TAB 2: LEADS & PIPELINE (FULL CRUD SYSTEM) */}
+          {/* TAB 2: LEADS (FULL CRUD SYSTEM) */}
           {activeTab === 'leads' && (
             <div className="space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {lang === 'bn' ? 'লিডস ও সেলস পাইপলাইন' : 'Leads & Sales Pipeline'}
+                    {lang === 'bn' ? 'লিডস' : 'Leads'}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                     {lang === 'bn'
@@ -1507,14 +1856,20 @@ export function App() {
                     type="text"
                     placeholder={lang === 'bn' ? 'নাম, মোবাইল বা লোকেশন খুঁজুন...' : 'Search name, phone or location...'}
                     value={leadFilter.search}
-                    onChange={(e) => setLeadFilter({ ...leadFilter, search: e.target.value })}
+                    onChange={(e) => {
+                      setLeadFilter({ ...leadFilter, search: e.target.value });
+                      setLeadsPage(1);
+                    }}
                     className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
                   />
                 </div>
                 <div className="flex items-center gap-2">
                   <select
                     value={leadFilter.stage}
-                    onChange={(e) => setLeadFilter({ ...leadFilter, stage: e.target.value })}
+                    onChange={(e) => {
+                      setLeadFilter({ ...leadFilter, stage: e.target.value });
+                      setLeadsPage(1);
+                    }}
                     className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none"
                   >
                     <option value="">{lang === 'bn' ? 'সকল পর্যায় (Stages)' : 'All Stages'}</option>
@@ -1529,7 +1884,10 @@ export function App() {
 
                   <select
                     value={leadFilter.temperature}
-                    onChange={(e) => setLeadFilter({ ...leadFilter, temperature: e.target.value })}
+                    onChange={(e) => {
+                      setLeadFilter({ ...leadFilter, temperature: e.target.value });
+                      setLeadsPage(1);
+                    }}
                     className="bg-slate-800 text-xs text-slate-300 border border-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none"
                   >
                     <option value="">{lang === 'bn' ? 'সকল তাপমাত্রা' : 'All Temperatures'}</option>
@@ -1557,7 +1915,9 @@ export function App() {
                       </thead>
                       <tbody className="divide-y divide-slate-800 text-slate-300">
                         {leads.length > 0 ? (
-                          leads.map((lead: any) => (
+                          leads
+                            .slice((leadsPage - 1) * leadsPageSize, leadsPage * leadsPageSize)
+                            .map((lead: any) => (
                             <tr key={lead.id} className="hover:bg-slate-800/40 transition-colors">
                               <td className="py-3 px-4">
                                 <div
@@ -1667,6 +2027,21 @@ export function App() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="p-3 border-t border-slate-800">
+                    <Pagination
+                      currentPage={leadsPage}
+                      totalItems={leads.length}
+                      pageSize={leadsPageSize}
+                      onPageChange={setLeadsPage}
+                      onPageSizeChange={(newSize) => {
+                        setLeadsPageSize(newSize);
+                        setLeadsPage(1);
+                      }}
+                      lang={lang}
+                    />
                   </div>
                 </div>
               ) : (
@@ -1796,7 +2171,7 @@ export function App() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {lang === 'bn' ? '১০-স্লট টিম এক্সপ্লোরার' : '10-Slot Team Explorer'}
+                    {lang === 'bn' ? 'টিম ট্রি' : 'Team Tree'}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                     {lang === 'bn'
@@ -1901,14 +2276,14 @@ export function App() {
                           return (
                             <div
                               key={slotNumber}
-                              className={`p-3 rounded-xl border flex items-center justify-between ${
+                              className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                                 node
                                   ? 'bg-slate-800/80 border-slate-700'
                                   : 'bg-slate-900/40 border-dashed border-slate-800'
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 font-black text-xs flex items-center justify-center">
+                                <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 font-black text-xs flex items-center justify-center shrink-0">
                                   L{slotNumber}
                                 </span>
                                 {node ? (
@@ -1930,7 +2305,7 @@ export function App() {
                                     <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
                                       <span>{node.phone}</span>
                                       <span>•</span>
-                                      <span className="text-orange-400 font-bold">৳{(node.totalProjectInvest || 10000).toLocaleString()}</span>
+                                      <span className="text-orange-400 font-bold">{formatMoney(node.totalProjectInvest || 10000)}</span>
                                     </div>
                                   </div>
                                 ) : (
@@ -1941,7 +2316,28 @@ export function App() {
                               </div>
 
                               {node ? (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                                  <button
+                                    onClick={() => handleViewMemberProfile(node)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                                    title={lang === 'bn' ? 'প্রোফাইল দেখুন' : 'View Profile'}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenEditMember(node)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 transition-colors"
+                                    title={lang === 'bn' ? 'মেম্বার এডিট' : 'Edit Member'}
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmNode(node)}
+                                    className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                    title={lang === 'bn' ? 'মেম্বার ডিলিট' : 'Delete Member'}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                     onClick={() => handleOpenAddProject(node)}
                                     className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-colors"
@@ -1993,14 +2389,14 @@ export function App() {
                           return (
                             <div
                               key={slotNumber}
-                              className={`p-3 rounded-xl border flex items-center justify-between ${
+                              className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                                 node
                                   ? 'bg-slate-800/80 border-slate-700'
                                   : 'bg-slate-900/40 border-dashed border-slate-800'
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <span className="w-6 h-6 rounded-lg bg-orange-500/20 text-orange-400 font-black text-xs flex items-center justify-center">
+                                <span className="w-6 h-6 rounded-lg bg-orange-500/20 text-orange-400 font-black text-xs flex items-center justify-center shrink-0">
                                   R{slotNumber - 5}
                                 </span>
                                 {node ? (
@@ -2022,7 +2418,7 @@ export function App() {
                                     <div className="text-[10px] text-slate-400 font-mono flex items-center gap-2">
                                       <span>{node.phone}</span>
                                       <span>•</span>
-                                      <span className="text-orange-400 font-bold">৳{(node.totalProjectInvest || 10000).toLocaleString()}</span>
+                                      <span className="text-orange-400 font-bold">{formatMoney(node.totalProjectInvest || 10000)}</span>
                                     </div>
                                   </div>
                                 ) : (
@@ -2033,7 +2429,28 @@ export function App() {
                               </div>
 
                               {node ? (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                                  <button
+                                    onClick={() => handleViewMemberProfile(node)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                                    title={lang === 'bn' ? 'প্রোফাইল দেখুন' : 'View Profile'}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenEditMember(node)}
+                                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 transition-colors"
+                                    title={lang === 'bn' ? 'মেম্বার এডিট' : 'Edit Member'}
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmNode(node)}
+                                    className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors"
+                                    title={lang === 'bn' ? 'মেম্বার ডিলিট' : 'Delete Member'}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                     onClick={() => handleOpenAddProject(node)}
                                     className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold transition-colors"
@@ -2135,11 +2552,11 @@ export function App() {
               </div>
 
               {/* Package Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {officialPackages.map((pkg) => (
                   <div
                     key={pkg.id}
-                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-orange-500/40 transition-colors shadow-lg"
+                    className="p-5 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-orange-500/40 transition-colors shadow-lg h-full"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -2216,7 +2633,7 @@ export function App() {
             <div className="space-y-6">
               <div className="pb-2 border-b border-slate-800">
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {lang === 'bn' ? 'র‍্যাঙ্ক ও লিডারশিপ অগ্রগতি' : 'Ranks & Leadership Progression'}
+                  {lang === 'bn' ? 'র‍্যাংক' : 'Ranks'}
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
                   {lang === 'bn'
@@ -2229,31 +2646,41 @@ export function App() {
                 {ranksList.map((rank, idx) => (
                   <div
                     key={idx}
-                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 relative overflow-hidden space-y-3"
+                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 relative overflow-hidden space-y-3.5 hover:border-orange-500/40 transition-colors shadow-lg flex flex-col justify-between"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="w-7 h-7 rounded-lg bg-orange-600/20 text-orange-400 font-black text-xs flex items-center justify-center">
-                        #{idx + 1}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                        Match Bonus {rank.matchBonus}
-                      </span>
-                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 rounded-xl bg-orange-600/30 border border-orange-500/50 text-orange-400 font-mono font-black text-sm tracking-wider shadow-sm">
+                            [{rank.code}]
+                          </span>
+                          <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-black text-xs flex items-center justify-center">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                          Match Bonus {rank.matchBonus}
+                        </span>
+                      </div>
 
-                    <div>
-                      <h3 className="text-lg font-black text-white">
-                        {lang === 'bn' ? rank.titleBn : rank.title}
-                      </h3>
-                      <div className="text-xs text-orange-400 font-semibold mt-0.5">
-                        {rank.bvReq}
+                      <div>
+                        <h3 className="text-base font-bold text-white">
+                          {lang === 'bn' ? rank.fullNameBn : rank.fullName}
+                        </h3>
+                        <div className="text-xs text-orange-400 font-semibold mt-1">
+                          {rank.bvReq}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-3 bg-slate-800/50 rounded-xl text-xs space-y-1 border border-slate-800">
+                    <div className="p-3 bg-slate-800/60 rounded-xl text-xs space-y-1 border border-slate-800">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                         {lang === 'bn' ? 'অর্জন ও পুরষ্কার:' : 'Achievement Award:'}
                       </span>
-                      <div className="text-white font-bold">{rank.reward}</div>
+                      <div className="text-white font-bold text-sm flex items-center gap-1.5">
+                        <span className="text-emerald-400 font-mono">{formatMoney(rank.rewardBdt)}</span>
+                        <span className="text-slate-300 text-xs">({rank.rewardText})</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -2423,383 +2850,658 @@ export function App() {
           )}
 
           {/* TAB 8: LINKS HUB */}
-          {activeTab === 'links' && (
-            <div className="space-y-6">
-              <div className="pb-2 border-b border-slate-800">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {lang === 'bn' ? 'এসবিএল লিংকস হাব' : 'Official Links Hub'}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  {lang === 'bn'
-                    ? 'অফিসিয়াল পোর্টাল, মোবাইল অ্যাপ ও অ্যাসোসিয়েট সিস্টেমের লিংক'
-                    : 'Verified official corporate portals, associate dashboards and media tools'}
-                </p>
-              </div>
+          {activeTab === 'links' && (() => {
+            const defaultLinks = [
+              { id: 1, title: 'SBL Official Corporate Portal', url: 'https://sbl.com.bd', category: 'Official' },
+              { id: 2, title: 'Associate Growth Manager', url: 'https://sbltools.creationtech.info', category: 'Platform' },
+              { id: 3, title: 'Central Support Desk', url: 'https://wa.me/8801700000000', category: 'Support' },
+            ];
+            const allLinks = links.length > 0 ? links : defaultLinks;
+            const filteredLinks = allLinks.filter(
+              (link: any) =>
+                link.title?.toLowerCase().includes(linksSearch.toLowerCase()) ||
+                link.url?.toLowerCase().includes(linksSearch.toLowerCase()) ||
+                link.category?.toLowerCase().includes(linksSearch.toLowerCase()),
+            );
+            const paginatedLinks = filteredLinks.slice(
+              (linksPage - 1) * linksPageSize,
+              linksPage * linksPageSize,
+            );
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(links.length > 0
-                  ? links
-                  : [
-                      { id: 1, title: 'SBL Official Corporate Portal', url: 'https://sbl.com.bd', category: 'Official' },
-                      { id: 2, title: 'Associate Growth Manager', url: 'https://sbltools.creationtech.info', category: 'Platform' },
-                      { id: 3, title: 'Central Support Desk', url: 'https://wa.me/8801700000000', category: 'Support' },
-                    ]
-                ).map((link: any) => (
-                  <div
-                    key={link.id}
-                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-orange-500/40 transition-colors"
-                  >
-                    <div>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-orange-400 border border-slate-700 uppercase">
-                        {link.category || 'Official'}
-                      </span>
-                      <h3 className="text-sm font-bold text-white mt-2">{link.title}</h3>
-                      <p className="text-xs text-slate-400 mt-1 truncate">{link.url}</p>
-                    </div>
-
-                    <div className="pt-4 mt-4 border-t border-slate-800 flex gap-2">
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
-                      >
-                        <span>Open</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(link.url);
-                          showToast('Link copied!');
-                        }}
-                        className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
-                        title="Copy URL"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 9: RESOURCES */}
-          {activeTab === 'resources' && (
-            <div className="space-y-6">
-              <div className="pb-2 border-b border-slate-800">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {lang === 'bn' ? 'মার্কেটিং রিসোর্সেস ও লিফলেট' : 'Marketing Resources & Leaflets'}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  {lang === 'bn'
-                    ? 'অফিসিয়াল লিফলেট, প্রেজেন্টেশন স্লাইড ও প্রিন্ট রেডি ডক্যুমেন্টস'
-                    : 'Verified corporate leaflets, presentation decks and brochures'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <img
-                    src="/images/sbl/sbl-office-leaflet.jpg"
-                    alt="SBL Office Leaflet"
-                    className="w-full h-48 object-cover rounded-xl"
-                  />
-                  <h3 className="text-sm font-bold text-white">
-                    {lang === 'bn' ? 'অফিসিয়াল হেডকোয়ার্টার লিফলেট ২০২৬' : 'Official Corporate Leaflet 2026'}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {lang === 'bn' ? 'নতুন ক্লায়েন্ট ও প্রসপেক্টদের দেওয়ার জন্য পূর্ণাঙ্গ বিবরণী।' : 'Comprehensive informational leaflet for prospect meetings.'}
-                  </p>
-                  <a
-                    href="/images/sbl/sbl-office-leaflet.jpg"
-                    target="_blank"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'ডাউনলোড করুন' : 'Download Leaflet'}</span>
-                  </a>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <img
-                    src="/images/sbl-packages-sheet.png"
-                    alt="Package Sheet"
-                    className="w-full h-48 object-cover rounded-xl"
-                  />
-                  <h3 className="text-sm font-bold text-white">
-                    {lang === 'bn' ? 'প্যাকেজ কম্প্যারিজন সামারি শিট' : 'Package Comparison Summary Sheet'}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {lang === 'bn' ? 'এক নজরে সকল প্যাকেজের তুলনা ও আর্নিং চার্ট।' : 'All package tiers and daily capping limits at a glance.'}
-                  </p>
-                  <a
-                    href="/images/sbl-packages-sheet.png"
-                    target="_blank"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>{lang === 'bn' ? 'পূর্ণাঙ্গ শিট দেখুন' : 'View Full Sheet'}</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 10: SBL CONTACT */}
-          {activeTab === 'contacts' && (
-            <div className="space-y-6">
-              <div className="pb-2 border-b border-slate-800">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  {lang === 'bn' ? 'এসবিএল অফিশিয়াল কন্টাক্ট ডিরেক্টরি' : 'SBL Contact Directory'}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  {lang === 'bn'
-                    ? 'কাস্টমার সাপোর্ট, অ্যাকাউন্টস ও লিডারশিপ যোগাযোগের নম্বর'
-                    : 'Direct hotlines and WhatsApp channels for support and finance'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(contacts.length > 0
-                  ? contacts
-                  : [
-                      { id: 1, name: 'Central Helpdesk', designation: 'Operations Lead', phone: '+8801700000000', email: 'support@sbl.test' },
-                      { id: 2, name: 'Accounts & Finance', designation: 'Billing Dept', phone: '+8801700000001', email: 'finance@sbl.test' },
-                      { id: 3, name: 'Leadership Coordinator', designation: 'Field Network', phone: '+8801700000002', email: 'network@sbl.test' },
-                    ]
-                ).map((c: any) => (
-                  <div key={c.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center font-black">
-                      <PhoneCall className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{c.name}</h3>
-                      <div className="text-xs text-slate-400">{c.designation || c.department}</div>
-                    </div>
-                    <div className="text-xs text-slate-300 font-mono">{c.phone}</div>
-                    <div className="flex gap-2 pt-2 border-t border-slate-800">
-                      <a
-                        href={`https://wa.me/${(c.phone || '').replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex-1 py-1.5 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>WhatsApp</span>
-                      </a>
-                      <a
-                        href={`tel:${c.phone}`}
-                        className="flex-1 py-1.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
-                      >
-                        <Phone className="w-3.5 h-3.5" />
-                        <span>Call</span>
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 11: GLOSSARY */}
-          {activeTab === 'glossary' && (
-            <div className="space-y-6">
-              <div className="pb-2 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {lang === 'bn' ? 'বিজনেস অ্যাব্রিভিয়েশন ও গ্লসারি' : 'Business Glossary & Abbreviations'}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                    {lang === 'bn'
-                      ? 'এসবিএল ব্যবসার জরুরি পরিভাষা ও সংক্ষেপণের বিস্তারিত অর্থ'
-                      : 'Comprehensive dictionary of terms, acronyms and operational formulas'}
-                  </p>
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search terms..."
-                    value={glossarySearch}
-                    onChange={(e) => setGlossarySearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredGlossary.map((item: any, idx: number) => (
-                  <div key={idx} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-sm font-black text-orange-400">
-                        {item.abbreviation || item.abbr}
-                      </span>
-                      <span className="text-xs text-slate-300 font-bold">{item.term}</span>
-                    </div>
-                    <p className="text-xs text-slate-400 leading-relaxed pt-1">
-                      {item.definition || item.desc}
+            return (
+              <div className="space-y-6">
+                <div className="pb-2 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {lang === 'bn' ? 'এসবিএল লিংকস হাব' : 'Official Links Hub'}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'অফিসিয়াল পোর্টাল, মোবাইল অ্যাপ ও অ্যাসোসিয়েট সিস্টেমের লিংক'
+                        : 'Verified official corporate portals, associate dashboards and media tools'}
                     </p>
                   </div>
-                ))}
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'লিংক খুঁজুন...' : 'Search links...'}
+                        value={linksSearch}
+                        onChange={(e) => {
+                          setLinksSearch(e.target.value);
+                          setLinksPage(1);
+                        }}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleOpenCreateLink}
+                      className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'নতুন লিংক' : 'Add Link'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedLinks.map((link: any) => (
+                    <div
+                      key={link.id}
+                      className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between hover:border-orange-500/40 transition-colors shadow-lg"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-orange-400 border border-slate-700 uppercase">
+                            {link.category || 'Official'}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenEditLink(link)}
+                              className="p-1 text-slate-400 hover:text-orange-400 rounded-lg hover:bg-slate-800 transition-colors"
+                              title="Edit link"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmLink(link)}
+                              className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
+                              title="Delete link"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <h3 className="text-sm font-bold text-white mt-2">{link.title}</h3>
+                        <p className="text-xs text-slate-400 mt-1 truncate">{link.url}</p>
+                      </div>
+
+                      <div className="pt-4 mt-4 border-t border-slate-800 flex gap-2">
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>Open</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(link.url);
+                            showToast('Link copied!');
+                          }}
+                          className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                          title="Copy URL"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Pagination
+                  currentPage={linksPage}
+                  totalItems={filteredLinks.length}
+                  pageSize={linksPageSize}
+                  onPageChange={setLinksPage}
+                  onPageSizeChange={(sz) => {
+                    setLinksPageSize(sz);
+                    setLinksPage(1);
+                  }}
+                  lang={lang}
+                />
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {/* TAB 9: RESOURCES */}
+          {activeTab === 'resources' && (() => {
+            const defaultResources = [
+              {
+                id: 1,
+                title: lang === 'bn' ? 'অফিসিয়াল হেডকোয়ার্টার লিফলেট ২০২৬' : 'Official Corporate Leaflet 2026',
+                description: lang === 'bn' ? 'নতুন ক্লায়েন্ট ও প্রসপেক্টদের দেওয়ার জন্য পূর্ণাঙ্গ বিবরণী।' : 'Comprehensive informational leaflet for prospect meetings.',
+                fileUrl: '/images/sbl/sbl-office-leaflet.jpg',
+                resourceType: 'image',
+              },
+              {
+                id: 2,
+                title: lang === 'bn' ? 'প্যাকেজ কম্প্যারিজন সামারি শিট' : 'Package Comparison Summary Sheet',
+                description: lang === 'bn' ? 'এক নজরে সকল প্যাকেজের তুলনা ও আর্নিং চার্ট।' : 'All package tiers and daily capping limits at a glance.',
+                fileUrl: '/images/sbl-packages-sheet.png',
+                resourceType: 'image',
+              },
+            ];
+            const allResources = resources.length > 0 ? resources : defaultResources;
+            const filteredResources = allResources.filter(
+              (r: any) =>
+                r.title?.toLowerCase().includes(resourcesSearch.toLowerCase()) ||
+                r.description?.toLowerCase().includes(resourcesSearch.toLowerCase()),
+            );
+            const paginatedResources = filteredResources.slice(
+              (resourcesPage - 1) * resourcesPageSize,
+              resourcesPage * resourcesPageSize,
+            );
+
+            return (
+              <div className="space-y-6">
+                <div className="pb-2 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {lang === 'bn' ? 'মার্কেটিং রিসোর্সেস ও লিফলেট' : 'Marketing Resources & Leaflets'}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'অফিসিয়াল লিফলেট, প্রেজেন্টেশন স্লাইড ও প্রিন্ট রেডি ডক্যুমেন্টস'
+                        : 'Verified corporate leaflets, presentation decks and brochures'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'রিসোর্স খুঁজুন...' : 'Search resources...'}
+                        value={resourcesSearch}
+                        onChange={(e) => {
+                          setResourcesSearch(e.target.value);
+                          setResourcesPage(1);
+                        }}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleOpenCreateResource}
+                      className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'নতুন রিসোর্স' : 'Add Resource'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {paginatedResources.map((res: any) => (
+                    <div key={res.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-orange-500/40 transition-colors shadow-lg">
+                      <div className="space-y-3">
+                        {res.fileUrl && (
+                          <img
+                            src={res.fileUrl}
+                            alt={res.title}
+                            className="w-full h-48 object-cover rounded-xl border border-slate-800"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-white">{res.title}</h3>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenEditResource(res)}
+                              className="p-1 text-slate-400 hover:text-orange-400 rounded-lg hover:bg-slate-800 transition-colors"
+                              title="Edit resource"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmResource(res)}
+                              className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
+                              title="Delete resource"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed">{res.description}</p>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-800">
+                        <a
+                          href={res.fileUrl || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{lang === 'bn' ? 'ফাইল দেখুন / ডাউনলোড' : 'View / Download'}</span>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Pagination
+                  currentPage={resourcesPage}
+                  totalItems={filteredResources.length}
+                  pageSize={resourcesPageSize}
+                  onPageChange={setResourcesPage}
+                  onPageSizeChange={(sz) => {
+                    setResourcesPageSize(sz);
+                    setResourcesPage(1);
+                  }}
+                  lang={lang}
+                />
+              </div>
+            );
+          })()}
+
+          {/* TAB 10: SBL CONTACT */}
+          {activeTab === 'contacts' && (() => {
+            const defaultContacts = [
+              { id: 1, name: 'Central Helpdesk', designation: 'Operations Lead', phone: '+8801700000000', email: 'support@sbl.test' },
+              { id: 2, name: 'Accounts & Finance', designation: 'Billing Dept', phone: '+8801700000001', email: 'finance@sbl.test' },
+              { id: 3, name: 'Leadership Coordinator', designation: 'Field Network', phone: '+8801700000002', email: 'network@sbl.test' },
+            ];
+            const allContacts = contacts.length > 0 ? contacts : defaultContacts;
+            const filteredContacts = allContacts.filter(
+              (c: any) =>
+                c.name?.toLowerCase().includes(contactsSearch.toLowerCase()) ||
+                c.designation?.toLowerCase().includes(contactsSearch.toLowerCase()) ||
+                c.phone?.toLowerCase().includes(contactsSearch.toLowerCase()) ||
+                c.email?.toLowerCase().includes(contactsSearch.toLowerCase()),
+            );
+            const paginatedContacts = filteredContacts.slice(
+              (contactsPage - 1) * contactsPageSize,
+              contactsPage * contactsPageSize,
+            );
+
+            return (
+              <div className="space-y-6">
+                <div className="pb-2 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {lang === 'bn' ? 'এসবিএল অফিশিয়াল কন্টাক্ট ডিরেক্টরি' : 'SBL Contact Directory'}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'কাস্টমার সাপোর্ট, অ্যাকাউন্টস ও লিডারশিপ যোগাযোগের নম্বর'
+                        : 'Direct hotlines and WhatsApp channels for support and finance'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'কন্টাক্ট খুঁজুন...' : 'Search contacts...'}
+                        value={contactsSearch}
+                        onChange={(e) => {
+                          setContactsSearch(e.target.value);
+                          setContactsPage(1);
+                        }}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleOpenCreateContact}
+                      className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'নতুন কন্টাক্ট' : 'Add Contact'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {paginatedContacts.map((c: any) => (
+                    <div key={c.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 flex flex-col justify-between hover:border-orange-500/40 transition-colors shadow-lg">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="w-10 h-10 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center font-black">
+                            <PhoneCall className="w-5 h-5" />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenEditContact(c)}
+                              className="p-1 text-slate-400 hover:text-orange-400 rounded-lg hover:bg-slate-800 transition-colors"
+                              title="Edit contact"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmContact(c)}
+                              className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
+                              title="Delete contact"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-white">{c.name}</h3>
+                          <div className="text-xs text-slate-400">{c.designation || c.department}</div>
+                        </div>
+                        <div className="text-xs text-slate-300 font-mono">{c.phone}</div>
+                        {c.email && <div className="text-[11px] text-slate-500">{c.email}</div>}
+                      </div>
+
+                      <div className="flex gap-2 pt-3 border-t border-slate-800">
+                        <a
+                          href={`https://wa.me/${(c.phone || '').replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 py-1.5 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>WhatsApp</span>
+                        </a>
+                        <a
+                          href={`tel:${c.phone}`}
+                          className="flex-1 py-1.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-xl text-xs font-bold text-center transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call</span>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Pagination
+                  currentPage={contactsPage}
+                  totalItems={filteredContacts.length}
+                  pageSize={contactsPageSize}
+                  onPageChange={setContactsPage}
+                  onPageSizeChange={(sz) => {
+                    setContactsPageSize(sz);
+                    setContactsPage(1);
+                  }}
+                  lang={lang}
+                />
+              </div>
+            );
+          })()}
+
+          {/* TAB 11: GLOSSARY */}
+          {activeTab === 'glossary' && (() => {
+            const paginatedGlossary = filteredGlossary.slice(
+              (glossaryPage - 1) * glossaryPageSize,
+              glossaryPage * glossaryPageSize,
+            );
+
+            return (
+              <div className="space-y-6">
+                <div className="pb-2 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {lang === 'bn' ? 'বিজনেস অ্যাব্রিভিয়েশন ও গ্লসারি' : 'Business Glossary & Abbreviations'}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'এসবিএল ব্যবসার জরুরি পরিভাষা ও সংক্ষেপণের বিস্তারিত অর্থ'
+                        : 'Comprehensive dictionary of terms, acronyms and operational formulas'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-full sm:w-60">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder={lang === 'bn' ? 'পরিভাষা খুঁজুন...' : 'Search terms...'}
+                        value={glossarySearch}
+                        onChange={(e) => {
+                          setGlossarySearch(e.target.value);
+                          setGlossaryPage(1);
+                        }}
+                        className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleOpenCreateGlossary}
+                      className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'নতুন পরিভাষা' : 'Add Term'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paginatedGlossary.map((item: any, idx: number) => (
+                    <div key={idx} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5 hover:border-orange-500/40 transition-colors shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-sm font-black text-orange-400">
+                            {item.abbreviation || item.abbr}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-slate-300 font-bold mr-2">{item.term}</span>
+                            <button
+                              onClick={() => handleOpenEditGlossary(item)}
+                              className="p-1 text-slate-400 hover:text-orange-400 rounded-lg hover:bg-slate-800 transition-colors"
+                              title="Edit term"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmGlossary(item)}
+                              className="p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
+                              title="Delete term"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed pt-1">
+                          {item.definition || item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Pagination
+                  currentPage={glossaryPage}
+                  totalItems={filteredGlossary.length}
+                  pageSize={glossaryPageSize}
+                  onPageChange={setGlossaryPage}
+                  onPageSizeChange={(sz) => {
+                    setGlossaryPageSize(sz);
+                    setGlossaryPage(1);
+                  }}
+                  lang={lang}
+                />
+              </div>
+            );
+          })()}
 
           {/* TAB 12: USERS & ACCOUNTS (SUPER ADMIN ONLY) */}
-          {activeTab === 'users' && isSuperAdmin && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                    {lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস অ্যাডমিনিস্ট্রেশন' : 'Users & Accounts'}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                    {lang === 'bn'
-                      ? 'মোবাইল নম্বর দিয়ে ইউজার ও পাসওয়ার্ড তৈরি, রোল নির্ধারণ ও ডিরেক্ট অ্যাকাউন্ট লগিন'
-                      : 'Create users with phone number & password, set roles (Super Admin, Member, Demo)'}
-                  </p>
-                </div>
-                {isSuperAdmin && (
-                  <button
-                    onClick={() => setShowAddUserModal(true)}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-2 self-start sm:self-auto"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>{lang === 'bn' ? '+ নতুন ইউজার তৈরি করুন' : '+ Create New User'}</span>
-                  </button>
-                )}
-              </div>
+          {activeTab === 'users' && isSuperAdmin && (() => {
+            const paginatedUsers = usersList.slice(
+              (usersPage - 1) * usersPageSize,
+              usersPage * usersPageSize,
+            );
 
-              {/* Role Permission Legend */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
-                  <div className="font-black text-orange-400 flex items-center gap-1.5">
-                    <span>👑 Super Admin</span>
+            return (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      {lang === 'bn' ? 'ইউজার ও অ্যাকাউন্টস অ্যাডমিনিস্ট্রেশন' : 'Users & Accounts'}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+                      {lang === 'bn'
+                        ? 'মোবাইল নম্বর দিয়ে ইউজার ও পাসওয়ার্ড তৈরি, রোল নির্ধারণ ও ডিরেক্ট অ্যাকাউন্ট লগিন'
+                        : 'Create users with phone number & password, set roles (Super Admin, Member, Demo)'}
+                    </p>
                   </div>
-                  <div className="text-[11px] text-slate-300 mt-1">
-                    {lang === 'bn' ? 'সকল ইউজারের ডাটা দেখতে পারবে, এডিট করতে পারবে এবং যেকোনো অ্যাকাউন্টে সুইচ করতে পারবে।' : 'Full administrative access and account impersonation.'}
-                  </div>
-                </div>
-                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs">
-                  <div className="font-black text-blue-400 flex items-center gap-1.5">
-                    <span>👤 Member</span>
-                  </div>
-                  <div className="text-[11px] text-slate-300 mt-1">
-                    {lang === 'bn' ? 'শুধুমাত্র নিজের লিড, নিজস্ব টিম ও আন্ডারে থাকা প্রজেক্টসমূহ স্বাধীনভাবে পরিচালনা করবে।' : 'Isolated member workspace for assigned leads & personal downline.'}
-                  </div>
-                </div>
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
-                  <div className="font-black text-emerald-400 flex items-center gap-1.5">
-                    <span>👀 Demo</span>
-                  </div>
-                  <div className="text-[11px] text-slate-300 mt-1">
-                    {lang === 'bn' ? 'শুধুমাত্র সিস্টেমের ফিচারগুলো দেখতে পারবে (Read-Only), কোনো ডাটা পরিবর্তন করতে পারবে না।' : 'Read-only access to explore packages, calculator and team structure.'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Users Table */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
-                    {lang === 'bn' ? `মোট ইউজার তালিকা (${usersList.length} জন)` : `System Users (${usersList.length})`}
-                  </span>
-                  <button
-                    onClick={loadUsers}
-                    className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 font-bold"
-                  >
-                    <span>{lang === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</span>
-                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => setShowAddUserModal(true)}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-2 self-start sm:self-auto"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>{lang === 'bn' ? 'নতুন ইউজার' : 'Create User'}</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-slate-800/80 text-[11px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-700">
-                      <tr>
-                        <th className="p-3.5">{lang === 'bn' ? 'ইউজার ও পদবি' : 'User & Designation'}</th>
-                        <th className="p-3.5">{lang === 'bn' ? 'মোবাইল নম্বর (ইউজারনেম)' : 'Mobile (Username)'}</th>
-                        <th className="p-3.5">{lang === 'bn' ? 'রোল' : 'Role'}</th>
-                        <th className="p-3.5">{lang === 'bn' ? 'সংযুক্ত ডাটা' : 'Associated Data'}</th>
-                        <th className="p-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {usersList.length > 0 ? (
-                        usersList.map((u) => (
-                          <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="p-3.5">
-                              <div className="font-bold text-white text-xs">{u.name}</div>
-                              <div className="text-[11px] text-slate-400">{u.designation || 'Associate'}</div>
-                            </td>
-                            <td className="p-3.5 font-mono text-slate-200">
-                              {u.phone || u.username || u.email}
-                            </td>
-                            <td className="p-3.5">
-                              <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                  u.role === 'super_admin'
-                                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                                    : u.role === 'demo'
-                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                }`}
-                              >
-                                {u.role === 'super_admin' ? 'Super Admin' : u.role === 'demo' ? 'Demo' : 'Member'}
-                              </span>
-                            </td>
-                            <td className="p-3.5 text-[11px] text-slate-400">
-                              <div>লিড: {u.leadsCount || 0} টি</div>
-                              <div>টিম মেম্বার: {u.nodesCount || 0} জন</div>
-                            </td>
-                            <td className="p-3.5 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {u.id === user?.id ? (
-                                  <span className="px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-lg text-[11px] font-bold">
-                                    {lang === 'bn' ? '✓ বর্তমান সক্রিয়' : 'Active Account'}
-                                  </span>
-                                ) : (
-                                  <button
-                                    onClick={() => handleImpersonate(u)}
-                                    className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-                                    title="এই ইউজারের অ্যাকাউন্টে প্রবেশ করুন"
-                                  >
-                                    <LogIn className="w-3.5 h-3.5" />
-                                    <span>{lang === 'bn' ? 'লগিন করুন' : 'Login As'}</span>
-                                  </button>
-                                )}
-                                {isSuperAdmin && u.id !== user?.id && u.role !== 'super_admin' && (
-                                  <button
-                                    onClick={async () => {
-                                      if (confirm(lang === 'bn' ? `আপনি কি ইউজার "${u.name}" ডিলিট করতে চান?` : `Delete user "${u.name}"?`)) {
-                                        await api.deleteUser(u.id);
-                                        showToast(lang === 'bn' ? 'ইউজার ডিলিট করা হয়েছে' : 'User deleted');
-                                        loadUsers();
-                                      }
-                                    }}
-                                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                                    title="Delete user"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
+                {/* Role Permission Legend */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs">
+                    <div className="font-black text-orange-400 flex items-center gap-1.5">
+                      <span>👑 Super Admin</span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 mt-1">
+                      {lang === 'bn' ? 'সকল ইউজারের ডাটা দেখতে পারবে, এডিট করতে পারবে এবং যেকোনো অ্যাকাউন্টে সুইচ করতে পারবে।' : 'Full administrative access and account impersonation.'}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs">
+                    <div className="font-black text-blue-400 flex items-center gap-1.5">
+                      <span>👤 Member</span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 mt-1">
+                      {lang === 'bn' ? 'শুধুমাত্র নিজের লিড, নিজস্ব টিম ও আন্ডারে থাকা প্রজেক্টসমূহ স্বাধীনভাবে পরিচালনা করবে।' : 'Isolated member workspace for assigned leads & personal downline.'}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                    <div className="font-black text-emerald-400 flex items-center gap-1.5">
+                      <span>👀 Demo</span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 mt-1">
+                      {lang === 'bn' ? 'শুধুমাত্র সিস্টেমের ফিচারগুলো দেখতে পারবে (Read-Only), কোনো ডাটা পরিবর্তন করতে পারবে না।' : 'Read-only access to explore packages, calculator and team structure.'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Users Table */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
+                      {lang === 'bn' ? `মোট ইউজার তালিকা (${usersList.length} জন)` : `System Users (${usersList.length})`}
+                    </span>
+                    <button
+                      onClick={loadUsers}
+                      className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 font-bold"
+                    >
+                      <span>{lang === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</span>
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-slate-800/80 text-[11px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-700">
+                        <tr>
+                          <th className="p-3.5">{lang === 'bn' ? 'ইউজার ও পদবি' : 'User & Designation'}</th>
+                          <th className="p-3.5">{lang === 'bn' ? 'মোবাইল নম্বর (ইউজারনেম)' : 'Mobile (Username)'}</th>
+                          <th className="p-3.5">{lang === 'bn' ? 'রোল' : 'Role'}</th>
+                          <th className="p-3.5">{lang === 'bn' ? 'সংযুক্ত ডাটা' : 'Associated Data'}</th>
+                          <th className="p-3.5 text-right">{lang === 'bn' ? 'অ্যাকশন' : 'Actions'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {paginatedUsers.length > 0 ? (
+                          paginatedUsers.map((u) => (
+                            <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="p-3.5">
+                                <div className="font-bold text-white text-xs">{u.name}</div>
+                                <div className="text-[11px] text-slate-400">{u.designation || 'Associate'}</div>
+                              </td>
+                              <td className="p-3.5 font-mono text-slate-200">
+                                {u.phone || u.username || u.email}
+                              </td>
+                              <td className="p-3.5">
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    u.role === 'super_admin'
+                                      ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                      : u.role === 'demo'
+                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  }`}
+                                >
+                                  {u.role === 'super_admin' ? 'Super Admin' : u.role === 'demo' ? 'Demo' : 'Member'}
+                                </span>
+                              </td>
+                              <td className="p-3.5 text-[11px] text-slate-400">
+                                <div>লিড: {u.leadsCount || 0} টি</div>
+                                <div>টিম মেম্বার: {u.nodesCount || 0} জন</div>
+                              </td>
+                              <td className="p-3.5 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {u.id === user?.id ? (
+                                    <span className="px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-lg text-[11px] font-bold">
+                                      {lang === 'bn' ? '✓ বর্তমান সক্রিয়' : 'Active Account'}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleImpersonate(u)}
+                                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                                      title="এই ইউজারের অ্যাকাউন্টে প্রবেশ করুন"
+                                    >
+                                      <LogIn className="w-3.5 h-3.5" />
+                                      <span>{lang === 'bn' ? 'লগিন করুন' : 'Login As'}</span>
+                                    </button>
+                                  )}
+                                  {isSuperAdmin && u.id !== user?.id && u.role !== 'super_admin' && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(lang === 'bn' ? `আপনি কি ইউজার "${u.name}" ডিলিট করতে চান?` : `Delete user "${u.name}"?`)) {
+                                          await api.deleteUser(u.id);
+                                          showToast(lang === 'bn' ? 'ইউজার ডিলিট করা হয়েছে' : 'User deleted');
+                                          loadUsers();
+                                        }
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                      title="Delete user"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="text-center py-6 text-slate-500">
+                              {isLoadingUsers ? 'ইউজার লোড হচ্ছে...' : 'কোনো ইউজার পাওয়া যায়নি।'}
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="text-center py-6 text-slate-500">
-                            {isLoadingUsers ? 'ইউজার লোড হচ্ছে...' : 'কোনো ইউজার পাওয়া যায়নি।'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Pagination
+                    currentPage={usersPage}
+                    totalItems={usersList.length}
+                    pageSize={usersPageSize}
+                    onPageChange={setUsersPage}
+                    onPageSizeChange={(sz) => {
+                      setUsersPageSize(sz);
+                      setUsersPage(1);
+                    }}
+                    lang={lang}
+                  />
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </main>
       </div>
 
@@ -3721,7 +4423,7 @@ export function App() {
           }`}
         >
           <Network className="w-5 h-5" />
-          <span className="text-[10px]">{lang === 'bn' ? '১০-স্লট টিম' : 'Team'}</span>
+          <span className="text-[10px]">{lang === 'bn' ? 'টিম ট্রি' : 'Team Tree'}</span>
         </button>
 
         <button
@@ -3973,6 +4675,779 @@ export function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: VIEW TREE MEMBER PROFILE */}
+      {/* ======================================================== */}
+      {viewingMemberNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative space-y-5">
+            <button
+              onClick={() => setViewingMemberNode(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-orange-600/20 text-orange-400 font-black text-lg flex items-center justify-center">
+                {viewingMemberNode.memberName?.charAt(0) || 'M'}
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-white">{viewingMemberNode.memberName}</h2>
+                <div className="text-xs text-slate-400 font-mono">{viewingMemberNode.phone}</div>
+              </div>
+              <span className="ml-auto px-2.5 py-1 rounded-lg text-xs font-bold uppercase bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                {viewingMemberNode.rank || 'FME'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-4 bg-slate-800/60 rounded-2xl border border-slate-700/60 text-xs">
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'স্লট পজিশন' : 'Slot Position'}</span>
+                <span className="font-bold text-white text-sm">
+                  {viewingMemberNode.placementPosition <= 5
+                    ? `Left (L${viewingMemberNode.placementPosition})`
+                    : `Right (R${viewingMemberNode.placementPosition - 5})`}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'অ্যাক্টিভ প্রজেক্ট' : 'Active Project'}</span>
+                <span className="font-bold text-emerald-400 text-sm">
+                  {viewingMemberNode.activeProject || viewingMemberNode.packageName || 'Starter'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'মোট বিনিয়োগ' : 'Total Investment'}</span>
+                <span className="font-bold text-orange-400 text-sm">
+                  {formatMoney(viewingMemberNode.totalProjectInvest || 10000)}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'ডাইরেক্ট টিম সাইজ' : 'Direct Team'}</span>
+                <span className="font-bold text-white text-sm">
+                  {viewingMemberNode.childCount || 0} members
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'স্পন্সর' : 'Sponsor'}</span>
+                <span className="font-bold text-slate-300">{viewingMemberNode.sponsorName || 'Direct'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">{lang === 'bn' ? 'স্ট্যাটাস' : 'Status'}</span>
+                <span className="font-bold text-emerald-400 uppercase">{viewingMemberNode.status || 'Active'}</span>
+              </div>
+            </div>
+
+            {viewingMemberNode.notes && (
+              <div className="p-3 bg-slate-800/40 rounded-xl text-xs text-slate-300 border border-slate-800">
+                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                  {lang === 'bn' ? 'নোট' : 'Notes'}
+                </span>
+                {viewingMemberNode.notes}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setViewingMemberNode(null)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বন্ধ করুন' : 'Close'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const node = viewingMemberNode;
+                  setViewingMemberNode(null);
+                  handleOpenEditMember(node);
+                }}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? 'তথ্য এডিট করুন' : 'Edit Member'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT TREE MEMBER */}
+      {/* ======================================================== */}
+      {editingMemberNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setEditingMemberNode(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <Edit3 className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {lang === 'bn' ? 'টিম মেম্বার তথ্য পরিবর্তন' : 'Edit Team Member Details'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleUpdateMemberNode} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'মেম্বার নাম *' : 'Member Name *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={memberFormData.memberName}
+                  onChange={(e) => setMemberFormData({ ...memberFormData, memberName: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'মোবাইল নম্বর *' : 'Mobile Number *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={memberFormData.phone}
+                  onChange={(e) => setMemberFormData({ ...memberFormData, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'র‍্যাংক' : 'Rank'}
+                  </label>
+                  <select
+                    value={memberFormData.rank}
+                    onChange={(e) => setMemberFormData({ ...memberFormData, rank: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                  >
+                    <option value="FME">FME</option>
+                    <option value="SME">SME</option>
+                    <option value="PME">PME</option>
+                    <option value="BME">BME</option>
+                    <option value="GME">GME</option>
+                    <option value="ETD">ETD</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    {lang === 'bn' ? 'স্ট্যাটাস' : 'Status'}
+                  </label>
+                  <select
+                    value={memberFormData.status}
+                    onChange={(e) => setMemberFormData({ ...memberFormData, status: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'নোট / মন্তব্য' : 'Notes'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={memberFormData.notes}
+                  onChange={(e) => setMemberFormData({ ...memberFormData, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingMemberNode(null)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'সংরক্ষণ করুন' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: DELETE CONFIRM TREE MEMBER */}
+      {/* ======================================================== */}
+      {deleteConfirmNode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-black text-white">
+                {lang === 'bn' ? 'মেম্বার ডিলিট করতে চান?' : 'Delete Team Member?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? `আপনি কি নিশ্চিত যে "${deleteConfirmNode.memberName}" কে টিম ট্রি থেকে ডিলিট করবেন?`
+                  : `Are you sure you want to remove "${deleteConfirmNode.memberName}"?`}
+              </p>
+              <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 mt-3 text-left">
+                ⚠️ {lang === 'bn'
+                  ? 'টিম ট্রির কাঠামো অক্ষুণ্ণ রাখতে এই মেম্বারের সাব-টিম স্বয়ংক্রিয়ভাবে অভিভাবক নোডের সাথে পুনঃসংযুক্ত হবে।'
+                  : 'Tree safety safeguard: Sub-team members will safely re-parent to keep team structure intact.'}
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmNode(null)}
+                className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteMemberNode}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-600/30"
+              >
+                {lang === 'bn' ? 'হ্যাঁ, ডিলিট' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD / EDIT LINK */}
+      {/* ======================================================== */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowLinkModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <ExternalLink className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {editingLink
+                  ? lang === 'bn' ? 'লিংক এডিট করুন' : 'Edit Link'
+                  : lang === 'bn' ? 'নতুন লিংক যুক্ত করুন' : 'Add New Link'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleSaveLink} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'শিরোনাম *' : 'Title *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={linkFormData.title}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, title: e.target.value })}
+                  placeholder="e.g. SBL Corporate Portal"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'লিংক URL *' : 'URL *'}
+                </label>
+                <input
+                  type="url"
+                  required
+                  value={linkFormData.url}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ক্যাটাগরি' : 'Category'}
+                </label>
+                <select
+                  value={linkFormData.category}
+                  onChange={(e) => setLinkFormData({ ...linkFormData, category: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                >
+                  <option value="Official">Official</option>
+                  <option value="Platform">Platform</option>
+                  <option value="Support">Support</option>
+                  <option value="Media">Media</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'সংরক্ষণ' : 'Save Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE CONFIRM LINK */}
+      {deleteConfirmLink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                {lang === 'bn' ? 'লিংক ডিলিট করতে চান?' : 'Delete Link?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? `"${deleteConfirmLink.title}" লিংকটি স্থায়ীভাবে মুছে ফেলা হবে।`
+                  : `Are you sure you want to delete "${deleteConfirmLink.title}"?`}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmLink(null)}
+                className="flex-1 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteLink}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'ডিলিট' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD / EDIT RESOURCE */}
+      {/* ======================================================== */}
+      {showResourceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowResourceModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <Download className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {editingResource
+                  ? lang === 'bn' ? 'রিসোর্স এডিট করুন' : 'Edit Resource'
+                  : lang === 'bn' ? 'নতুন মার্কেটিং রিসোর্স' : 'Add New Resource'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleSaveResource} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'রিসোর্স শিরোনাম *' : 'Resource Title *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={resourceFormData.title}
+                  onChange={(e) => setResourceFormData({ ...resourceFormData, title: e.target.value })}
+                  placeholder="e.g. SBL Official Leaflet"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ফাইল URL / ডাউনলোড লিংক *' : 'File URL / Link *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={resourceFormData.fileUrl}
+                  onChange={(e) => setResourceFormData({ ...resourceFormData, fileUrl: e.target.value })}
+                  placeholder="/images/... or https://..."
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'রিসোর্স টাইপ' : 'Resource Type'}
+                </label>
+                <select
+                  value={resourceFormData.resourceType}
+                  onChange={(e) => setResourceFormData({ ...resourceFormData, resourceType: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-bold"
+                >
+                  <option value="image">Image (ছবি/লিফলেট)</option>
+                  <option value="pdf">PDF Document</option>
+                  <option value="doc">Sheet / Presentation</option>
+                  <option value="link">External Link</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'বিবরণ' : 'Description'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={resourceFormData.description}
+                  onChange={(e) => setResourceFormData({ ...resourceFormData, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResourceModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'সংরক্ষণ' : 'Save Resource'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE CONFIRM RESOURCE */}
+      {deleteConfirmResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                {lang === 'bn' ? 'রিসোর্স ডিলিট করতে চান?' : 'Delete Resource?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? `"${deleteConfirmResource.title}" রিসোর্সটি মুছে ফেলা হবে।`
+                  : `Are you sure you want to delete "${deleteConfirmResource.title}"?`}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmResource(null)}
+                className="flex-1 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteResource}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'ডিলিট' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD / EDIT CONTACT */}
+      {/* ======================================================== */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowContactModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <PhoneCall className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {editingContact
+                  ? lang === 'bn' ? 'কন্টাক্ট এডিট করুন' : 'Edit Contact'
+                  : lang === 'bn' ? 'নতুন অফিসিয়াল কন্টাক্ট' : 'Add New Contact'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleSaveContact} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'নাম / বিভাগ *' : 'Name / Department *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={contactFormData.name}
+                  onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })}
+                  placeholder="e.g. Accounts & Finance"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'পদবি / দায়িত্ব' : 'Designation / Role'}
+                </label>
+                <input
+                  type="text"
+                  value={contactFormData.designation}
+                  onChange={(e) => setContactFormData({ ...contactFormData, designation: e.target.value })}
+                  placeholder="e.g. Senior Billing Officer"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ফোন নম্বর / হটলাইন *' : 'Phone / Hotline *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={contactFormData.phone}
+                  onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+                  placeholder="+88017XXXXXXXX"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'ইমেইল (ঐচ্ছিক)' : 'Email (Optional)'}
+                </label>
+                <input
+                  type="email"
+                  value={contactFormData.email}
+                  onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+                  placeholder="contact@sbl.test"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowContactModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'সংরক্ষণ' : 'Save Contact'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE CONFIRM CONTACT */}
+      {deleteConfirmContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                {lang === 'bn' ? 'কন্টাক্ট ডিলিট করতে চান?' : 'Delete Contact?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? `"${deleteConfirmContact.name}" কন্টাক্টটি মুছে ফেলা হবে।`
+                  : `Are you sure you want to delete "${deleteConfirmContact.name}"?`}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmContact(null)}
+                className="flex-1 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteContact}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'ডিলিট' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: ADD / EDIT GLOSSARY */}
+      {/* ======================================================== */}
+      {showGlossaryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowGlossaryModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="w-5 h-5 text-orange-400" />
+              <h2 className="text-base font-black text-white">
+                {editingGlossary
+                  ? lang === 'bn' ? 'পরিভাষা এডিট করুন' : 'Edit Glossary Term'
+                  : lang === 'bn' ? 'নতুন পরিভাষা যুক্ত করুন' : 'Add New Term'}
+              </h2>
+            </div>
+
+            <form onSubmit={handleSaveAbbreviation} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'সংক্ষেপণ (Abbreviation) *' : 'Abbreviation *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={glossaryFormData.abbreviation}
+                  onChange={(e) => setGlossaryFormData({ ...glossaryFormData, abbreviation: e.target.value })}
+                  placeholder="e.g. BV"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'পূর্ণাঙ্গ অর্থ / টার্ম *' : 'Full Term *'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={glossaryFormData.term}
+                  onChange={(e) => setGlossaryFormData({ ...glossaryFormData, term: e.target.value })}
+                  placeholder="e.g. Business Volume"
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  {lang === 'bn' ? 'সংজ্ঞা / ব্যাখ্যা *' : 'Definition *'}
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={glossaryFormData.definition}
+                  onChange={(e) => setGlossaryFormData({ ...glossaryFormData, definition: e.target.value })}
+                  placeholder="e.g. Point volume generated from associate project purchases."
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGlossaryModal(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+                >
+                  {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/30"
+                >
+                  {lang === 'bn' ? 'সংরক্ষণ' : 'Save Term'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: DELETE CONFIRM GLOSSARY */}
+      {deleteConfirmGlossary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                {lang === 'bn' ? 'পরিভাষা ডিলিট করতে চান?' : 'Delete Term?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                {lang === 'bn'
+                  ? `"${deleteConfirmGlossary.abbreviation || deleteConfirmGlossary.abbr}" পরিভাষাটি মুছে ফেলা হবে।`
+                  : `Are you sure you want to delete "${deleteConfirmGlossary.abbreviation || deleteConfirmGlossary.abbr}"?`}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmGlossary(null)}
+                className="flex-1 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAbbreviation}
+                className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+              >
+                {lang === 'bn' ? 'ডিলিট' : 'Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

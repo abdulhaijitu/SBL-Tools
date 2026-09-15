@@ -105,19 +105,88 @@ export const api = {
             body: JSON.stringify(activity),
         }),
 
-    // Toolkit
+    // Toolkit (Full CRUD)
     getLinks: () => request<any[]>("/toolkit/links"),
-    getContacts: () => request<any[]>("/toolkit/contacts"),
-    getAbbreviations: () => request<any[]>("/toolkit/abbreviations"),
-    getResources: () => request<any[]>("/toolkit/resources"),
+    createLink: (data: any) =>
+        request<any>("/toolkit/links", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateLink: (id: number, data: any) =>
+        request<any>(`/toolkit/links/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteLink: (id: number) =>
+        request<any>(`/toolkit/links/${id}`, {
+            method: "DELETE",
+        }),
 
-    // Team Tree
+    getContacts: () => request<any[]>("/toolkit/contacts"),
+    createContact: (data: any) =>
+        request<any>("/toolkit/contacts", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateContact: (id: number, data: any) =>
+        request<any>(`/toolkit/contacts/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteContact: (id: number) =>
+        request<any>(`/toolkit/contacts/${id}`, {
+            method: "DELETE",
+        }),
+
+    getAbbreviations: () => request<any[]>("/toolkit/abbreviations"),
+    createAbbreviation: (data: any) =>
+        request<any>("/toolkit/abbreviations", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateAbbreviation: (id: number, data: any) =>
+        request<any>(`/toolkit/abbreviations/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteAbbreviation: (id: number) =>
+        request<any>(`/toolkit/abbreviations/${id}`, {
+            method: "DELETE",
+        }),
+
+    getResources: () => request<any[]>("/toolkit/resources"),
+    createResource: (data: any) =>
+        request<any>("/toolkit/resources", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    updateResource: (id: number, data: any) =>
+        request<any>(`/toolkit/resources/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteResource: (id: number) =>
+        request<any>(`/toolkit/resources/${id}`, {
+            method: "DELETE",
+        }),
+
+    // Team Tree (Full CRUD)
     getTreeNodes: (parentId?: number) =>
         request<any[]>(`/tree${parentId ? `?parentId=${parentId}` : ""}`),
+    getTreeNode: (id: number) => request<any>(`/tree/nodes/${id}`),
     addTreeNode: (node: any) =>
         request<any>("/tree/nodes", {
             method: "POST",
             body: JSON.stringify(node),
+        }),
+    updateTreeNode: (id: number, data: any) =>
+        request<any>(`/tree/nodes/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+    deleteTreeNode: (id: number) =>
+        request<any>(`/tree/nodes/${id}`, {
+            method: "DELETE",
         }),
     addProjectToNode: (data: {
         nodeId: number;

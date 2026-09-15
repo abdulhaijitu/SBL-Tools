@@ -349,3 +349,129 @@ treeRouter.get("/nodes/:id/projects", async (c) => {
 
     return c.json(projects);
 });
+
+// Get single member node details
+treeRouter.get("/nodes/:id", async (c) => {
+    const nodeId = Number(c.req.param("id"));
+    const { db } = await getDb(c);
+
+    const [node] = await db
+        .select()
+        .from(schema.binaryNodes)
+        .where(eq(schema.binaryNodes.id, nodeId))
+        .limit(1);
+
+    if (!node) {
+        return c.json({ error: "Node not found" }, 404);
+    }
+
+    const projects = await db
+        .select()
+        .from(schema.memberProjects)
+        .where(eq(schema.memberProjects.nodeId, nodeId))
+        .orderBy(desc(schema.memberProjects.createdAt));
+
+    const [childCountRow] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.binaryNodes)
+        .where(eq(schema.binaryNodes.parentId, nodeId));
+
+    return c.json({
+        ...node,
+        projects,
+        childCount: childCountRow?.count || 0,
+    });
+});
+
+// Update member node
+treeRouter.put("/nodes/:id", async (c) => {
+    const authUser = c.get("user");
+    if (authUser.role === "demo") {
+        return c.json({ error: "Demo mode is read-only" }, 403);
+    }
+
+    const nodeId = Number(c.req.param("id"));
+    const body = await c.req.json();
+    const { db } = await getDb(c);
+
+    const [existingNode] = await db
+        .select()
+        .from(schema.binaryNodes)
+        .where(eq(schema.binaryNodes.id, nodeId))
+        .limit(1);
+
+    if (!existingNode) {
+        return c.json({ error: "Node not found" }, 404);
+    }
+
+    if (authUser.role !== "super_admin" && existingNode.userId !== authUser.userId) {
+        return c.json({ error: "Permission denied" }, 403);
+    }
+
+    const updateData: any = {
+        updatedAt: new Date(),
+    };
+
+    if (body.memberName !== undefined) updateData.memberName = body.memberName.trim();
+    if (body.phone !== undefined) updateData.phone = body.phone?.trim() || null;
+    if (body.rank !== undefined) updateData.rank = body.rank;
+    if (body.packageName !== undefined) updateData.packageName = body.packageName;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.sponsorName !== undefined) updateData.sponsorName = body.sponsorName;
+
+    const [updatedNode] = await db
+        .update(schema.binaryNodes)
+        .set(updateData)
+        .where(eq(schema.binaryNodes.id, nodeId))
+        .returning();
+
+    return c.json(updatedNode);
+});
+
+// Delete member node
+treeRouter.delete("/nodes/:id", async (c) => {
+    const authUser = c.get("user");
+    if (authUser.role === "demo") {
+        return c.json({ error: "Demo mode is read-only" }, 403);
+    }
+
+    const nodeId = Number(c.req.param("id"));
+    const { db } = await getDb(c);
+
+    const [existingNode] = await db
+        .select()
+        .from(schema.binaryNodes)
+        .where(eq(schema.binaryNodes.id, nodeId))
+        .limit(1);
+
+    if (!existingNode) {
+        return c.json({ error: "Node not found" }, 404);
+    }
+
+    if (authUser.role !== "super_admin" && existingNode.userId !== authUser.userId) {
+        return c.json({ error: "Permission denied" }, 403);
+    }
+
+    // Safely re-parent any children to prevent orphaned/broken tree nodes
+    await db
+        .update(schema.binaryNodes)
+        .set({
+            parentId: existingNode.parentId,
+            updatedAt: new Date(),
+        })
+        .where(eq(schema.binaryNodes.parentId, nodeId));
+
+    // Delete associated member projects
+    await db
+        .delete(schema.memberProjects)
+        .where(eq(schema.memberProjects.nodeId, nodeId));
+
+    // Delete the node
+    await db
+        .delete(schema.binaryNodes)
+        .where(eq(schema.binaryNodes.id, nodeId));
+
+    return c.json({ message: "Member node deleted successfully", id: nodeId });
+});
+
